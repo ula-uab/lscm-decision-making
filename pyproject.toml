@@ -1,0 +1,21 @@
+[project]
+name = "lscm-decision-making"
+version = "0.1.0"
+description = "Worked cases and use cases for the courses Decision Making (European Master in Logistics and Supply Chain Management) and Quantitative Methods for Decision Making (bachelor's degree), UAB"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Juan José Ramos", email = "juanjose.ramos@uab.es" }]
+dependencies = [
+    "pulp>=3.3",
+    "highspy>=1.7",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+# The cases are run as scripts and notebooks; nothing is built or installed.
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
