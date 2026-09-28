@@ -8,14 +8,23 @@ authors = [{ name = "Juan José Ramos", email = "juanjose.ramos@uab.es" }]
 dependencies = [
     "pulp>=3.3",
     "highspy>=1.7",
+    "security-filters",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ipykernel>=6", "nbconvert>=7", "jupyterlab>=4"]
 
 [tool.uv]
-# The cases are run as scripts and notebooks; nothing is built or installed.
+# The repository itself is not a package: it gathers the cases. Cases that
+# are packages are workspace members and are installed in the environment.
 package = false
 
+[tool.uv.workspace]
+members = ["cases/security_filters"]
+
+[tool.uv.sources]
+security-filters = { workspace = true }
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "cases/security_filters/tests"]
+addopts = "--import-mode=importlib"
