@@ -23,9 +23,11 @@ There are three ways, from easiest to most complete:
 To work with the whole repository (for example, to run the tests), install [uv](https://docs.astral.sh/uv/) and run from the repository folder:
 
 ```
-uv sync
+uv sync --python 3.12
 uv run pytest
 uv run jupyter lab
 ```
 
-In PyCharm, open the repository folder and select `.venv` as the interpreter after running `uv sync`.
+The code needs Python 3.10 or later, and the tests are run on 3.10 and 3.12. Asking for 3.12 keeps your environment on a version that is checked; uv downloads it if it is not on your computer. Plain `uv sync` also works, but it picks the newest version installed, which may be one the tests have never run on.
+
+In PyCharm, open the repository folder and, after running `uv sync`, add the interpreter of type *uv* pointing at the `.venv` folder of the repository.
