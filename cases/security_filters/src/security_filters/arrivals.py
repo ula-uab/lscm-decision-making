@@ -17,7 +17,13 @@ Differences from the original macro (see ``legacy.py`` and the README):
   that arrive after 00:00 are counted;
 - passengers of early flights of the next day who arrive before midnight are
   counted (use ``schedule.flights_for_curve``);
-- a shift that moves a flight outside the day does not stop the calculation.
+- an advance or delay that moves a flight outside the day does not stop the
+  calculation.
+
+The time correction of a flight is given as an advance in minutes (positive:
+its passengers arrive earlier). The macro used the opposite sign: its
+"CorrecionFranja" was added to the slot of the flight, so a positive value
+delayed the arrivals.
 """
 
 from __future__ import annotations
@@ -36,31 +42,40 @@ def slot_labels() -> pd.Index:
 
 def presentation_curve(flights: pd.DataFrame, profiles: pd.DataFrame,
                        profile: str = "erlang", load_factor: float = 1.0,
-                       shift_slots: int = 0) -> pd.Series:
+                       advance_min: float = 0) -> pd.Series:
     """Passengers arriving at the filters in each slot of the day.
 
-    ``flights`` needs the columns ``seats`` and ``departure_minute``. Three
-    optional columns override the arguments flight by flight: ``profile``,
-    ``load_factor`` and ``shift_slots`` (positive values move the arrivals of
-    the flight later). An optional column ``day_offset`` (1 for flights of the
-    next day) is added by ``schedule.flights_for_curve``.
+    ``flights`` needs the columns ``seats`` and ``departure_minute``. Optional
+    columns override the arguments flight by flight:
+
+    - ``passengers``: passengers who go through the filters (if missing,
+      ``seats * load_factor``);
+    - ``load_factor``, ``profile``;
+    - ``advance_min``: minutes by which the arrivals of the flight are
+      brought forward (negative values delay them), rounded to 5 minutes;
+    - ``day_offset``: 1 for flights of the next day (added by
+      ``schedule.flights_for_curve``).
+
+    ``assumptions.apply_rules`` builds these columns from simple rules.
     """
     curve = np.zeros(SLOTS_PER_DAY)
     n_intervals = len(profiles)
     offsets = np.arange(1, n_intervals + 1)
+    fractions = {name: profiles[name].to_numpy() for name in profiles}
 
     for flight in flights.itertuples(index=False):
         name = _value(flight, "profile", profile)
-        factor = _value(flight, "load_factor", load_factor)
-        shift = int(_value(flight, "shift_slots", shift_slots))
+        passengers = _value(flight, "passengers", None)
+        if passengers is None:
+            passengers = flight.seats * _value(flight, "load_factor", load_factor)
+        advance = int(round(_value(flight, "advance_min", advance_min) / SLOT_MINUTES))
         day_offset = int(_value(flight, "day_offset", 0))
 
-        passengers = flight.seats * factor
         departure_slot = (flight.departure_minute // SLOT_MINUTES
-                          + shift + day_offset * SLOTS_PER_DAY)
+                          - advance + day_offset * SLOTS_PER_DAY)
         slots = departure_slot - offsets
         inside = (slots >= 0) & (slots < SLOTS_PER_DAY)
-        curve[slots[inside]] += passengers * profiles[name].to_numpy()[inside]
+        curve[slots[inside]] += passengers * fractions[name][inside]
 
     return pd.Series(curve, index=slot_labels(), name="arrivals")
 

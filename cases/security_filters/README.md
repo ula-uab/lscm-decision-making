@@ -2,16 +2,18 @@
 
 How many passengers arrive at the airport security filters in each 5-minute slot of a day, and how many filters are needed to avoid long queues?
 
-From the flight schedule of one day, this case computes the **presentation curve** (passengers arriving at the filters per 5-minute slot) and, for given filter capacities, the **queue** and the **idle time** of the filters. **Scenarios** compare different assumptions on the same day.
+From the flight schedule of one day, this case computes the **presentation curve** (passengers arriving at the filters per 5-minute slot) under different **demand scenarios**, evaluates **lane policies** (how many lanes are open in each period of the day) on those curves, and finally compares scenarios and policies with the curve that was **observed** on the day.
 
 The case reproduces, without Excel and with its errors corrected, two workbooks used in the course: `ProcesaDatosVuelos-plantilla-original.xls` (a VBA macro that builds the curve) and `indicadores-filtros-parte2.xls` (queues and idle time). Both are kept in [`reference/`](reference/), with the exported VBA code.
 
 ## Notebooks
 
-| Notebook | Open in Colab |
-|---|---|
-| [1. Presentation curve](notebooks/01_presentation_curve.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/security_filters/notebooks/01_presentation_curve.ipynb) |
-| [2. Scenarios](notebooks/02_scenarios.ipynb) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/security_filters/notebooks/02_scenarios.ipynb) |
+| Notebook | Question | Open in Colab |
+|---|---|---|
+| [1. Presentation curve](notebooks/01_presentation_curve.ipynb) | How is the curve built from the flight schedule? | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/security_filters/notebooks/01_presentation_curve.ipynb) |
+| [2. Demand scenarios](notebooks/02_demand_scenarios.ipynb) | What could the demand at the filters be, under different assumptions? | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/security_filters/notebooks/02_demand_scenarios.ipynb) |
+| [3. Lane policies](notebooks/03_lane_policies.ipynb) | How many lanes should be open in each period of the day? | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/security_filters/notebooks/03_lane_policies.ipynb) |
+| [4. After the day](notebooks/04_after_the_day.ipynb) | How good were the scenarios and the policies against what happened? | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/security_filters/notebooks/04_after_the_day.ipynb) |
 
 In Colab nothing has to be installed: the first cell of each notebook installs the package.
 
@@ -19,6 +21,7 @@ In Colab nothing has to be installed: the first cell of each notebook installs t
 
 - **Flight schedule** ([`flight_schedule.xls`](src/security_filters/data/flight_schedule.xls), the original `mostradores.xls`): 5,597 departing flights from 16/07/2008 to early August 2008, with date, flight number, departure time, destination airport and number of seats. The days after 31/07/2008 are incomplete.
 - **Arrival profiles** ([`arrival_profiles.csv`](src/security_filters/data/arrival_profiles.csv)): five profiles (`gauss`, `erlang`, `normal2`, `erlang2`, `erlang3`) copied from the sheet "Distribuciones" of the original workbook. Each gives, for 29 intervals of 5 minutes before departure, the fraction of the passengers of a flight that arrive at the filters in that interval; interval 1 is the 5 minutes just before departure. The workbook only keeps the fractions, not the parameters of the distributions. Note that `erlang3` is `erlang2` read backwards, so it puts the peak 15 minutes before departure; it is kept as it is.
+- **Observed arrivals** ([`observed_arrivals_2008-07-19.csv`](src/security_filters/data/observed_arrivals_2008-07-19.csv)): passengers arriving at the filters per 5-minute slot on 19/07/2008. **They are invented**: the real counts are not available. [`tools/generate_observed.py`](tools/generate_observed.py) simulates every passenger with "true" assumptions (random load factors, connections, arrival times by type of flight, tour-operator buses and a cruise ship) that the demand scenarios do not know exactly. It uses a fixed seed, so it always gives the same curve.
 
 ## Method
 
@@ -32,7 +35,26 @@ q_t = q_{t-1} + a_t - \text{served}_t, \qquad
 \text{idle}_t = \frac{c_t - \text{served}_t}{c_t}
 $$
 
-The average wait is estimated with Little's law: average queue divided by the arrival rate.
+The average wait is estimated with Little's law: average queue divided by the arrival rate. The maximum wait is estimated as the minutes needed to clear the queue with the capacity of the next slot.
+
+**Assumptions as rules.** The original workbook asked for the assumptions flight by flight (sheet "Paso2"). Here they are written as a short list of rules; each rule says which flights it applies to (`airline`, `destination`, `flight`, `departure_from`, `departure_to`) and which values it sets:
+
+| Value | Meaning |
+|---|---|
+| `load_factor` | Fraction of the seats that are occupied |
+| `transfer_share` | Fraction of the passengers who connect to another flight and do not go through the filters |
+| `advance_min` | Minutes by which passengers arrive earlier than their profile says: tour-operator or cruise buses whose timetable does not follow the flights |
+| `profile` | Arrival profile |
+
+The last matching rule wins, so rules go from the most general to the most specific. The passengers who go through the filters are seats × load factor × (1 − transfer share). `apply_rules` gives the table of assumptions of each flight, the equivalent of "Paso2". Rules can also be read from a CSV or Excel file (`read_rules`).
+
+In the macro the time correction ("CorrecionFranja") was added to the slot of the flight, so a positive value delayed the arrivals. Here `advance_min` is positive when passengers arrive earlier.
+
+**Arrival profiles by type of flight.** Besides the five original profiles, profiles are defined by the mean and the standard deviation of the time before departure at which passengers arrive, with a gamma distribution (the continuous version of the Erlang distribution) cut at 4 hours. The presets are `business` (mean 55 min, standard deviation 18), `low_cost` (85, 25), `leisure` (100, 30), `long_haul` (150, 40) and `wave` (95, 6: a bus brings passengers together). **These values are provisional orders of magnitude, not measured data.**
+
+**Lane policies.** A policy gives the open lanes by period of the day (`LanePlan`). With the capacity of a lane (180 passengers per hour, a provisional value) it gives the capacity of each slot, and its lane-hours measure its cost. `decision_table` evaluates several policies on the curves of several scenarios; `worst_case` and `regret` apply two classic criteria for deciding without knowing which scenario will happen.
+
+**After the day.** Each scenario is a forecast of the observed curve. `compare_forecasts` measures its error (MAE, MAPE and bias, with error = observed − forecast), and the policies are evaluated on the observed curve.
 
 ## Errors of the original workbooks and how they are corrected
 
@@ -57,25 +79,42 @@ The first fraction of each profile falls in the slot just before departure. The 
 import security_filters as sf
 
 schedule = sf.read_schedule()
-profiles = sf.read_profiles()
 flights = sf.flights_for_curve(schedule, "2008-07-19")
+profiles = sf.profile_library()
 
-curve = sf.presentation_curve(flights, profiles, profile="erlang", load_factor=1.0)
+# Demand scenarios
+mine = sf.DemandScenario("my scenario", [
+    {"load_factor": 0.85, "profile": "leisure"},
+    {"destination": ["MAD", "BCN"], "profile": "business"},
+    {"airline": "TOM", "profile": "wave", "advance_min": 55},
+])
+curves = sf.demand_curves([mine, *sf.examples.demand_scenarios()], flights, profiles)
 
-capacity = sf.capacity_by_hour({h: 400 for h in range(2, 24)}, default=50)
-result = sf.run(sf.Scenario("flat 400", capacity=capacity), flights, profiles)  # one row per slot
-sf.summary(result)                                                              # indicators of the day
+# Lane policies and decision table
+policies = [sf.LanePlan("flat 28", {"02:00-23:00": 28}, default_lanes=4),
+            sf.LanePlan("peaks", {"02:00-05:00": 20, "05:00-14:00": 28, "14:00-24:00": 22},
+                        default_lanes=3)]
+table = sf.decision_table(policies, curves, "max_wait_min")
+
+# After the day
+observed = sf.read_observed("2008-07-19")
+sf.compare_forecasts(curves, observed)
 ```
 
 | Module | What it does |
 |---|---|
 | `schedule` | Reads the flight schedule and selects the flights of a day |
-| `profiles` | Reads and checks the arrival profiles |
+| `profiles` | Reads and checks the five original arrival profiles |
+| `distributions` | Arrival profiles defined by mean and standard deviation; presets by type of flight |
+| `assumptions` | Rules and the table of assumptions of each flight |
 | `arrivals` | Presentation curve (corrected) |
+| `scenarios` | Demand scenarios and their curves |
 | `indicators` | Queue, idle time and indicators of a day |
-| `scenarios` | Scenarios, capacity helpers and comparison |
+| `policies` | Lane policies, decision tables, worst case and regret |
+| `observed` | Observed (invented) curve and forecast errors |
+| `examples` | Example scenarios and policies used in the notebooks |
 | `legacy` | Faithful reproduction of the original workbooks, errors included |
-| `plots` | Plots of curves and scenarios |
+| `plots` | Plots of profiles, curves and policies |
 
 ## Installing it on your own computer
 

@@ -1,12 +1,11 @@
-"""Corrected presentation curve, queue and scenarios."""
+"""Corrected presentation curve and queue."""
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from security_filters import (Scenario, capacity_by_hour, capacity_from_fraction,
-                              capacity_from_lanes, compare, flights_for_curve,
-                              flights_of_day, presentation_curve, run, simulate_queue)
+from security_filters import (flights_for_curve, presentation_curve, simulate_queue,
+                              summary)
 from security_filters.legacy import legacy_performance
 
 
@@ -45,9 +44,20 @@ def test_next_day_flight_arrivals_before_midnight(profiles):
     assert curve["23:55"] == pytest.approx(100 * profiles["gauss"].loc[13])
 
 
-def test_shift_outside_the_day_does_not_fail(profiles):
-    curve = presentation_curve(one_flight("23:55"), profiles, shift_slots=40)
+def test_delay_outside_the_day_does_not_fail(profiles):
+    curve = presentation_curve(one_flight("23:55"), profiles, advance_min=-200)
     assert curve.sum() < 100
+
+
+def test_advance_brings_arrivals_forward(profiles):
+    curve = presentation_curve(one_flight("12:00", advance_min=30), profiles, profile="gauss")
+    assert curve["11:25"] == pytest.approx(100 * profiles["gauss"].loc[1])
+    assert curve["11:30"] == 0
+
+
+def test_passengers_column_overrides_seats_and_load_factor(profiles):
+    curve = presentation_curve(one_flight("12:00", passengers=42.5), profiles, load_factor=0.5)
+    assert curve.sum() == pytest.approx(42.5)
 
 
 def test_load_factor_and_per_flight_columns(profiles):
@@ -98,21 +108,9 @@ def test_queue_matches_workbook(performance):
     np.testing.assert_allclose(result["queue"], performance["Colas"])
 
 
-# --- Scenarios ----------------------------------------------------------------
-
-def test_capacity_helpers():
-    assert capacity_from_fraction([0.1, 1.0]).tolist() == [50, 500]
-    assert capacity_from_lanes([2], 180).tolist() == [30]
-    hourly = capacity_by_hour({6: 300}, default=100)
-    assert len(hourly) == 288 and hourly[72] == 300 and hourly[0] == 100
-
-
-def test_scenarios_run_and_compare(schedule, profiles):
-    flights = flights_for_curve(schedule, "2008-07-19")
-    base = Scenario("base", capacity=500)
-    tight = Scenario("tight", capacity=300)
-    result = run(base, flights, profiles)
-    assert len(result) == 288
-    table = compare([base, tight], flights, profiles)
-    assert table.loc["max_queue", "tight"] >= table.loc["max_queue", "base"]
-    assert table.loc["passengers", "base"] == pytest.approx(table.loc["passengers", "tight"])
+def test_summary_indicators():
+    result = simulate_queue([100, 300, 50, 0], [150, 150, 150, 150])
+    indicators = summary(result)
+    assert indicators["max_queue"] == 150
+    assert indicators["waiting_pax_min"] == (150 + 50) * 5
+    assert indicators["max_wait_min"] == pytest.approx(150 / 150 * 5)

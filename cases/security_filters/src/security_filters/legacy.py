@@ -22,10 +22,13 @@ from .schedule import SLOT_MINUTES, SLOTS_PER_DAY
 
 def legacy_presentation_curve(flights: pd.DataFrame, profiles: pd.DataFrame,
                               profile: str = "erlang", load_factor: float = 1.0,
-                              shift_slots: int = 0) -> pd.Series:
+                              oleada: int = 0) -> pd.Series:
     """Curve computed as the macro does, including its errors.
 
     ``flights`` are the flights of one day (``schedule.flights_of_day``).
+    ``oleada`` is the "CorrecionFranja" of the sheet "Paso2", in slots, with
+    the sign of the macro: it is added to the slot of the flight, so a
+    positive value delays the arrivals.
     The result uses the same slots as ``arrivals.presentation_curve``: the
     macro writes the value of its slot ``i`` on the row of the sheet "Paso3"
     labelled with the start time of slot ``i - 1``.
@@ -37,7 +40,7 @@ def legacy_presentation_curve(flights: pd.DataFrame, profiles: pd.DataFrame,
         # Integer assignment in VBA rounds to the nearest (half to even),
         # as Python's round() does
         flight_slot = round(flight.departure_minute / SLOT_MINUTES)
-        later = flight_slot + shift_slots
+        later = flight_slot + oleada
         total_pax = round(flight.seats * load_factor)
 
         # Error: flights whose slot is 7 or lower (departure before 00:40)

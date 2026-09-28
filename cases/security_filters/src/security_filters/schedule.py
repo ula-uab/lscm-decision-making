@@ -35,8 +35,9 @@ def read_schedule(path: str | Path | None = None, header_row: int = 2) -> pd.Dat
     """Read the whole flight schedule.
 
     Returns one row per flight with the columns ``date`` (datetime.date),
-    ``flight``, ``departure`` (text "HH:MM"), ``destination``, ``seats`` (int)
-    and ``departure_minute`` (minutes after midnight).
+    ``flight``, ``departure`` (text "HH:MM"), ``destination``, ``seats`` (int),
+    ``departure_minute`` (minutes after midnight) and ``airline`` (the ICAO
+    code of the airline: the first three letters of the flight number).
     """
     path = default_schedule_path() if path is None else Path(path)
     raw = pd.read_excel(path, header=header_row, engine="xlrd")
@@ -54,6 +55,8 @@ def read_schedule(path: str | Path | None = None, header_row: int = 2) -> pd.Dat
     df["destination"] = df["destination"].astype(str).str.strip()
     df["seats"] = df["seats"].astype(int)
     df["departure_minute"] = df["departure"].map(_minutes_after_midnight)
+    # The flight number starts with the ICAO code of the airline
+    df["airline"] = df["flight"].str[:3]
     return df.reset_index(drop=True)
 
 

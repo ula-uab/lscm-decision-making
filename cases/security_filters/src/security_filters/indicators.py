@@ -40,20 +40,29 @@ def simulate_queue(arrivals, capacity) -> pd.DataFrame:
 def summary(result: pd.DataFrame) -> pd.Series:
     """Indicators of a day, from the table of ``simulate_queue``.
 
-    The average wait is estimated with Little's law: average number of
-    passengers in the queue divided by the arrival rate.
+    - ``average_wait_min``: average wait per passenger, with Little's law
+      (average queue divided by the arrival rate);
+    - ``max_wait_min``: the longest estimated wait: minutes needed to clear
+      the queue at the end of a slot with the capacity of the next slot;
+    - ``waiting_pax_min``: total passenger-minutes spent in the queue.
     """
     total = result["arrivals"].sum()
     minutes = len(result) * SLOT_MINUTES
+    queue = result["queue"].to_numpy()
+    next_capacity = np.append(result["capacity"].to_numpy()[1:], result["capacity"].iloc[-1])
+    with np.errstate(divide="ignore", invalid="ignore"):
+        clearing = np.where(queue > 0, queue / next_capacity * SLOT_MINUTES, 0.0)
     peak = result["queue"].idxmax()
     average_wait = (result["queue"].mean() / (total / minutes)) if total > 0 else 0.0
     return pd.Series({
         "passengers": total,
-        "max_queue": result["queue"].max(),
-        "time_of_max_queue": peak if result["queue"].max() > 0 else "-",
-        "slots_with_queue": int((result["queue"] > 0.5).sum()),
-        "queue_at_midnight": result["queue"].iloc[-1],
+        "max_queue": queue.max(),
+        "time_of_max_queue": peak if queue.max() > 0 else "-",
+        "slots_with_queue": int((queue > 0.5).sum()),
+        "queue_at_midnight": queue[-1],
         "average_wait_min": average_wait,
+        "max_wait_min": clearing.max(),
+        "waiting_pax_min": queue.sum() * SLOT_MINUTES,
         "capacity_used": result["served"].sum() / result["capacity"].sum(),
         "average_idle": result["idle"].mean(),
     })
