@@ -6,6 +6,8 @@ one line of code.
 
 from __future__ import annotations
 
+import functools
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -19,6 +21,16 @@ OVER = "tab:red"
 SECONDS_PER_YEAR = 365.25 * 24 * 3600
 AGE_OF_UNIVERSE_YEARS = 13.8e9      # Planck Collaboration (2020), A&A 641, A6
 PLANS_PER_SECOND = 1e9              # assumed: a computer that checks a billion plans per second
+
+
+def _light(func):
+    """Draw with matplotlib's default style: white background and dark text, also
+    when the editor has a dark theme (PyCharm changes the colours of the text)."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        with plt.style.context("default"):
+            return func(*args, **kwargs)
+    return wrapper
 
 
 def _display(obj) -> None:
@@ -109,6 +121,7 @@ def explosion_table(sizes=((2, 4), (3, 10), (5, 30), (10, 50), (10, 200))) -> pd
 # Figures
 # ---------------------------------------------------------------------------
 
+@_light
 def plot_map(plan: dict | None = None, ax=None, title: str = "", demand: dict = d):
     """Schematic map (not to scale). With a plan, each customer is joined to its warehouse.
 
@@ -151,6 +164,7 @@ def plot_map(plan: dict | None = None, ax=None, title: str = "", demand: dict = 
     return ax
 
 
+@_light
 def plot_loads(plan: dict, capacity: dict = K, demand: dict = d, ax=None, title: str = ""):
     """Pallets shipped by each warehouse, stacked by customer, against its capacity."""
     ax = ax or plt.subplots(figsize=(4, 3.6))[1]
@@ -181,6 +195,7 @@ def plot_loads(plan: dict, capacity: dict = K, demand: dict = d, ax=None, title:
     return ax
 
 
+@_light
 def show_data() -> None:
     """Tables 1-4 and the map of the example."""
     data_tables()
@@ -202,6 +217,7 @@ def _summary(plan: dict, capacity: dict = K, demand: dict = d) -> None:
         print(f"  Average delivery time: {m.average_delivery_time(plan):.2f} days")
 
 
+@_light
 def check_plan(plan: dict, title: str = "Your plan", capacity: dict = K,
                demand: dict = d) -> bool:
     """Draw a plan on the map with its warehouse loads, and say whether it is feasible."""
@@ -275,6 +291,7 @@ def compare_methods() -> None:
     print(f"Solver (PuLP + HiGHS): plan {m.name_of(solver)}, {_euros(m.cost(solver))}/week")
 
 
+@_light
 def two_objectives(value_of_a_day: float) -> None:
     """§5: cost against delivery time, and the plan chosen for a value of a day."""
     plans = m.all_plans()
@@ -329,6 +346,7 @@ def forecast_table() -> pd.DataFrame:
     return table.round(2).astype(object).where(table.notna(), "—")
 
 
+@_light
 def show_forecast() -> None:
     """Table 8, its accuracy and a figure with orders, forecast and week 13."""
     _display(forecast_table())
