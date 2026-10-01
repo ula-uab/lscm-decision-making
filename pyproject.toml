@@ -13,7 +13,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "ipykernel>=6", "nbconvert>=7", "jupyterlab>=4"]
+dev = [
+    "pytest>=8",
+    "ipykernel>=6",
+    "nbconvert>=7",
+    "jupyterlab>=4",
+    "nbstripout>=0.9.1",
+]
 
 [tool.uv]
 # The repository itself is not a package: it gathers the cases. Cases that

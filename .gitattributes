@@ -1,0 +1,6 @@
+# Notebooks saved without outputs, so that students discover the results by
+# running the cells. Needs nbstripout as a git filter: run once, from the
+# repository folder, ".venv/bin/nbstripout --install" and then empty
+# .git/info/attributes, so that the filter only applies to the paths below.
+# The security_filters notebooks keep their outputs on purpose.
+cases/warehouse_allocation/notebooks/*.ipynb filter=nbstripout diff=ipynb
