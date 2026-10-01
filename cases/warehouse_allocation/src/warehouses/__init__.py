@@ -8,17 +8,17 @@ one per step:
 2. ``check_plan``: any plan, on the map and against the capacities;
 3. ``rule_of_thumb``, ``challenge`` and ``solve_model``: experience against the model (§3);
 4. ``all_plans_table``, ``explosion_table`` and ``compare_methods``: how many plans (§4);
-5. ``two_objectives``: cost and delivery time (§5);
+5. ``pareto`` and ``two_objectives``: cost and delivery time (§5);
 6. ``show_forecast``, ``large_error`` and ``safety_margin``: uncertainty (§6).
 """
 
 from . import data, forecast, model
 from .show import (all_plans_table, challenge, check_plan, compare_methods, explosion_table,
-                   large_error, rule_of_thumb, safety_margin, show_data, show_forecast,
+                   large_error, pareto, pareto_table, rule_of_thumb, safety_margin, show_data, show_forecast,
                    solve_model, two_objectives)
 
 __all__ = [
     "all_plans_table", "challenge", "check_plan", "compare_methods", "data", "explosion_table",
-    "forecast", "large_error", "model", "rule_of_thumb", "safety_margin", "show_data",
+    "forecast", "large_error", "model", "pareto", "pareto_table", "rule_of_thumb", "safety_margin", "show_data",
     "show_forecast", "solve_model", "two_objectives",
 ]

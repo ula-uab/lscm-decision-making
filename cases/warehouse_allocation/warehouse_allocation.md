@@ -122,32 +122,65 @@ Sixteen plans can be checked by hand. In general, with $m$ warehouses and $n$ cu
 
 ## 5. Two objectives: cost and delivery time
 
-The average delivery time of a plan is the delivery time of each customer weighted by its pallets:
+So far a plan has been judged only by its cost. The company also wants its customers served fast, and the cheapest plan is not the fastest.
+
+**The second objective.** A pallet of customer $c$ sent from warehouse $w$ takes $t_{wc}$ days to arrive (Table 4). The average delivery time of a plan is the number of days that a pallet takes on average:
 
 $$
-\text{average delivery time} = \frac{\sum_{w \in W} \sum_{c \in C} t_{wc}\, d_c\, x_{wc}}{\sum_{c \in C} d_c}
+T(x) = \frac{\sum_{w \in W} \sum_{c \in C} t_{wc}\, d_c\, x_{wc}}{\sum_{c \in C} d_c}
 $$
 
-where $t_{wc}$ is the delivery time from $w$ to $c$ (days, Table 4). For plan A:
+In the numerator, $t_{wc}\, d_c\, x_{wc}$ counts the pallet-days of customer $c$: its $d_c$ pallets, each taking $t_{wc}$ days, if $w$ serves it ($x_{wc} = 1$). The denominator is the total number of pallets, 130. For plan A:
 
 $$
-\frac{40 \cdot 1 + 30 \cdot 4 + 35 \cdot 1 + 25 \cdot 1}{130} = \frac{220}{130} = 1.69 \text{ days}
+T = \frac{40 \cdot 1 + 30 \cdot 4 + 35 \cdot 1 + 25 \cdot 1}{130} = \frac{220}{130} = 1.69 \text{ days}
 $$
+
+**The problem with two objectives.** The model of §2 gets a second objective; the decisions and the constraints do not change:
+
+$$
+\begin{aligned}
+\min \quad & Z_1(x) = \sum_{w \in W} \sum_{c \in C} k_{wc}\, d_c\, x_{wc} && \text{(cost, €/week)}\\
+\min \quad & Z_2(x) = \frac{1}{\sum_{c} d_c} \sum_{w \in W} \sum_{c \in C} t_{wc}\, d_c\, x_{wc} && \text{(average delivery time, days)}\\
+\text{s.t.} \quad & \sum_{w \in W} x_{wc} = 1 && \forall c \in C\\
+& \sum_{c \in C} d_c\, x_{wc} \le K_w && \forall w \in W\\
+& x_{wc} \in \{0, 1\} && \forall w \in W,\ \forall c \in C
+\end{aligned}
+$$
+
+There is usually no plan that is best on both objectives. Solving the problem has two steps: discard the plans that no one should choose, and choose among the others.
 
 Table 7. The five feasible plans on both criteria
 
-| Plan | Cost (€/week) | Average delivery time (days) |
-|---|---|---|
-| A | 320 | 1.69 |
-| B | 450 | 1.31 |
-| M | 465 | 1.54 |
-| D | 580 | 2.38 |
-| E | 595 | 2.62 |
+| Plan | Cost (€/week) | Average delivery time (days) | Beaten by |
+|---|---|---|---|
+| A | 320 | 1.69 | none: no feasible plan is cheaper |
+| B | 450 | 1.31 | none: no feasible plan is faster |
+| M | 465 | 1.54 | B, which is cheaper (450 < 465) and faster (1.31 < 1.54) |
+| D | 580 | 2.38 | A, B and M, each cheaper and faster |
+| E | 595 | 2.62 | A, B, M and D, each cheaper and faster |
 
-- Plan A is the cheapest, but it serves C2 from W2, which takes 4 days.
-- Plan B is the fastest, but it costs 130 €/week more than A.
-- No plan is best on both criteria. A and B are the only plans that no other plan beats on both at once; choosing between them depends on how much a faster delivery is worth to the company. These plans are called Pareto-optimal (T3-T).
-- Plan M, the one diverted by hand, is beaten by B on both criteria: B is cheaper (450 < 465) and faster (1.31 < 1.54).
+**Step 1: Pareto-optimal plans.** A plan beats another if it is no worse on both criteria and better on at least one. A feasible plan is Pareto-optimal if no other feasible plan beats it (T3-T). A plan that is beaten should never be chosen, because another plan is at least as cheap and at least as fast.
+
+- A is Pareto-optimal because no feasible plan is cheaper, and B because no feasible plan is faster.
+- Plan M, the one diverted by hand, is beaten by B. D and E are beaten by A, among others.
+- Plans that do not fit in the warehouses do not count: the plan that serves each customer from its nearest warehouse costs 290 €/week and takes 1.00 days, better than all of them, but it is not feasible.
+
+The choice is therefore between A, the cheaper, and B, the faster. Going from A to B costs $450 - 320 = 130$ €/week more and shortens the average delivery by $1.69 - 1.31 = 0.385$ days (exactly $50/130$). The model cannot say whether that is worth it: it depends on what a faster delivery is worth to the company.
+
+**Step 2: choosing with a price for time.** One way to choose is to give time a price. Let $V$ be what the company would pay, in euros per week, to make the average delivery one day shorter. Its unit is €/week per day: euros per week, like the cost, for each day of average delivery time that is saved. $V = 100$, for example, means that shortening the average delivery by one day is worth 100 €/week to the company, and by half a day, 50 €/week. The value comes from the company: fewer complaints, sales that are not lost, smaller stocks at the customers. With $V$ the two objectives become one, in €/week, with the same constraints:
+
+$$
+\min \quad Z(x) = Z_1(x) + V \cdot Z_2(x)
+$$
+
+This is the weighted sum method: $V$ is the weight given to the delivery time. The model is of the same kind as that of §2 and is solved in the same way. With $V = 100$, plan A has $Z = 320 + 100 \times 1.69 = 489$ €/week and plan B $Z = 450 + 100 \times 1.31 = 581$ €/week, so A is chosen.
+
+**Where the choice changes.** B saves 0.385 days for 130 €/week more: each day saved costs $130 / 0.385 = 338$ €/week. If a day is worth less than that to the company ($V < 338$ €/week per day), A is chosen; if it is worth more ($V > 338$), B is chosen. At $V = 338$ both have the same total. M, D and E are never chosen, whatever $V$: each is beaten by a plan that is cheaper and faster, which always has a lower total.
+
+**In a figure.** If the plans are drawn with the average delivery time on the horizontal axis and the cost on the vertical one, all the points with the same total $Z$ lie on the line $\text{cost} = Z - V \times \text{time}$, of slope $-V$: along it, one day more of delivery time is compensated by $V$ euros less of cost. The best plan is the feasible plan on the lowest such line. A larger $V$ gives a steeper line, and above 338 the lowest line goes through B instead of A. The notebook of this example draws this line and lets $V$ be changed (§7).
+
+The weighted sum is one of several ways of choosing between objectives; another is to minimise the cost with a limit on the delivery time (T3-T).
 
 ## 6. Uncertainty: the forecast can be wrong
 

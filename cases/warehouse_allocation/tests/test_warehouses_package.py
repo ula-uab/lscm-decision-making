@@ -49,7 +49,20 @@ def test_table7_two_objectives_and_pareto():
     assert pareto == ["A", "B"]
 
 
+def test_pareto_table_says_who_beats_whom():
+    table = show.pareto_table()
+    assert list(table["Pareto-optimal"]) == ["yes", "yes", "no", "no", "no"]
+    assert table.loc["M", "Beaten by"].startswith("B:")
+    assert table.loc["D", "Beaten by"].startswith("A, B, M:")
+
+
 def test_value_of_a_day_switches_from_A_to_B_at_338():
+    a, b = m.NAMED_PLANS["A"], m.NAMED_PLANS["B"]
+    assert m.average_delivery_time(a) - m.average_delivery_time(b) == pytest.approx(50 / 130)
+    assert m.switch_value(a, b) == pytest.approx(338)
+    assert round(m.total(a, 100)) == 489 and round(m.total(b, 100)) == 581
+    for value in range(0, 1001, 10):
+        assert m.solve_weighted(value) == m.best_weighted(value)
     assert m.best_weighted(0) == m.NAMED_PLANS["A"]
     assert m.best_weighted(337) == m.NAMED_PLANS["A"]
     assert m.best_weighted(339) == m.NAMED_PLANS["B"]

@@ -291,13 +291,41 @@ def compare_methods() -> None:
     print(f"Solver (PuLP + HiGHS): plan {m.name_of(solver)}, {_euros(m.cost(solver))}/week")
 
 
-@_light
-def two_objectives(value_of_a_day: float) -> None:
-    """§5: cost against delivery time, and the plan chosen for a value of a day."""
+def pareto_table() -> pd.DataFrame:
+    """§5: for each feasible plan, which plans beat it on both criteria, and why."""
+    feasible = [p for p in m.all_plans() if m.is_feasible(p)]
+    feasible.sort(key=m.cost)
+    cheapest = min(feasible, key=m.cost)
+    fastest = min(feasible, key=m.average_delivery_time)
+    rows = {}
+    for plan in feasible:
+        cost, time = m.cost(plan), m.average_delivery_time(plan)
+        reasons = m.beaten_by(plan, feasible)
+        if len(reasons) == 1:
+            other = reasons[0]
+            beaten = (f"{m.name_of(other)}: cheaper ({m.cost(other):g} < {cost:g}) "
+                      f"and faster ({m.average_delivery_time(other):.2f} < {time:.2f})")
+        elif reasons:
+            beaten = (", ".join(m.name_of(o) for o in reasons)
+                      + f": each one is cheaper and faster than {m.name_of(plan)}")
+        elif plan == cheapest:
+            beaten = "none: no feasible plan is cheaper"
+        elif plan == fastest:
+            beaten = "none: no feasible plan is faster"
+        else:
+            beaten = "none"
+        rows[m.name_of(plan)] = {
+            "Cost (€/week)": cost,
+            "Average delivery time (days)": f"{time:.2f}",
+            "Beaten by": beaten,
+            "Pareto-optimal": "yes" if not reasons else "no",
+        }
+    return pd.DataFrame(rows).T.rename_axis("Plan")
+
+
+def _plot_plans(ax, chosen: dict | None = None) -> None:
     plans = m.all_plans()
     feasible = [p for p in plans if m.is_feasible(p)]
-    chosen = m.best_weighted(value_of_a_day)
-    fig, ax = plt.subplots(figsize=(8, 4.8))
     for p in plans:
         x, y = m.average_delivery_time(p), m.cost(p)
         if not m.is_feasible(p):
@@ -308,11 +336,6 @@ def two_objectives(value_of_a_day: float) -> None:
                    edgecolor="black" if p == chosen else "none", lw=2)
         ax.annotate(m.name_of(p), (x, y), xytext=(9, 6), textcoords="offset points",
                     weight="bold" if p == chosen else "normal")
-    # Plans with the same cost + value x time lie on a line; the chosen plan is on the lowest one
-    total = m.cost(chosen) + value_of_a_day * m.average_delivery_time(chosen)
-    xs = [0.9, 3.0]
-    ax.plot(xs, [total - value_of_a_day * x for x in xs], color="black", ls=":", lw=1,
-            label="same cost + value × time as the chosen plan")
     b, plan_m = m.NAMED_PLANS["B"], m.NAMED_PLANS["M"]
     ax.annotate("", xy=(m.average_delivery_time(b), m.cost(b)),
                 xytext=(m.average_delivery_time(plan_m), m.cost(plan_m)),
@@ -324,16 +347,54 @@ def two_objectives(value_of_a_day: float) -> None:
     ax.set_ylim(250, 800)
     ax.set_xlabel("Average delivery time (days)")
     ax.set_ylabel("Cost (€/week)")
-    ax.legend(fontsize=8, loc="lower right")
     ax.spines[["top", "right"]].set_visible(False)
+
+
+@_light
+def pareto() -> None:
+    """§5: the 16 plans on both criteria, and which feasible plans are Pareto-optimal."""
+    fig, ax = plt.subplots(figsize=(8, 4.8))
+    _plot_plans(ax)
+    ax.legend(fontsize=8, loc="upper left")
     plt.show()
-    print(f"A day less of average delivery time is worth {_euros(value_of_a_day)}/week.")
-    print(f"Best plan: {m.name_of(chosen)}, {_euros(m.cost(chosen))}/week and "
-          f"{m.average_delivery_time(chosen):.2f} days.")
-    a = m.NAMED_PLANS["A"]
-    switch = (m.cost(b) - m.cost(a)) / (m.average_delivery_time(a) - m.average_delivery_time(b))
-    print(f"The choice changes from A to B at {_euros(switch)}/week per day. "
-          "For no value is M chosen: B beats it on both criteria (green arrow).")
+    _display(pareto_table())
+
+
+@_light
+def two_objectives(value_of_a_day: float) -> None:
+    """§5: the plan chosen with the single objective cost + V x average delivery time."""
+    v = value_of_a_day
+    chosen = m.solve_weighted(v)
+    best_total = m.total(chosen, v)
+    fig, ax = plt.subplots(figsize=(8, 4.8))
+    _plot_plans(ax, chosen)
+    # All points with the same total as the chosen plan: cost = total - V x time,
+    # a line with slope -V. Feasible plans above it have a higher total.
+    xs = [0.9, 3.0]
+    ax.plot(xs, [best_total - v * x for x in xs], color="black", ls=":", lw=1.2,
+            label=f"cost + {v:g} × time = {best_total:.0f} €/week (slope −{v:g})")
+    ax.legend(fontsize=8, loc="upper left")
+    plt.show()
+
+    print(f"V = {v:g} €/week per day: the company would pay up to {_euros(v)} a week "
+          "to make the average delivery one day shorter.")
+    feasible = sorted((p for p in m.all_plans() if m.is_feasible(p)), key=lambda p: m.total(p, v))
+    _display(pd.DataFrame({
+        m.name_of(p): {
+            "Cost (€/week)": m.cost(p),
+            "Average delivery time (days)": f"{m.average_delivery_time(p):.2f}",
+            f"V × time (€/week)": f"{v * m.average_delivery_time(p):.0f}",
+            "Total (€/week)": f"{m.total(p, v):.0f}",
+        } for p in feasible}).T.rename_axis("Plan"))
+    print(f"Best plan (solver, objective cost + V × time): {m.name_of(chosen)}, "
+          f"total {best_total:.0f} €/week.")
+    a, b = m.NAMED_PLANS["A"], m.NAMED_PLANS["B"]
+    extra = m.cost(b) - m.cost(a)
+    saved = m.average_delivery_time(a) - m.average_delivery_time(b)
+    switch = m.switch_value(a, b)
+    print(f"From A to B: {_euros(extra)}/week more, {saved:.3f} days faster on average. "
+          f"Each day saved costs {extra:g} / {saved:.3f} = {switch:.0f} €/week.")
+    print(f"So A is chosen when V is below {switch:.0f} €/week per day, and B when V is above.")
 
 
 def forecast_table() -> pd.DataFrame:

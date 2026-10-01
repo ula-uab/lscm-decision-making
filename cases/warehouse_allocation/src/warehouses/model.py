@@ -128,10 +128,50 @@ def is_pareto_optimal(plan: dict, plans: list[dict]) -> bool:
     return True
 
 
+def beaten_by(plan: dict, plans: list[dict]) -> list[dict]:
+    """The plans that beat a plan: no worse on both criteria and better on one."""
+    return [other for other in plans
+            if cost(other) <= cost(plan)
+            and average_delivery_time(other) <= average_delivery_time(plan)
+            and (cost(other) < cost(plan)
+                 or average_delivery_time(other) < average_delivery_time(plan))]
+
+
+def total(plan: dict, value_of_a_day: float) -> float:
+    """Cost + value_of_a_day x average delivery time (EUR/week), §5."""
+    return cost(plan) + value_of_a_day * average_delivery_time(plan)
+
+
 def best_weighted(value_of_a_day: float) -> dict:
-    """The feasible plan with the lowest cost + value_of_a_day x average delivery time."""
+    """The feasible plan with the lowest total, found by checking all 16 plans."""
     feasible = [p for p in all_plans() if is_feasible(p)]
-    return min(feasible, key=lambda p: cost(p) + value_of_a_day * average_delivery_time(p))
+    return min(feasible, key=lambda p: total(p, value_of_a_day))
+
+
+def solve_weighted(value_of_a_day: float, capacity: dict = K) -> dict | None:
+    """The model of §5 with one objective, cost + V x average delivery time,
+    written with PuLP and solved with HiGHS. The constraints are those of §2."""
+    model = pulp.LpProblem("warehouse_allocation_two_objectives", pulp.LpMinimize)
+    x = model.add_variable_dicts("x", (W, C), lowBound=0, upBound=1, cat="Integer")
+    total_pallets = sum(d.values())
+    model += (pulp.lpSum(k[w][c] * d[c] * x[w][c] for w in W for c in C)
+              + value_of_a_day * pulp.lpSum(t[w][c] * d[c] * x[w][c] for w in W for c in C)
+              / total_pallets)
+    for c in C:
+        model += pulp.lpSum(x[w][c] for w in W) == 1
+    for w in W:
+        model += pulp.lpSum(d[c] * x[w][c] for c in C) <= capacity[w]
+    model.solve(pulp.HiGHS(msg=False))
+    plan = {c: w for c in C for w in W
+            if x[w][c].value() is not None and x[w][c].value() > 0.5}
+    return plan if len(plan) == len(C) and is_feasible(plan, capacity) else None
+
+
+def switch_value(cheaper: dict, faster: dict) -> float:
+    """Value of a day (EUR/week per day) at which both plans have the same total:
+    the extra cost of the faster plan divided by the days it saves."""
+    return ((cost(faster) - cost(cheaper))
+            / (average_delivery_time(cheaper) - average_delivery_time(faster)))
 
 
 def with_reserve(reserve: float) -> dict:
