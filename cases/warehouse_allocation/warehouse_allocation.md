@@ -185,3 +185,5 @@ Two Python scripts in this folder reproduce every table of this document. Runnin
 | `warehouse_allocation_solver.py` | It writes the model of §2 and lets a solver find the best plan, without listing the plans | The libraries PuLP and HiGHS (`pip install pulp highspy`) |
 
 Both print the same results. With 16 plans, checking them all is quick. With $10^{200}$ plans (§4) it is impossible. A solver does not need to list the plans, so it can often solve problems of that size: how it does so is the subject of the optimisation methods of T2.
+
+The notebook [`notebooks/warehouse_allocation.ipynb`](notebooks/warehouse_allocation.ipynb) goes through §3–§6 step by step, with forms to try your own plans, the value of a faster delivery, other orders of C3 and other safety margins. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/warehouse_allocation/notebooks/warehouse_allocation.ipynb). Its code is in the package `warehouses` of this folder (`src/warehouses/`).

@@ -9,6 +9,7 @@ dependencies = [
     "pulp>=3.3",
     "highspy>=1.7",
     "security-filters",
+    "warehouse-allocation",
 ]
 
 [dependency-groups]
@@ -20,11 +21,12 @@ dev = ["pytest>=8", "ipykernel>=6", "nbconvert>=7", "jupyterlab>=4"]
 package = false
 
 [tool.uv.workspace]
-members = ["cases/security_filters"]
+members = ["cases/security_filters", "cases/warehouse_allocation"]
 
 [tool.uv.sources]
 security-filters = { workspace = true }
+warehouse-allocation = { workspace = true }
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "cases/security_filters/tests"]
+testpaths = ["tests", "cases/security_filters/tests", "cases/warehouse_allocation/tests"]
 addopts = "--import-mode=importlib"
