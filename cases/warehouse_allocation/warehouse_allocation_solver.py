@@ -2,8 +2,9 @@
 #
 # This script reproduces every table of warehouse_allocation.md (same folder):
 # the plan from experience versus the plan from the model (Table 5), the 16
-# possible plans (Table 6), the two objectives (Table 7) and the forecast
-# error of customer C3 (Table 8).
+# possible plans (Table 6), the two objectives (Table 7), the forecast
+# error of customer C3 (Table 8) and the plans under uncertain demand
+# (Tables 9-12).
 #
 # In this version the model of §2 is written with the PuLP library and solved
 # by the HiGHS solver. The other version, warehouse_allocation.py, finds the
@@ -64,6 +65,17 @@ orders_C3 = [33, 36, 34, 38, 31, 35, 37, 32, 36, 34, 35, 35]
 # §6 Order of C3 in week 13 and capacity kept in reserve
 order_C3_week13 = 46
 reserve = 0.10
+
+# §7 Orders of customer C1 in weeks 1-12 and in week 13 (pallets/week),
+# Table 9. C2 and C4 order the same every week, by contract (Table 2).
+orders_C1 = [38, 41, 43, 39, 44, 37, 42, 45, 40, 36, 43, 41]
+order_C1_week13 = 40
+
+# §7 Example of Table 12: weeks of the period, cost of a pallet not served
+# (EUR/pallet) and weeks with a surprise
+period_weeks = 12
+pallet_cost = 100
+surprise_weeks = 1
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +201,38 @@ def is_pareto_optimal(plan, plans):
             return False
     return True
 
+
+# ---------------------------------------------------------------------------
+# §7 Plans under uncertain demand
+# ---------------------------------------------------------------------------
+
+def week_orders(week):
+    """Orders of the four customers in a week, 1 to 13 (Table 9)."""
+    orders = dict(d)                     # C2 and C4: their demand every week
+    if week == 13:
+        orders["C1"], orders["C3"] = order_C1_week13, order_C3_week13
+    else:
+        orders["C1"], orders["C3"] = orders_C1[week - 1], orders_C3[week - 1]
+    return orders
+
+
+def not_served(plan, orders):
+    """Pallets above the capacity of each warehouse, which are not served."""
+    load = loads(plan, orders)
+    return {w: max(0, load[w] - K[w]) for w in W}
+
+
+def forecast_errors(orders):
+    """Errors (orders - forecast) of weeks 5-12 with a 4-week moving average."""
+    return [orders[week - 1] - sum(orders[week - 5:week - 1]) / 4
+            for week in range(5, len(orders) + 1)]
+
+
+def period_cost(plan, n_weeks, cost_of_a_pallet, n_surprises, demand):
+    """Weekly cost times n_weeks, plus the cost of the pallets not served in
+    the n_surprises weeks in which the customers order demand."""
+    lost = sum(not_served(plan, demand).values())
+    return n_weeks * cost(plan) + cost_of_a_pallet * n_surprises * lost, lost
 
 # ---------------------------------------------------------------------------
 # Printing
@@ -362,3 +406,63 @@ if __name__ == "__main__":
           f" at {cost(plan_reserve):.2f} EUR/week")
     print(f"  Cost of the margin: {cost(plan_reserve) - cost(plan_A):.2f}"
           f" EUR/week")
+
+    # §7 Plans under uncertain demand
+    title("§7 Plans under uncertain demand")
+
+    print("Table 9. Orders of C1 and C3 (pallets/week)")
+    print(f"{'Week':<6}" + "".join(f"{week:>5}" for week in range(1, 14)))
+    for c in ("C1", "C3"):
+        print(f"{c:<6}" + "".join(f"{week_orders(week)[c]:>5}" for week in range(1, 14)))
+    print(f"C2 and C4 order {d['C2']} and {d['C4']} pallets every week.")
+
+    print()
+    print("Table 10. The feasible plans week by week (pallets/week)")
+    print(f"{'Plan':<6}{'Smallest margin W1 / W2':>25}{'Not served, week 13':>22}"
+          f"   Weeks 1-12 above capacity")
+    for name, p in zip(names, feasible):
+        over, smallest = [], {w: None for w in W}
+        for week in range(1, 13):
+            load = loads(p, week_orders(week))
+            for w in W:
+                margin = K[w] - load[w]
+                if smallest[w] is None or margin < smallest[w]:
+                    smallest[w] = margin
+                if margin < 0:
+                    over.append(f"{week} ({w})")
+        lost = not_served(p, week_orders(13))
+        lost_text = ", ".join(f"{v} ({w})" for w, v in lost.items() if v) or "0"
+        margins = f"{smallest['W1']} / {smallest['W2']}"
+        print(f"{name:<6}{margins:>25}{lost_text:>22}   {', '.join(over) or 'none'}")
+
+    print()
+    print("Table 11. Forecast error of C1 and C3, weeks 5-12")
+    errors_by_customer = {}
+    for c, orders in (("C1", orders_C1), ("C3", orders_C3)):
+        errs = forecast_errors(orders)
+        errors_by_customer[c] = errs
+        mae = sum(abs(e) for e in errs) / len(errs)
+        mape = 100 * sum(abs(e) / o for e, o in zip(errs, orders[4:])) / len(errs)
+        bias = sum(errs) / len(errs)
+        largest = max(errs)
+        week = 5 + errs.index(largest)
+        print(f"{c}: errors " + ", ".join(f"{e:.2f}" for e in errs))
+        print(f"    MAE {mae:.2f} pallets/week, MAPE {mape:.1f} %,"
+              f" bias {bias:.2f} pallets/week,"
+              f" largest positive error {largest:.2f} (week {week})")
+        print(f"    Forecast for week 13: {sum(orders[-4:]) / 4:.2f} pallets")
+    both = [a + b for a, b in zip(errors_by_customer["C1"], errors_by_customer["C3"])]
+    print("Sum of the errors of C1 and C3 (plan A, W1): "
+          + ", ".join(f"{e:.2f}" for e in both)
+          + f"; largest {max(both):.2f} (week {5 + both.index(max(both))})")
+
+    print()
+    surprise = week_orders(13)
+    print(f"Table 12. Cost of each plan over {period_weeks} weeks"
+          f" (p = {pallet_cost} EUR/pallet, {surprise_weeks} week with a surprise:"
+          f" C1 {surprise['C1']}, C3 {surprise['C3']})")
+    print(f"{'Plan':<6}{'Weekly cost (EUR/week)':>24}{'Not served, surprise week':>28}"
+          f"{'Total cost (EUR)':>19}")
+    for name, p in zip(names, feasible):
+        total, lost = period_cost(p, period_weeks, pallet_cost, surprise_weeks, surprise)
+        print(f"{name:<6}{cost(p):>24.2f}{lost:>28}{total:>19.2f}")
