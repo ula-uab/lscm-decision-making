@@ -1,4 +1,4 @@
-"""Forecast of the orders of C3 with a 4-week moving average, and its error (§6)."""
+"""Forecast of the orders of a customer with a 4-week moving average, and its error (§6, §7)."""
 
 from __future__ import annotations
 
@@ -32,3 +32,8 @@ def accuracy(orders: list[float] = orders_C3, window: int = WINDOW) -> dict:
 def next_week(orders: list[float] = orders_C3, window: int = WINDOW) -> float:
     """Forecast for the week after the last one."""
     return sum(orders[-window:]) / window
+
+
+def largest_positive_error(orders: list[float], window: int = WINDOW) -> tuple[float, int]:
+    """The largest error (orders - forecast) and its week, numbered from 1 (§7)."""
+    return max((e, week) for week, e in enumerate(errors(orders, window), start=1) if e is not None)

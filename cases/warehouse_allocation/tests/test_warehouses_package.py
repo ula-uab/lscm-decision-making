@@ -118,3 +118,75 @@ def test_notebook_runs():
     nb = nbformat.read(NOTEBOOK, as_version=4)
     nbclient.NotebookClient(nb, timeout=120, kernel_name="python3",
                             resources={"metadata": {"path": str(NOTEBOOK.parent)}}).execute()
+
+
+# ---------- §7 Plans under uncertain demand
+
+
+from warehouses import uncertain as u  # noqa: E402
+
+# Table 10: weeks 1-12 above capacity, smallest margin W1 / W2, and week 13 not served
+TABLE_10 = {
+    "A": ([], {"W1": 1, "W2": 15}, {"W1": 6, "W2": 0}),
+    "B": ([], {"W1": 12, "W2": 0}, {"W1": 0, "W2": 0}),
+    "M": ([], {"W1": 5, "W2": 7}, {"W1": 0, "W2": 1}),
+    "D": ([(w, "W2") for w in (2, 3, 5, 7, 8, 11, 12)], {"W1": 17, "W2": -5}, {"W1": 0, "W2": 0}),
+    "E": ([], {"W1": 10, "W2": 2}, {"W1": 0, "W2": 6}),
+}
+
+
+def test_table9_orders():
+    assert [u.week_orders(w)["C1"] for w in range(1, 14)] == [38, 41, 43, 39, 44, 37, 42, 45, 40, 36, 43, 41, 40]
+    assert [u.week_orders(w)["C3"] for w in range(1, 14)] == [33, 36, 34, 38, 31, 35, 37, 32, 36, 34, 35, 35, 46]
+    assert all(u.week_orders(w)["C2"] == 30 and u.week_orders(w)["C4"] == 25 for w in range(1, 14))
+
+
+@pytest.mark.parametrize("name", TABLE_10)
+def test_table10_plans_week_by_week(name):
+    over, smallest, week13 = TABLE_10[name]
+    plan = m.NAMED_PLANS[name]
+    summary = u.summary(plan)
+    assert summary["weeks over capacity"] == over
+    assert summary["smallest margin"] == smallest
+    assert u.unserved(plan, u.week_orders(13)) == week13
+
+
+@pytest.mark.parametrize("customer, errors, mae, mape, bias, largest", [
+    ("C1", [3.75, -4.75, 1.25, 4.50, -2.00, -5.00, 2.25, 0.00], 2.94, 7.3, 0.00, (4.50, 8)),
+    ("C3", [-4.25, 0.25, 2.50, -3.25, 2.25, -1.00, 0.25, 0.75], 1.81, 5.4, -0.31, (2.50, 7)),
+])
+def test_table11_forecast_error(customer, errors, mae, mape, bias, largest):
+    orders = u.ORDERS[customer]
+    assert fc.errors(orders)[4:] == pytest.approx(errors)
+    acc = fc.accuracy(orders)
+    assert round(acc["MAE"], 2) == mae and round(acc["MAPE"], 1) == mape and round(acc["bias"], 2) == bias
+    assert fc.largest_positive_error(orders) == pytest.approx(largest)
+    assert fc.next_week(orders) == d[customer]  # the forecast for week 13 is the demand of Table 2
+
+
+def test_sum_of_the_errors_of_customers_sharing_a_warehouse():
+    shared = u.shared_errors(m.NAMED_PLANS["A"])
+    assert list(shared) == ["W1"]
+    assert shared["W1"] == pytest.approx([-0.50, -4.50, 3.75, 1.25, 0.25, -6.00, 2.50, 0.75])
+    assert max(shared["W1"]) == pytest.approx(3.75)
+    for name in ("B", "M", "D", "E"):
+        assert u.shared_errors(m.NAMED_PLANS[name]) == {}
+
+
+def test_table12_cost_over_a_period():
+    totals = {name: u.period_cost(plan, 12, 100, 1, 40, 46)["total"] for name, plan in m.NAMED_PLANS.items()}
+    assert totals == {"A": 4440, "B": 5400, "M": 5680, "D": 6960, "E": 7740}
+    a = u.period_cost(m.NAMED_PLANS["A"], 12, 100, 3, 40, 46)
+    assert a["not served"] == 3 * 6 and a["total"] == 12 * 320 + 100 * 18
+    with pytest.raises(ValueError):
+        u.period_cost(m.NAMED_PLANS["A"], 4, 100, 5)
+
+
+def test_scripts_print_tables_9_to_12():
+    import subprocess
+    import sys
+    script = Path(__file__).resolve().parents[1] / "warehouse_allocation.py"
+    out = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, check=True).stdout
+    for table in ("Table 9.", "Table 10.", "Table 11.", "Table 12."):
+        assert table in out
+    assert "4440.00" in out and "7740.00" in out

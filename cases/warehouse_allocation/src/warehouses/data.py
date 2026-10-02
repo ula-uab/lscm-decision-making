@@ -28,6 +28,11 @@ orders_C3 = [33, 36, 34, 38, 31, 35, 37, 32, 36, 34, 35, 35]
 order_C3_week13 = 46
 reserve = 0.10
 
+# §7 Orders of customer C1 in weeks 1-12 and in week 13 (pallets/week), Table 9.
+# C2 and C4 order the same every week, by contract: their demand of Table 2.
+orders_C1 = [38, 41, 43, 39, 44, 37, 42, 45, 40, 36, 43, 41]
+order_C1_week13 = 40
+
 # Positions for the schematic map (not to scale): each customer is drawn
 # nearer to the warehouse that is cheaper and faster for it.
 POSITIONS = {

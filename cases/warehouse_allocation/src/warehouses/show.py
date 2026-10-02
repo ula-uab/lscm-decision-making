@@ -465,3 +465,147 @@ def safety_margin(reserve_percent: float, c3_order: float) -> None:
     print()
     check_plan(plan, f"Plan {m.name_of(plan)} when C3 orders {c3_order:g} pallets",
                demand=dict(d, C3=c3_order))
+
+
+# ---------------------------------------------------------------------------
+# §7 Plans under uncertain demand
+# ---------------------------------------------------------------------------
+
+def _plan(name: str) -> dict:
+    if name not in m.NAMED_PLANS:
+        raise ValueError(f"The plan must be one of {', '.join(m.NAMED_PLANS)}.")
+    return m.NAMED_PLANS[name]
+
+
+def orders_table() -> pd.DataFrame:
+    """Table 9: orders of C1 and C3, weeks 1 to 13 (pallets/week)."""
+    from . import uncertain as u
+    weeks = range(1, 14)
+    return pd.DataFrame({f"{c}": [u.week_orders(w)[c] for w in weeks] for c in u.ORDERS},
+                        index=pd.Index(weeks, name="Week")).T
+
+
+def show_orders() -> None:
+    """Table 9 and the orders of C2 and C4."""
+    _display(orders_table())
+    print(f"C2 and C4 order the same every week, by contract: {d['C2']} and {d['C4']} pallets.")
+
+
+def summary_table() -> pd.DataFrame:
+    """Table 10: weeks over capacity and smallest margin of each plan, weeks 1-12, and the
+    pallets not served in week 13."""
+    from . import uncertain as u
+    rows = {}
+    for name, plan in m.NAMED_PLANS.items():
+        s = u.summary(plan)
+        over = s["weeks over capacity"]
+        lost = u.unserved(plan, u.week_orders(13))
+        rows[name] = {
+            "Weeks over capacity (1-12)": ", ".join(f"{wk} ({w})" for wk, w in over) or "none",
+            **{f"Smallest margin {w} (pallets)": s["smallest margin"][w] for w in W},
+            "Not served in week 13 (pallets)": ", ".join(f"{v} ({w})" for w, v in lost.items() if v) or "0",
+        }
+    return pd.DataFrame(rows).T.rename_axis("Plan")
+
+
+@_light
+def plan_by_week(plan_name: str, weeks: str = "1-12") -> None:
+    """A plan week by week: loads, margins and pallets not served, a figure of the loads
+    against the capacities, and Table 10."""
+    from . import uncertain as u
+    plan = _plan(plan_name)
+    weeks = range(1, 13) if weeks == "1-12" else [13]
+    rows = u.week_by_week(plan, weeks)
+    print(f"Plan {plan_name}: " + ", ".join(f"{c} from {plan[c]}" for c in C))
+    _display(pd.DataFrame(rows).set_index("week").rename_axis("Week").T)
+    fig, ax = plt.subplots(figsize=(9, 3.8))
+    x = [r["week"] for r in rows]
+    for w in W:
+        y = [r[f"load {w}"] for r in rows]
+        ax.plot(x, y, marker="o", color=COLOURS[w], label=f"Load {w}")
+        ax.axhline(K[w], color=COLOURS[w], ls="--", lw=1, label=f"Capacity {w} ({K[w]})")
+        over = [(xi, yi) for xi, yi in zip(x, y) if yi > K[w]]
+        if over:
+            ax.scatter(*zip(*over), s=110, facecolor="none", edgecolor=OVER, lw=2, zorder=3)
+    ax.scatter([], [], s=110, facecolor="none", edgecolor=OVER, lw=2, label="Above capacity")
+    ax.set_xticks(x)
+    ax.set_xlabel("Week")
+    ax.set_ylabel("Pallets/week")
+    ax.set_ylim(0, 100)
+    ax.legend(fontsize=8, loc="lower right", ncol=3)
+    ax.spines[["top", "right"]].set_visible(False)
+    plt.show()
+    print("The five plans, weeks 1-12, and the pallets not served in week 13 (Table 10):")
+    _display(summary_table())
+
+
+def customer_forecast(customer: str, plan_name: str) -> None:
+    """Forecast and error of C1 or C3 (Table 11), and, for a plan, the sum of the errors of
+    the customers that share a warehouse."""
+    from . import uncertain as u
+    if customer not in u.ORDERS:
+        raise ValueError("The customer must be C1 or C3: the others order the same every week.")
+    orders = u.ORDERS[customer]
+    table = pd.DataFrame({
+        "Orders": orders,
+        "Forecast": fc.moving_average(orders),
+        "Error (orders − forecast)": fc.errors(orders),
+    }, index=pd.RangeIndex(1, len(orders) + 1, name="Week")).T
+    _display(table.round(2).astype(object).where(table.notna(), "—"))
+    acc = fc.accuracy(orders)
+    largest, week = fc.largest_positive_error(orders)
+    print(f"{customer}, weeks 5-12: MAE {acc['MAE']:.2f} pallets/week · MAPE {acc['MAPE']:.1f} % · "
+          f"bias {acc['bias']:.2f} pallets/week · largest positive error {largest:.2f} (week {week})")
+    print(f"Forecast for week 13: {fc.next_week(orders):.2f} pallets")
+    print()
+    plan = _plan(plan_name)
+    shared = u.shared_errors(plan)
+    if not shared:
+        print(f"In plan {plan_name}, C1 and C3 are served from different warehouses: "
+              "their errors do not add up in any warehouse.")
+        return
+    for w, series in shared.items():
+        names = " and ".join(c for c in u.ORDERS if plan[c] == w)
+        print(f"In plan {plan_name}, {w} serves {names}. Sum of their errors, weeks 5-12 (pallets):")
+        _display(pd.DataFrame({"Sum of errors": series}, index=pd.RangeIndex(5, 5 + len(series), name="Week")).T)
+        top = max(series)
+        print(f"Largest sum: {top:.2f} (week {5 + series.index(top)})")
+
+
+def period_cost_table(n_weeks: int, pallet_cost: float, surprise_weeks: int,
+                      c1_order: float, c3_order: float) -> pd.DataFrame:
+    """Table 12: the cost of each plan kept for n_weeks, ordered from the cheapest."""
+    from . import uncertain as u
+    rows = {}
+    for name, plan in m.NAMED_PLANS.items():
+        c = u.period_cost(plan, n_weeks, pallet_cost, surprise_weeks, c1_order, c3_order)
+        rows[name] = {"Weekly cost c (€/week)": c["weekly cost"],
+                      "Not served in a surprise week (pallets)": c["not served in a surprise week"],
+                      "Not served in the period U (pallets)": c["not served"],
+                      "Total cost N·c + p·U (€)": c["total"]}
+    table = pd.DataFrame(rows).T.rename_axis("Plan")
+    return table.sort_values("Total cost N·c + p·U (€)", kind="stable")
+
+
+@_light
+def period_costs(n_weeks: int, pallet_cost: float, surprise_weeks: int,
+                 c1_order: float, c3_order: float) -> None:
+    """Table 12 and a bar chart of the total cost of each plan."""
+    if surprise_weeks > n_weeks:
+        print(f"The weeks with a surprise ({surprise_weeks}) cannot be more than the weeks of the "
+              f"period ({n_weeks}). Lower s or raise N.")
+        return
+    print(f"N = {n_weeks} weeks · p = {_euros(pallet_cost)}/pallet · s = {surprise_weeks} weeks with a "
+          f"surprise, in which C1 orders {c1_order:g} and C3 orders {c3_order:g} pallets")
+    table = period_cost_table(n_weeks, pallet_cost, surprise_weeks, c1_order, c3_order)
+    _display(table)
+    fig, ax = plt.subplots(figsize=(7, 3.4))
+    totals = table["Total cost N·c + p·U (€)"]
+    bars = ax.bar(totals.index, totals.values, color="0.55")
+    bars[0].set_color("tab:green")
+    for bar, value in zip(bars, totals.values):
+        ax.text(bar.get_x() + bar.get_width() / 2, value, f"{value:,.0f} €", ha="center", va="bottom", fontsize=8)
+    ax.set_ylabel(f"Total cost over {n_weeks} weeks (€)")
+    ax.set_xlabel("Plan, from the cheapest")
+    ax.spines[["top", "right"]].set_visible(False)
+    plt.show()
