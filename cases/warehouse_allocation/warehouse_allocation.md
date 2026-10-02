@@ -178,7 +178,7 @@ This is the weighted sum method: $V$ is the weight given to the delivery time. T
 
 **Where the choice changes.** B saves 0.385 days for 130 €/week more: each day saved costs $130 / 0.385 = 338$ €/week. If a day is worth less than that to the company ($V < 338$ €/week per day), A is chosen; if it is worth more ($V > 338$), B is chosen. At $V = 338$ both have the same total. M, D and E are never chosen, whatever $V$: each is beaten by a plan that is cheaper and faster, which always has a lower total.
 
-**In a figure.** If the plans are drawn with the average delivery time on the horizontal axis and the cost on the vertical one, all the points with the same total $Z$ lie on the line $\text{cost} = Z - V \times \text{time}$, of slope $-V$: along it, one day more of delivery time is compensated by $V$ euros less of cost. The best plan is the feasible plan on the lowest such line. A larger $V$ gives a steeper line, and above 338 the lowest line goes through B instead of A. The notebook of this example draws this line and lets $V$ be changed (§7).
+**In a figure.** If the plans are drawn with the average delivery time on the horizontal axis and the cost on the vertical one, all the points with the same total $Z$ lie on the line $\text{cost} = Z - V \times \text{time}$, of slope $-V$: along it, one day more of delivery time is compensated by $V$ euros less of cost. The best plan is the feasible plan on the lowest such line. A larger $V$ gives a steeper line, and above 338 the lowest line goes through B instead of A. The notebook of this example draws this line and lets $V$ be changed (§8).
 
 The weighted sum is one of several ways of choosing between objectives; another is to minimise the cost with a limit on the delivery time (T3-T).
 
@@ -208,7 +208,97 @@ The forecast for week 13 is $(36 + 34 + 35 + 35)/4 = 35$ pallets, the value used
 
 **Rolling horizon.** In practice the plan is not fixed once: each week new orders arrive, the forecast is updated and the plan is recomputed. This is called planning with a rolling horizon (T3-P).
 
-## 7. Reproducing the numbers
+§7 keeps a plan for several weeks while the orders change, and measures what that costs.
+
+## 7. Plans under uncertain demand
+
+§6 looks at one week: the forecast of C3 fails in week 13, and a reserve of capacity costs money. This section keeps a plan for several weeks while the orders of two customers change. It checks every feasible plan week by week, measures the forecast error of two customers, and computes what each plan costs over a period when a pallet that is not served has a cost.
+
+**The data.** The orders of C1 are now also data of the example (Table 9). They are invented for this course (2026), like the rest of the example. C2 and C4 order the same every week, by contract: 30 and 25 pallets. Only C1 and C3 have orders that change. In week 13, C1 orders 40 pallets, the same as its forecast, and C3 orders 46, as in §6.
+
+Table 9. Orders of C1 and C3 (pallets/week)
+
+| Week | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C1 | 38 | 41 | 43 | 39 | 44 | 37 | 42 | 45 | 40 | 36 | 43 | 41 | 40 |
+| C3 | 33 | 36 | 34 | 38 | 31 | 35 | 37 | 32 | 36 | 34 | 35 | 35 | 46 |
+
+**The assumptions.**
+
+1. The plan, which warehouse serves each customer, is kept for a period of $N$ weeks, with no changes.
+2. Each customer is served from one warehouse. The pallets above the capacity of a warehouse in a week are not served: they are lost (they are not served in another week), and each one costs $p$ € to the company.
+3. Each week is independent of the others: no stock and no pending orders pass from one week to the next.
+4. The cost of a plan in the period is its weekly cost of Table 6 (computed with the forecast demand of Table 2) times $N$, plus $p$ for each pallet not served. The change in the shipping cost when a customer orders more or less than forecast is not counted.
+
+**The plans week by week.** In week $t$, with $D_{ct}$ the order of customer $c$, the *load* of warehouse $w$ is the pallets of the customers it serves, its *margin* is its capacity minus its load, and the pallets *not served* are those above its capacity:
+
+$$
+L_{wt} = \sum_{c \in C} D_{ct}\, x_{wc}, \qquad \text{margin}_{wt} = K_w - L_{wt}, \qquad \text{not served}_{wt} = \max(0,\ L_{wt} - K_w)
+$$
+
+A negative margin is a load above capacity. Table 10 sums up the five feasible plans of Table 6 over weeks 1 to 12, and gives the pallets not served in week 13 (C1 40, C2 30, C3 46, C4 25).
+
+Table 10. The feasible plans week by week (pallets/week)
+
+| Plan | Weeks 1–12 with a load above capacity | Smallest margin W1 / W2, weeks 1–12 | Not served in week 13 |
+|---|---|---|---|
+| A | none | 1 / 15 | 6 (W1) |
+| B | none | 12 / 0 | 0 |
+| M | none | 5 / 7 | 1 (W2) |
+| D | 2, 3, 5, 7, 8, 11, 12 (W2) | 17 / −5 | 0 |
+| E | none | 10 / 2 | 6 (W2) |
+
+**The forecast and its error, for C1 and C3.** The forecast of each customer is the 4-week moving average of §6, and its error is orders − forecast. Besides MAE, MAPE and bias, the *largest positive error* is the largest amount by which the orders exceeded the forecast in weeks 5 to 12:
+
+$$
+e^{+}_{\max} = \max_{t = 5, \dots, 12} e_t
+$$
+
+Table 11 gives the errors and the four measures of both customers.
+
+Table 11. Forecast error of C1 and C3, weeks 5–12
+
+| Customer | Errors, weeks 5–12 (pallets) | MAE (pallets/week) | MAPE | Bias (pallets/week) | Largest positive error (pallets) |
+|---|---|---|---|---|---|
+| C1 | 3.75, −4.75, 1.25, 4.50, −2.00, −5.00, 2.25, 0.00 | 2.94 | 7.3 % | 0.00 | 4.50 (week 8) |
+| C3 | −4.25, 0.25, 2.50, −3.25, 2.25, −1.00, 0.25, 0.75 | 1.81 | 5.4 % | −0.31 | 2.50 (week 7) |
+
+The forecast for week 13 is 40.00 pallets for C1 and 35.00 for C3, the demand of Table 2.
+
+When two customers whose orders change share a warehouse, their errors add up in it. In plan A, W1 serves C1 and C3; the sum of their errors in weeks 5 to 12 is −0.50, −4.50, 3.75, 1.25, 0.25, −6.00, 2.50 and 0.75 pallets, and the largest is 3.75 (week 7). With the forecast demand, W1 has 5 pallets of spare capacity in plan A (§6). In the other four plans, C1 and C3 are served from different warehouses.
+
+**The cost of a plan over a period.** Over a period of $N$ weeks, the cost of a plan is
+
+$$
+\text{total cost} = N \cdot c + p \cdot U
+$$
+
+where:
+
+- $c$ is the weekly cost of the plan (€/week, Table 6);
+- $N$ is the number of weeks of the period;
+- $p$ is the cost of a pallet that is not served (€/pallet);
+- $U$ is the number of pallets not served in the period.
+
+In the weeks of the period without a surprise, every customer orders its forecast demand and every feasible plan serves all its pallets. In $s$ weeks with a surprise, C1 and C3 order more or less than forecast (by default, 40 and 46 pallets, as in week 13). Then $U = s \cdot u$, where $u$ is the number of pallets the plan does not serve in one week with a surprise.
+
+Table 12 is an example with $N = 12$ weeks, $p = 100$ €/pallet and one week with a surprise, in which C1 orders 40 and C3 orders 46 pallets.
+
+Table 12. Cost of each plan over 12 weeks ($p = 100$ €/pallet, one week with a surprise)
+
+| Plan | Weekly cost $c$ (€/week) | Not served in the week with a surprise, $u$ (pallets) | Total cost $N \cdot c + p \cdot U$ (€) |
+|---|---|---|---|
+| A | 320 | 6 | 4,440 |
+| B | 450 | 0 | 5,400 |
+| M | 465 | 1 | 5,680 |
+| D | 580 | 0 | 6,960 |
+| E | 595 | 6 | 7,740 |
+
+The ranking of the plans depends on $p$, $N$, $s$ and the orders in a week with a surprise.
+
+**Doing these calculations.** Everything in this section can be computed by hand with the formulas above and the data of Tables 2, 6 and 9. Section 7 of the [notebook](notebooks/warehouse_allocation.ipynb) does them for any plan, customer and values of $N$, $p$ and $s$, and the two scripts of §8 print Tables 9 to 12.
+
+## 8. Reproducing the numbers
 
 Two Python scripts in this folder reproduce every table of this document. Running them is optional: it is not part of what is assessed in the course. How to install and run each one is explained at the top of the file.
 
@@ -219,4 +309,4 @@ Two Python scripts in this folder reproduce every table of this document. Runnin
 
 Both print the same results. With 16 plans, checking them all is quick. With $10^{200}$ plans (§4) it is impossible. A solver does not need to list the plans, so it can often solve problems of that size: how it does so is the subject of the optimisation methods of T2.
 
-The notebook [`notebooks/warehouse_allocation.ipynb`](notebooks/warehouse_allocation.ipynb) goes through §3–§6 step by step, with forms to try your own plans, the value of a faster delivery, other orders of C3 and other safety margins. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/warehouse_allocation/notebooks/warehouse_allocation.ipynb). Its code is in the package `warehouses` of this folder (`src/warehouses/`).
+The notebook [`notebooks/warehouse_allocation.ipynb`](notebooks/warehouse_allocation.ipynb) goes through §3–§7 step by step, with forms to try your own plans, the value of a faster delivery, other orders of C3, other safety margins and, in its section 7, plans kept for several weeks under uncertain demand. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/warehouse_allocation/notebooks/warehouse_allocation.ipynb). Its code is in the package `warehouses` of this folder (`src/warehouses/`).
