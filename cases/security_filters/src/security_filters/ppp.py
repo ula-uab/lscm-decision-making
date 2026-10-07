@@ -1,8 +1,8 @@
-"""PPP of the airport: passengers who arrive at the filters in each slot.
+"""PPP of the airport: passengers who arrive at the security checkpoint in each slot.
 
 The calculations follow §6 of the design of the case:
 
-- passengers of a flight who go through the filters (Equations E.7 to E.9):
+- passengers of a flight who go through security screening (Equations E.7 to E.9):
   ``B = round(L A)``, ``R = round(T B)``, ``Q = B - R``;
 - whole passengers in each slot of the flight (Equation E.11): the
   cumulative number of passengers up to each slot is rounded, and the
@@ -42,7 +42,7 @@ def round_half_up(x) -> np.ndarray:
 
 
 def flight_passengers(seats, load_factor, transit_share) -> tuple:
-    """Passengers who fly ``B``, in transit ``R`` and through the filters
+    """Passengers who fly ``B``, in transit ``R`` and through security screening
     ``Q`` (Equations E.7 to E.9). Arguments can be numbers or arrays."""
     boarding = round_half_up(np.asarray(load_factor, dtype=float) * np.asarray(seats, dtype=float))
     transit = round_half_up(np.asarray(transit_share, dtype=float) * boarding)

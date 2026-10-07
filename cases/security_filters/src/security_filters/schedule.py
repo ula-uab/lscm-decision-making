@@ -94,7 +94,7 @@ def flights_of_day(schedule: pd.DataFrame, day: dt.date | str) -> pd.DataFrame:
 
 def flights_for_curve(schedule: pd.DataFrame, day: dt.date | str,
                       max_slots_before: int = 29) -> pd.DataFrame:
-    """Flights whose passengers can arrive at the filters on ``day``.
+    """Flights whose passengers can arrive at the security checkpoint on ``day``.
 
     These are the flights of ``day`` and the flights of the next day that
     depart early enough for some of their passengers to arrive before

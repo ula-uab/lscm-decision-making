@@ -1,8 +1,8 @@
-"""Passengers who go through the filters after the closing of the gate of
+"""Passengers who go through security screening after the closing of the gate of
 their flight, with a capacity plan applied to a demand (design, §7,
 assumptions 14 to 16).
 
-Each passenger arrives at the filters in a slot of the day, and the gate of
+Each passenger arrives at the security checkpoint in a slot of the day, and the gate of
 his or her flight closes at the end of a later slot: ``k`` is the number of
 slots from the slot of arrival to that slot, counting both (``k = 1`` when
 the gate closes at the end of the slot of arrival). The queue is served in
@@ -14,7 +14,7 @@ passengers still waiting, in whole passengers (largest remainders), so the
 same data always give the same figures.
 
 A passenger misses the closing if he or she goes through after the slot
-that ends when the gate closes, minus the walk from the filters to the gate.
+that ends when the gate closes, minus the walk from the security checkpoint to the gate.
 With a walk of ``m`` slots, the passengers with ``k <= m`` would miss it
 even with no queue: they are counted apart, and only the rest is due to the
 queue. Nobody leaves the queue, and there is no priority lane.

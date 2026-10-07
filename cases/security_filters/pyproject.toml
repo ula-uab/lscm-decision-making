@@ -1,7 +1,7 @@
 [project]
 name = "security-filters"
 version = "0.1.0"
-description = "Passengers arriving at airport security filters: presentation curve, queues and scenarios (course case, UAB)"
+description = "Passengers arriving at the airport security checkpoint: presentation curve, queues and scenarios (course case, UAB)"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Juan José Ramos", email = "juanjose.ramos@uab.es" }]

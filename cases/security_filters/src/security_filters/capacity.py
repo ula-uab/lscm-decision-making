@@ -1,7 +1,7 @@
-"""Capacity plan of the filters (phase 5).
+"""Capacity plan of security screening (phase 5).
 
-The airport sets the capacity of the filters before the day starts by
-opening more or fewer lanes. Two parameters describe the filters (lecturer,
+The airport sets the screening capacity before the day starts by
+opening more or fewer lanes. Two parameters describe the screening lanes (lecturer,
 06/10/2026):
 
 - ``lanes_available``: the number of lanes, L (10 by default);

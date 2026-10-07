@@ -1,10 +1,10 @@
-"""Queue at the filters when a capacity plan meets the real PPP (phase 6).
+"""Queue at security screening when a capacity plan meets the real PPP (phase 6).
 
 For each slot t of the day, a_t passengers arrive and the plan gives a
 capacity c_t (open lanes times the capacity of a lane):
 
 - the queue starts empty at 00:00;
-- s_t = min(q_{t-1} + a_t, c_t) passengers go through the filters;
+- s_t = min(q_{t-1} + a_t, c_t) passengers go through security screening;
 - q_t = q_{t-1} + a_t - s_t wait in the queue at the end of the slot;
 - u_t = c_t - s_t is the unused capacity.
 

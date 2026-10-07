@@ -1116,7 +1116,7 @@ class QueuePanel:
                    if result.longest_wait_arrival_slot is not None else "no passengers")
         share = result.unused_capacity / capacity_of_day if capacity_of_day else 0
         self.summary_text.value = (
-            f"<b>Passengers of the day:</b> {result.passengers:,}; they go through the filters: "
+            f"<b>Passengers of the day:</b> {result.passengers:,}; they go through security screening: "
             f"{int(result.day['served'].sum()):,}<br>"
             f"<b>Mean wait:</b> {result.mean_wait_min:.2f} minutes<br>"
             f"<b>Longest wait:</b> {longest}<br>"
@@ -1131,14 +1131,14 @@ class QueuePanel:
     def _missed_line(missed) -> str:
         walk = missed.walk_min
         if missed.by_queue == 0 and missed.anyway == 0 and missed.complete:
-            return "<b>No passenger goes through the filters after his or her gate closes.</b>"
+            return "<b>No passenger goes through security screening after his or her gate closes.</b>"
         number = f"{missed.by_queue:,}" if missed.complete else f"at least {missed.by_queue:,}"
         flights = f" ({len(missed.flights)} flights)" if missed.flights is not None else ""
         if walk == 0:
-            text = (f"<b>Passengers who go through the filters after their gate closes:</b> "
+            text = (f"<b>Passengers who go through security screening after their gate closes:</b> "
                     f"{number}{flights}")
         else:
-            text = (f"<b>Passengers who go through the filters after their gate closes, with a walk "
+            text = (f"<b>Passengers who go through security screening after their gate closes, with a walk "
                     f"of {walk} minutes to the gate, because of the queue:</b> {number}{flights}; "
                     f"another {missed.anyway:,} would miss it even with no queue")
         if not missed.complete:

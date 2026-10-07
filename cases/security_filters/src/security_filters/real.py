@@ -1,4 +1,4 @@
-"""Real PPPs of the airport: the passengers who arrived at the filters in
+"""Real PPPs of the airport: the passengers who arrived at the security checkpoint in
 each 5-minute slot, one PPP per day from 16/07/2008 to 31/07/2008.
 
 They are what the student compares his or her scenarios with. They are

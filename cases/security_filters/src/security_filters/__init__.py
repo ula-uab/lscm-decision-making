@@ -1,4 +1,4 @@
-"""Security filters case: passengers arriving at the airport security filters.
+"""Security filters case: passengers arriving at the airport security checkpoint.
 
 Workflow:
 

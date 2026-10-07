@@ -1,4 +1,4 @@
-"""Queue at the filters (phase 6). The expected numbers were computed by the
+"""Queue at security screening (phase 6). The expected numbers were computed by the
 lecturer's design session with the queue model of the brief; the data are
 set here. Tests 2 and 3 use the real PPPs: if the generator changes, their
 numbers are computed again, the code is not adjusted."""

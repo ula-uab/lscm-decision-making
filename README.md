@@ -10,7 +10,7 @@ Each case lives in its own folder under `cases/`, with a document that explains 
 | Case | Topic | What it shows |
 |---|---|---|
 | [`warehouse_allocation`](cases/warehouse_allocation/) | T1 · Introduction | Which warehouse serves each customer: rule of thumb versus model, number of plans, two objectives, forecast error. Scripts, and a notebook that opens in Google Colab |
-| [`security_filters`](cases/security_filters/) | Airport operations | Passengers arriving at the security filters: presentation curve under demand scenarios, lane policies compared in a decision table, and evaluation against the observed day. Package with notebooks that open in Google Colab |
+| [`security_filters`](cases/security_filters/) | Airport operations | Passengers arriving at the security checkpoint: presentation curve under demand scenarios, lane policies compared in a decision table, and evaluation against the observed day. Package with notebooks that open in Google Colab |
 
 ## Running the cases
 
