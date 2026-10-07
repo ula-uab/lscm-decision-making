@@ -1,0 +1,19 @@
+{
+  "name": "LSCM Decision Making",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/astral-sh/uv-devcontainer-feature/uv:1": {}
+  },
+  "postCreateCommand": "uv sync && uv run python -m ipykernel install --user --name lscm-decision-making --display-name 'LSCM Decision Making'",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-toolsai.jupyter"],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python"
+      }
+    },
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  }
+}
