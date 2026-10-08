@@ -8,7 +8,9 @@ authors = [{ name = "Juan José Ramos", email = "juanjose.ramos@uab.es" }]
 dependencies = [
     "pulp>=3.3",
     "highspy>=1.7",
+    "production-plan",
     "security-filters",
+    "supplier-selection",
     "warehouse-allocation",
 ]
 
@@ -27,12 +29,25 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["cases/security_filters", "cases/warehouse_allocation"]
+members = [
+    "cases/production_plan",
+    "cases/security_filters",
+    "cases/supplier_selection",
+    "cases/warehouse_allocation",
+]
 
 [tool.uv.sources]
+production-plan = { workspace = true }
 security-filters = { workspace = true }
+supplier-selection = { workspace = true }
 warehouse-allocation = { workspace = true }
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "cases/security_filters/tests", "cases/warehouse_allocation/tests"]
+testpaths = [
+    "tests",
+    "cases/production_plan/tests",
+    "cases/security_filters/tests",
+    "cases/supplier_selection/tests",
+    "cases/warehouse_allocation/tests",
+]
 addopts = "--import-mode=importlib"
