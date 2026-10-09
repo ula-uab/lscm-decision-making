@@ -61,12 +61,12 @@ def price_table() -> pd.DataFrame:
 
 
 def cost_table() -> pd.DataFrame:
-    """Annual cost c[s][m] of buying the whole volume of m from s (k€/year)."""
+    """Table 2: annual cost c[s][m] of buying the whole volume of m from s (k€/year)."""
     return pd.DataFrame({s: {m: c[s].get(m, "–") for m in M} for s in S}).T.rename_axis("Supplier")
 
 
 def scorecard_table() -> pd.DataFrame:
-    """Table 2: scorecard of each supplier, weighted score and whether it is acceptable."""
+    """Table 3: scorecard of each supplier, weighted score and whether it is acceptable."""
     rows = {s: {**{f"{k} ({100 * WEIGHTS[k]:.0f} %)": SCORES[s][k] for k in CRITERIA},
                 "Weighted score q": round(q[s], 2),
                 "Acceptable (q ≥ 6)": "yes" if q[s] >= MIN_SCORE else "no"} for s in S}
@@ -218,7 +218,7 @@ def check_selection(suppliers) -> float | None:
 # ---------------------------------------------------------------------------
 
 def selections_table() -> pd.DataFrame:
-    """Table 4: the 21 selections that cover every component, from the cheapest."""
+    """Table 6: the 21 selections that cover every component, from the cheapest."""
     optima = set(ls.local_optima(sel.covering_selections()))
     rows = []
     for rank, s in enumerate(sel.covering_selections(), start=1):
@@ -343,7 +343,7 @@ def relaxation() -> None:
 
 
 def tree_table(nodes: list[dict]) -> pd.DataFrame:
-    """One row per node of a branch-and-bound tree (Tables 6 and 7)."""
+    """One row per node of a branch-and-bound tree (Tables 10 and 11)."""
     rows = []
     for n in nodes:
         rows.append({

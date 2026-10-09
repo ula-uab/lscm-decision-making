@@ -20,7 +20,8 @@ PRICE = {
     "F": {"batteries": 130},
 }
 
-# Annual cost c[s][m] of buying the whole volume of m from s (kEUR/year):
+# Annual cost c[s][m] of buying the whole volume of m from s (kEUR/year),
+# Table 2:
 # price x 5,000 units / 1,000
 c = {s: {m: PRICE[s][m] * VOLUME / 1000 for m in PRICE[s]} for s in S}
 
@@ -28,12 +29,12 @@ c = {s: {m: PRICE[s][m] * VOLUME / 1000 for m in PRICE[s]} for s in S}
 # audits, quality engineering and contract management
 f = {s: 50 for s in S}
 
-# Criteria of the supplier scorecard and their weights, Table 2
+# Criteria of the supplier scorecard and their weights, Table 3
 CRITERIA = ["Quality", "Delivery reliability", "Sustainability", "Financial strength"]
 WEIGHTS = {"Quality": 0.35, "Delivery reliability": 0.25, "Sustainability": 0.20,
            "Financial strength": 0.20}
 
-# Score of each supplier on each criterion (points, 0-10), Table 2
+# Score of each supplier on each criterion (points, 0-10), Table 3
 SCORES = {
     "A": {"Quality": 8, "Delivery reliability": 7, "Sustainability": 6, "Financial strength": 7},
     "B": {"Quality": 7, "Delivery reliability": 8, "Sustainability": 7, "Financial strength": 6},
