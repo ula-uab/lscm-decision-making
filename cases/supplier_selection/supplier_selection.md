@@ -1,6 +1,6 @@
 # Supplier selection for an electric bicycle assembler
 
-A company that assembles electric bicycles decides which suppliers to contract and which supplier each component is bought from. This document follows that decision from a weighted decision matrix to an integer model. It compares the rule a buyer would apply with the optimal selection of the model and with a local search, and it uses a reduced version of the problem to show how an integer model is solved. It contains all the data and all the results, so that anyone can follow and check them. The production plan of the same company is a separate example, [`production_plan`](../production_plan/production_plan.md).
+A company that assembles electric bicycles decides which suppliers to contract and which supplier each component is bought from. This document follows that decision from a weighted decision matrix to an integer model. It compares the rule a buyer would apply with the optimal selection of the model and with a local search, and it uses a reduced version of the problem to show how an integer model is solved. It also compares the rule with buying everything from the distributor when a supplier may stop delivering, with a decision tree (§8). It contains all the data and all the results, so that anyone can follow and check them. The production plan of the same company is a separate example, [`production_plan`](../production_plan/production_plan.md).
 
 ## 1. Components, suppliers and costs
 
@@ -117,6 +117,8 @@ Table 4. Decision matrix for the batteries, with the price weighing 40 % (points
 | B | 140 | 4.44 | 7.05 | 6.01 |
 | E | 148 | 0.00 | 7.50 | 4.50 |
 
+**Price score and the offers compared.** $p_{\max}$ and $p_{\min}$ are taken among the suppliers whose offers are compared. If the offer of F is left out and only B, C and E are compared, the lowest price is 136 €/unit (C) and the highest is still 148 €/unit (E). The price scores become 10.00 for C, 6.67 for B and 0.00 for E, and the scores with the price 8.77, 6.90 and 4.50. The order of C, B and E is the same as in Table 4, but the score of B goes from 6.01 to 6.90 although nothing about B has changed. With this way of scoring the price, adding or removing one offer can change the order of two other suppliers.
+
 F comes second with a quality score of 4: in a weighted sum, a low price makes up for poor quality. This is why the company uses the scorecard only to decide which suppliers are acceptable ($q_s \ge 6$), and decides in euros among the acceptable ones. For the batteries the choice is C, at 680 k€/year. In the description of Ivanov et al. (2025, §5.4.2), the scoring of suppliers produces a shortlist, and the final choice is made in the negotiation of the commercial conditions; when the scores of two suppliers are close, the ranking has to be checked against changes in the weights and the scores.
 
 ## 4. Buyer's rule and the distributor alone
@@ -141,7 +143,7 @@ The rule contracts four suppliers. Without fixed costs it would give the best se
 
 **The distributor alone.** E is the cheapest supplier of no component, so the rule never chooses it. Buying everything from E costs $2{,}530 + 50 = 2{,}580$ k€/year, 50 k€/year less than the rule: E is dearer for every component, but one supplier instead of four saves 150 k€/year of fixed costs.
 
-How many suppliers to have is itself a decision. Concentrating the volume in fewer suppliers lowers costs, and depending on one supplier is a risk (Ivanov et al., 2025, §5.3.1). The model of §2 counts only costs; the risk of depending on few suppliers is not in it.
+How many suppliers to have is itself a decision. Concentrating the volume in fewer suppliers lowers costs, and depending on one supplier is a risk (Ivanov et al., 2025, §5.3.1). The model of §2 counts only costs; the risk of depending on few suppliers is not in it. §8 compares the rule with the distributor alone when a supplier may stop delivering.
 
 ## 5. Number of selections and optimal selection
 
@@ -283,21 +285,60 @@ Table 11. Branch and bound with one constraint per supplier, $\sum_{m} x_{sm} \l
 
 The relaxation of every node has a single optimal solution (checked by minimising and maximising each variable at the optimal cost), so the trees do not depend on the solver used. Both ways of writing the model are correct and give the same optimum; the first one gives higher bounds and a tree of 3 nodes instead of 9. How a model is written changes the work of the solver. With the model of §2, the relaxation of the full case of §5 already has the integer solution C, E (2,545 k€/year) at the first node.
 
-**Constraint programming.** The same reduced version can be written as a constraint programming model, with one variable per component whose domain is the set of its acceptable suppliers: frames $\in \{A, C\}$, motors $\in \{A, B\}$, batteries $\in \{B, C\}$. There are $2 \times 2 \times 2 = 8$ combinations of values. The contracted suppliers are the distinct values taken by the three variables, and the cost of a combination is the cost of the three purchases plus 50 k€/year for each distinct supplier. The scripts of §8 do not solve this version.
+**Constraint programming.** The same reduced version can be written as a constraint programming model, with one variable per component whose domain is the set of its acceptable suppliers: frames $\in \{A, C\}$, motors $\in \{A, B\}$, batteries $\in \{B, C\}$. There are $2 \times 2 \times 2 = 8$ combinations of values. The contracted suppliers are the distinct values taken by the three variables, and the cost of a combination is the cost of the three purchases plus 50 k€/year for each distinct supplier. The scripts of §9 do not solve this version.
 
-## 8. Reproducing the numbers
+## 8. Decision tree with a supplier that may stop delivering
 
-Three Python scripts in this folder reproduce the tables of this document, one per method. Running them is optional: it is support material, not part of what is assessed. How to install and run each one is explained at the top of the file.
+**Decision tree.** A decision tree compares strategies whose result depends on events that the company does not control. It starts at a decision node, with one branch for each strategy compared. Each strategy leads to a chance node, with one branch for each outcome of the event and its probability; here, the event is that the uncertain supplier of the strategy stops delivering during the year. At the end of each branch is the annual cost of the strategy with that outcome. The expected cost of a strategy is the sum of the costs of its branches, each multiplied by its probability: the expected monetary value of the strategy, written as a cost (Ivanov et al., 2025, §9.3.6).
+
+**Data of the tree.** The tree compares two strategies of §4: buying everything from E (2,580 k€/year) and the buyer's rule (2,630 k€/year). The tree rests on one assumption: in each strategy, only a supplier that serves more than one component is uncertain, and the suppliers that serve one component are treated as reliable. With everything from E, E serves the six components and is the uncertain supplier. With the buyer's rule, C serves three components (frames, batteries and wheels) and is the uncertain supplier; A, B and D serve one each. The probability that a supplier stops delivering during the year is 0.05 for E and 0.10 for C; C has the lower delivery reliability score of the two, 8 against 9 (Table 3). When a supplier stops, each of its components is moved to another supplier at short notice, at a cost of 100 k€ per component: lost assembly, urgent transport and qualification of the new supplier. The annual cost of a year in which a supplier stops is the planned cost plus 100 k€ for each component of that supplier. These data are invented.
+
+Table 12 gives the four branches of the tree, two per strategy.
+
+Table 12. Branches of the decision tree
+
+| Strategy | Uncertain supplier | Outcome | Probability | Annual cost (k€/year) |
+|---|---|---|---|---|
+| Everything from E | E | E keeps delivering | 0.95 | 2,580 |
+| Everything from E | E | E stops: 6 components moved | 0.05 | 2,580 + 6 × 100 = 3,180 |
+| Buyer's rule | C | C keeps delivering | 0.90 | 2,630 |
+| Buyer's rule | C | C stops: 3 components moved | 0.10 | 2,630 + 3 × 100 = 2,930 |
+
+Table 13 gives, for each strategy, the planned cost (the year in which every supplier delivers), the expected cost and the worst case, the cost of its dearest branch.
+
+Table 13. Planned cost, expected cost and worst case of each strategy (k€/year)
+
+| Strategy | Planned cost | Expected cost | Worst case |
+|---|---|---|---|
+| Everything from E | 2,580 | 0.95 × 2,580 + 0.05 × 3,180 = 2,610 | 3,180 |
+| Buyer's rule | 2,630 | 0.90 × 2,630 + 0.10 × 2,930 = 2,660 | 2,930 |
+
+**Expected cost and worst case.** Buying everything from E has the lower expected cost, 2,610 against 2,660 k€/year, and the higher worst case, 3,180 against 2,930 k€/year. The expected cost is not the cost of any year: in a given year only one branch happens, and buying everything from E costs 2,580 or 3,180 k€/year, never 2,610. Choosing the strategy with the lower expected cost treats the company as indifferent to risk: a year at 3,180 k€ counts only through its probability, 0.05. With one supplier, the risk is concentrated in one event: when E stops, the six components have to be moved at once. The cost savings of a single supplier can be outweighed by the cost of a disruption (Ivanov et al., 2025, §5.3.1).
+
+**Threshold probability.** If $p$ is the probability that E stops, the expected cost of buying everything from E is $2{,}580 + 600\,p$ k€/year: with probability $p$, the six components are moved at 100 k€ each. It equals the expected cost of the buyer's rule when
+
+$$
+2{,}580 + 600\,p = 2{,}660, \qquad p = \frac{80}{600} = 0.133
+$$
+
+Buying everything from E has the lower expected cost while the probability that E stops is below 0.133. With the probability of Table 12, 0.05, it is.
+
+**Size of the tree.** A decision tree evaluates only the strategies drawn in it. A tree with one branch for each of the 21 selections that cover the six components (Table 6), in which any contracted supplier could stop, would give each selection of $k$ suppliers $2^k$ outcomes, since each supplier stops or does not. It would have $1 \times 2 + 4 \times 4 + 10 \times 8 + 5 \times 16 + 1 \times 32 = 210$ final branches: 1 selection of one supplier, 4 of two, 10 of three, 5 of four and 1 of five. The optimum of the model, C, E, is not in the tree of Tables 12 and 13. The model of §2 still counts only costs: its optimum is the cheapest selection in a year in which every supplier delivers.
+
+## 9. Reproducing the numbers
+
+Four Python scripts in this folder reproduce the tables of this document, one per method. Running them is optional: it is support material, not part of what is assessed. How to install and run each one is explained at the top of the file.
 
 | Script | What it prints | What must be installed |
 |---|---|---|
-| `supplier_selection_rule.py` | The weighted scores, the decision matrix of the batteries (Table 4), the buyer's rule (Table 5) and the distributor alone | Nothing beyond Python |
+| `supplier_selection_rule.py` | The weighted scores, the decision matrix of the batteries (Table 4) and the same matrix without F (§3), the buyer's rule (Table 5) and the distributor alone | Nothing beyond Python |
 | `supplier_selection_local_search.py` | The buyer's rule, the 31 sets of suppliers and the 21 that cover every component (Table 6), the local search from the selection of the rule (Table 8) and from a selection set at the top of the script, and the local optima | Nothing beyond Python |
 | `supplier_selection_solver.py` | The buyer's rule, the optimal selection of the model (Table 7), the costs of the reduced version (Table 9), its linear relaxation and rounding, and the two branch-and-bound trees (Tables 10 and 11) | The libraries PuLP and HiGHS (`pip install pulp highspy`) |
+| `supplier_selection_decision_tree.py` | The buyer's rule, the distributor alone, the branches of the decision tree (Table 12), the planned cost, expected cost and worst case of each strategy (Table 13), the threshold probability and the 210 final branches of a tree with every selection | Nothing beyond Python |
 
-The three scripts print the buyer's rule in the same way, so that the three methods can be compared on the same data. In the branch-and-bound trees, HiGHS only solves the linear relaxation of each node; the branching, the order of the nodes and the closing rules are written in the script.
+The four scripts print the buyer's rule in the same way, so that the three methods can be compared on the same data. In the branch-and-bound trees, HiGHS only solves the linear relaxation of each node; the branching, the order of the nodes and the closing rules are written in the script.
 
-The notebook [`notebooks/supplier_selection.ipynb`](notebooks/supplier_selection.ipynb) goes through §1–§7 step by step, with forms to change the weight of the price in the decision matrix, to price any selection of suppliers and to start the local search from any selection. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/supplier_selection/notebooks/supplier_selection.ipynb). Its code is in the package `suppliers` of this folder (`src/suppliers/`).
+The notebook [`notebooks/supplier_selection.ipynb`](notebooks/supplier_selection.ipynb) goes through §1–§8 step by step, with forms to change the weight of the price in the decision matrix and to leave the offer of F out of it, to price any selection of suppliers, to start the local search from any selection, and to change the probabilities that E and C stop delivering and the cost of moving a component in the decision tree. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/supplier_selection/notebooks/supplier_selection.ipynb). Its code is in the package `suppliers` of this folder (`src/suppliers/`).
 
 ## References
 
@@ -307,4 +348,4 @@ Stadtler, H. (2015). Purchasing and material requirements planning. In H. Stadtl
 
 ---
 
-The data of this example are invented (2026); they do not describe a real company.
+The data of this example are invented (2026); they do not describe a real company. The probabilities that a supplier stops delivering and the cost of moving a component to another supplier are also invented.

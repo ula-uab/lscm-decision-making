@@ -11,12 +11,13 @@ import functools
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from . import decision_tree as dt
 from . import local_search as ls
 from . import matrix as mx
 from . import model as mo
 from . import selection as sel
-from .data import (CRITERIA, MIN_SCORE, PRICE, PRICE_WEIGHT, REDUCED_M, REDUCED_S, SCORES, VOLUME,
-                   WEIGHTS, M, S, c, f, q)
+from .data import (CRITERIA, MIN_SCORE, MOVE_COST, PRICE, PRICE_WEIGHT, REDUCED_M, REDUCED_S, SCORES,
+                   STOP_PROBABILITY, VOLUME, WEIGHTS, M, S, c, f, q)
 
 FIXED = "tab:orange"
 PURCHASE = "tab:blue"
@@ -90,14 +91,16 @@ def show_data() -> None:
 # ---------------------------------------------------------------------------
 
 @_light
-def batteries_matrix(price_weight_percent: float = 100 * PRICE_WEIGHT) -> None:
+def batteries_matrix(price_weight_percent: float = 100 * PRICE_WEIGHT, include_f: bool = True) -> None:
     """The decision matrix of the batteries without the price and with the price
-    weighing price_weight_percent %."""
+    weighing price_weight_percent %. With include_f False, F's offer is left out
+    of the comparison."""
     w = price_weight_percent / 100
-    suppliers = mx.offering("batteries")
-    ps = mx.price_scores("batteries")
+    compared = S if include_f else [s for s in S if s != "F"]
+    suppliers = mx.offering("batteries", compared)
+    ps = mx.price_scores("batteries", compared)
     weights = mx.weights_with_price(w)
-    with_price = mx.with_price("batteries", w)
+    with_price = mx.with_price("batteries", w, compared)
     table = pd.DataFrame({s: {
         **{f"{k} ({100 * weights[k]:.0f} %)": SCORES[s][k] for k in CRITERIA},
         f"Price score ({100 * w:.0f} %)": round(ps[s], 2),
@@ -108,9 +111,18 @@ def batteries_matrix(price_weight_percent: float = 100 * PRICE_WEIGHT) -> None:
     _display(table.sort_values("Score with price", ascending=False))
     order = mx.ranking(with_price)
     print("Ranking with the price: " + " > ".join(f"{s} ({with_price[s]:.2f})" for s in order))
-    if order[0] == "F" or order.index("F") < order.index("E"):
+    if "F" in order and order.index("F") < order.index("E"):
         print(f"F, with a quality score of {SCORES['F']['Quality']}, is ranked above suppliers with a "
               "much better scorecard: a low price makes up for poor quality.")
+    if not include_f:
+        prices = [PRICE[s]["batteries"] for s in suppliers]
+        print(f"Without F, the lowest price compared is {min(prices)} €/unit and the highest "
+              f"{max(prices)} €/unit.")
+        if w > 0:
+            all_offers = mx.with_price("batteries", w)
+            print("Score with the price, with F → without F: "
+                  + "; ".join(f"{s} {all_offers[s]:.2f} → {with_price[s]:.2f}" for s in order) + ".")
+            print("Nothing has changed in B, C or E: only the offers compared.")
 
     fig, ax = plt.subplots(figsize=(7, 3.2))
     xs = range(len(suppliers))
@@ -121,7 +133,8 @@ def batteries_matrix(price_weight_percent: float = 100 * PRICE_WEIGHT) -> None:
     ax.set_xticks(list(xs), suppliers)
     ax.set_ylim(0, 10)
     ax.set_ylabel("Weighted score (points)")
-    ax.set_title("Batteries: weighted score of each supplier", fontsize=10)
+    ax.set_title("Batteries: weighted score of each supplier"
+                 + ("" if include_f else " (F left out of the comparison)"), fontsize=10)
     ax.legend(fontsize=8, loc="upper right", ncol=3)
     ax.spines[["top", "right"]].set_visible(False)
     plt.show()
@@ -406,3 +419,105 @@ def branch_and_bound() -> None:
         _display(tree_table(nodes))
         plot_tree(nodes, title=titles[formulation])
         plt.show()
+
+
+# ---------------------------------------------------------------------------
+# §8 Decision tree with a supplier that may stop delivering
+# ---------------------------------------------------------------------------
+
+def _outcome(row: dict, risky: list[str]) -> str:
+    if not row["stopped"]:
+        return (f"{risky[0]} keeps delivering" if len(risky) == 1
+                else "every supplier keeps delivering")
+    return f"{', '.join(row['stopped'])} stops: {row['moved']} components moved"
+
+
+def branches_table(probability: dict, move_cost: float) -> pd.DataFrame:
+    """Table 12: the branches of each strategy, with their probability and annual cost."""
+    rows = []
+    for name, contracted in dt.strategies().items():
+        risky = dt.uncertain(contracted)
+        for r in dt.branches(contracted, probability, move_cost):
+            rows.append({"Strategy": name, "Uncertain supplier": ", ".join(risky),
+                         "Outcome": _outcome(r, risky),
+                         "Probability": round(r["probability"], 4),
+                         "Annual cost (k€/year)": r["cost"]})
+    return pd.DataFrame(rows).set_index("Strategy")
+
+
+def strategies_table(probability: dict, move_cost: float) -> pd.DataFrame:
+    """Table 13: planned cost, expected cost and worst case of each strategy."""
+    rows = {name: dt.summary(contracted, probability, move_cost)
+            for name, contracted in dt.strategies().items()}
+    return pd.DataFrame({name: {"Planned cost": v["planned"], "Expected cost": round(v["expected"], 1),
+                                "Worst case": v["worst"]} for name, v in rows.items()}).T.rename_axis(
+        "Strategy (k€/year)")
+
+
+@_light
+def plot_decision_tree(probability: dict, move_cost: float, ax=None):
+    """The decision tree: a square for the decision, a circle per strategy for
+    the chance of a supplier stopping, and the annual cost at the end of each branch."""
+    ax = ax or plt.subplots(figsize=(8, 3.8))[1]
+    plans = dt.strategies()
+    leaves = [(name, r) for name, contracted in plans.items()
+              for r in dt.branches(contracted, probability, move_cost)]
+    ys = {i: len(leaves) - 1 - i for i in range(len(leaves))}
+    ax.scatter([0], [(len(leaves) - 1) / 2], marker="s", s=300, color="0.85", edgecolor="0.3", zorder=3)
+    i = 0
+    for name, contracted in plans.items():
+        rows = dt.branches(contracted, probability, move_cost)
+        own = [ys[i + k] for k in range(len(rows))]
+        y_chance = sum(own) / len(own)
+        expected = dt.expected_cost(rows)
+        ax.plot([0, 1], [(len(leaves) - 1) / 2, y_chance], color="0.5", zorder=1)
+        ax.text(1, y_chance + 0.28, name, ha="center", va="bottom", fontsize=8)
+        ax.scatter([1], [y_chance], marker="o", s=300, color="0.85", edgecolor="0.3", zorder=3)
+        ax.text(1, y_chance - 0.28, f"expected {expected:,.0f}", ha="center", va="top", fontsize=8,
+                weight="bold")
+        for k, r in enumerate(rows):
+            y = own[k]
+            ax.plot([1, 2.2], [y_chance, y], color=FIXED if r["stopped"] else PURCHASE, zorder=1)
+            ax.text(1.6, (y_chance + y) / 2 + 0.08, f"{r['probability']:.4g}", ha="center", va="bottom",
+                    fontsize=8)
+            ax.text(2.25, y, f"{_outcome(r, dt.uncertain(contracted))}: {r['cost']:,.0f}", ha="left",
+                    va="center", fontsize=8)
+        i += len(rows)
+    ax.set_xlim(-0.3, 4.2)
+    ax.set_ylim(-0.8, len(leaves) - 0.2)
+    ax.axis("off")
+    ax.set_title("Decision tree: annual cost of each branch (k€/year)", fontsize=10)
+    return ax
+
+
+def disruption_tree(stop_e: float = STOP_PROBABILITY["E"], stop_c: float = STOP_PROBABILITY["C"],
+                  move_cost: float = MOVE_COST) -> None:
+    """§8: the buyer's rule against everything from E when the supplier that serves
+    more than one component may stop delivering during the year."""
+    probability = {"E": stop_e, "C": stop_c}
+    for name, contracted in dt.strategies().items():
+        print(f"{name} ({sel.label(contracted)}): uncertain supplier {', '.join(dt.uncertain(contracted))}, "
+              f"which serves {', '.join(dt.served(contracted)[dt.uncertain(contracted)[0]])}.")
+    print(f"Probability of stopping: E {stop_e:g}, C {stop_c:g}. "
+          f"Cost of moving a component to another supplier: {move_cost:g} k€.")
+    print()
+    print("Branches of each strategy:")
+    _display(branches_table(probability, move_cost))
+    table = strategies_table(probability, move_cost)
+    print("Planned cost, expected cost and worst case (k€/year):")
+    _display(table)
+    lowest = table["Expected cost"].idxmin() if table["Expected cost"].nunique() > 1 else None
+    safest = table["Worst case"].idxmin() if table["Worst case"].nunique() > 1 else None
+    print("Lowest expected cost: " + (lowest or "both strategies, the same") + ".")
+    print("Lowest worst case: " + (safest or "both strategies, the same") + ".")
+    p = dt.threshold(probability=probability, move_cost=move_cost)
+    if p is None:
+        print("Moving a component costs nothing: everything from E has the lower expected cost "
+              "whatever the probability that E stops.")
+    elif p >= 1:
+        print("Everything from E has the lower expected cost whatever the probability that E stops.")
+    else:
+        print(f"Everything from E has the lower expected cost while the probability that E stops "
+              f"is below {p:.3f}.")
+    plot_decision_tree(probability, move_cost)
+    plt.show()

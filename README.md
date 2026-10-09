@@ -10,7 +10,7 @@ Each case lives in its own folder under `cases/`, with a document that explains 
 | Case | Topic | What it shows |
 |---|---|---|
 | [`warehouse_allocation`](cases/warehouse_allocation/) | T1 · Introduction | Which warehouse serves each customer: rule of thumb versus model, number of plans, two objectives, forecast error. Scripts, and a notebook that opens in Google Colab |
-| [`supplier_selection`](cases/supplier_selection/) | T2 · Optimization methods | Which suppliers an electric bicycle assembler contracts: decision matrix, buyer's rule, local search and integer model, and how an integer model is solved (linear relaxation, branch and bound). Scripts, and a notebook that opens in Google Colab |
+| [`supplier_selection`](cases/supplier_selection/) | T2 · Optimization methods | Which suppliers an electric bicycle assembler contracts: decision matrix, buyer's rule, local search and integer model, how an integer model is solved (linear relaxation, branch and bound), and a decision tree with a supplier that may stop delivering. Scripts, and a notebook that opens in Google Colab |
 | [`production_plan`](cases/production_plan/) | T2 · Optimization methods | How many bikes each plant assembles each month: linear model, feasible region, shadow prices and reduced costs, and a model with no solution because it leaves stock out. Script, and a notebook that opens in Google Colab |
 | [`security_filters`](cases/security_filters/) | Airport operations | Passengers arriving at the security checkpoint: presentation curve under demand scenarios, lane policies compared in a decision table, and evaluation against the observed day. Package with notebooks that open in Google Colab |
 

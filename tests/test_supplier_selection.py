@@ -1,4 +1,4 @@
-"""Check that the three scripts of the supplier selection case reproduce the
+"""Check that the four scripts of the supplier selection case reproduce the
 numbers of supplier_selection.md, and that they agree with the package."""
 
 import importlib.util
@@ -10,7 +10,7 @@ import pytest
 
 CASE = Path(__file__).resolve().parents[1] / "cases" / "supplier_selection"
 SCRIPTS = ["supplier_selection_rule.py", "supplier_selection_local_search.py",
-           "supplier_selection_solver.py"]
+           "supplier_selection_solver.py", "supplier_selection_decision_tree.py"]
 
 
 def load(script):
@@ -26,7 +26,7 @@ def run(script):
 
 
 def table_5(output):
-    """The lines of Table 5, the buyer's rule, which the three scripts print."""
+    """The lines of Table 5, the buyer's rule, which the four scripts print."""
     start = output.index("Table 5.")
     return output[start:output.index("kEUR/year\n", start)]
 
@@ -36,7 +36,7 @@ def outputs():
     return {script: run(script) for script in SCRIPTS}
 
 
-def test_the_three_scripts_print_the_same_buyer_rule(outputs):
+def test_the_four_scripts_print_the_same_buyer_rule(outputs):
     tables = {table_5(out) for out in outputs.values()}
     assert len(tables) == 1
     assert "Purchases 2430.00 + fixed costs 200.00 = 2630.00" in tables.pop()
@@ -48,6 +48,9 @@ def test_rule_script(outputs):
                  "F                        130        10.00                 4.50              6.70",
                  "B                        140         4.44                 7.05              6.01",
                  "E                        148         0.00                 7.50              4.50",
+                 "Batteries without F: lowest price 136 and highest 148 EUR/unit",
+                 "C                        136        10.00              8.77               7.44",
+                 "B                        140         6.67              6.90               6.01",
                  "Purchases 2530.00 + fixed costs 50.00 = 2580.00 kEUR/year"):
         assert line in out
 
@@ -90,3 +93,25 @@ def test_solver_script_trees_agree_with_the_package():
         rows = script.branch_and_bound(formulation)
         nodes = mo.branch_and_bound(REDUCED_S, REDUCED_M, formulation)
         assert [(r[1], r[2]) for r in rows] == [(n["fixed"], n["bound"]) for n in nodes]
+
+
+def test_decision_tree_script(outputs):
+    out = outputs["supplier_selection_decision_tree.py"]
+    for line in ("Purchases 2530.00 + fixed costs 50.00 = 2580.00 kEUR/year",
+                 "Everything from E            E  E stops: 6 components moved           0.05                   3180.00",
+                 "Buyer's rule                 C  C stops: 3 components moved           0.10                   2930.00",
+                 "Everything from E          2580.00        2610.00     3180.00",
+                 "Buyer's rule               2630.00        2660.00     2930.00",
+                 "(2660.00 - 2580.00) / (100 x 6) = 0.1333",
+                 "Final branches in all: 210"):
+        assert line in out
+
+
+def test_decision_tree_script_agrees_with_the_package():
+    from suppliers import decision_tree as dt
+    from suppliers import selection as sel
+    script = load("supplier_selection_decision_tree.py")
+    for contracted in dt.strategies().values():
+        assert script.branches(contracted) == [(r["stopped"], r["moved"], r["probability"], r["cost"])
+                                               for r in dt.branches(contracted)]
+    assert sorted(script.covering_selections()) == sorted(sel.covering_selections())

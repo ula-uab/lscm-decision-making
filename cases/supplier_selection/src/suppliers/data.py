@@ -1,4 +1,4 @@
-"""Data of the example, Tables 1-3 of supplier_selection.md.
+"""Data of the example, Tables 1-3 and §8 of supplier_selection.md.
 
 The data are invented (2026); they do not describe a real company.
 """
@@ -54,6 +54,16 @@ a = {s: {m: int(m in PRICE[s] and q[s] >= MIN_SCORE) for m in M} for s in S}
 
 # Weight of the price in the decision matrix of the batteries (§3)
 PRICE_WEIGHT = 0.40
+
+# Decision tree (§8, Table 12): probability that a supplier stops delivering
+# during the year. Only the suppliers that serve more than one component in a
+# strategy are uncertain; the others are treated as reliable.
+STOP_PROBABILITY = {"E": 0.05, "C": 0.10}
+
+# Cost of moving one component to another supplier at short notice when its
+# supplier stops (kEUR per component): lost assembly, urgent transport and
+# qualification of the new supplier (§8, Table 12)
+MOVE_COST = 100
 
 # Reduced version (§7): three suppliers, three components, the same costs
 REDUCED_S = ["A", "B", "C"]

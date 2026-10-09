@@ -2,12 +2,15 @@
 #
 # This script reproduces §3 and §4 of supplier_selection.md (same folder): the
 # weighted decision matrix of the batteries, without and with the price
-# (Table 4), the buyer's rule and its cost (Table 5), and the cost of buying
-# everything from the distributor E.
+# (Table 4), the same matrix with F left out of the comparison, the buyer's
+# rule and its cost (Table 5), and the cost of buying everything from the
+# distributor E.
 #
-# The two other scripts of this folder go on from here:
+# The three other scripts of this folder go on from here:
 #   supplier_selection_local_search.py  local search and the 31 sets of suppliers;
-#   supplier_selection_solver.py        the integer model, solved with a solver.
+#   supplier_selection_solver.py        the integer model, solved with a solver;
+#   supplier_selection_decision_tree.py the buyer's rule against the distributor
+#                                       alone when a supplier may stop delivering.
 #
 # Running it is optional: it is support material, not part of the assessment.
 #
@@ -79,18 +82,19 @@ PRICE_WEIGHT = 0.40
 # §3 Weighted decision matrix for one component
 # ---------------------------------------------------------------------------
 
-def price_scores(component):
-    """Price score of each supplier that offers the component (points, 0-10):
-    10 x (highest price - price) / (highest price - lowest price)."""
-    prices = {s: PRICE[s][component] for s in S if component in PRICE[s]}
+def price_scores(component, suppliers=S):
+    """Price score of each of the given suppliers that offers the component
+    (points, 0-10): 10 x (highest price - price) / (highest price - lowest
+    price), among the offers compared."""
+    prices = {s: PRICE[s][component] for s in suppliers if component in PRICE[s]}
     high, low = max(prices.values()), min(prices.values())
     return {s: 10 * (high - p) / (high - low) for s, p in prices.items()}
 
 
-def score_with_price(component, price_weight):
+def score_with_price(component, price_weight, suppliers=S):
     """Weighted score with the price as one more criterion: the other weights
     are multiplied by (1 - price_weight)."""
-    ps = price_scores(component)
+    ps = price_scores(component, suppliers)
     return {s: (1 - price_weight) * q[s] + price_weight * ps[s] for s in ps}
 
 
@@ -177,6 +181,19 @@ if __name__ == "__main__":
           f"{'Score without price':>21}{'Score with price':>18}")
     for s in sorted(batteries, key=lambda s: -with_price[s]):
         print(f"{s:<10}{PRICE[s]['batteries']:>18}{ps[s]:>13.2f}{q[s]:>21.2f}{with_price[s]:>18.2f}")
+
+    # The same matrix, with F's offer left out: the lowest price compared is now C's
+    without_f = [s for s in batteries if s != "F"]
+    ps_without = price_scores("batteries", without_f)
+    with_price_without = score_with_price("batteries", PRICE_WEIGHT, without_f)
+    prices = [PRICE[s]["batteries"] for s in without_f]
+    print()
+    print(f"Batteries without F: lowest price {min(prices)} and highest {max(prices)} EUR/unit")
+    print(f"{'Supplier':<10}{'Price (EUR/unit)':>18}{'Price score':>13}"
+          f"{'Score with price':>18}{'With F (Table 4)':>19}")
+    for s in sorted(without_f, key=lambda s: -with_price_without[s]):
+        print(f"{s:<10}{PRICE[s]['batteries']:>18}{ps_without[s]:>13.2f}"
+              f"{with_price_without[s]:>18.2f}{with_price[s]:>19.2f}")
 
     best = min((s for s in batteries if a[s]["batteries"]), key=lambda s: c[s]["batteries"])
     print()

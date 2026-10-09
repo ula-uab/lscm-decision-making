@@ -8,6 +8,7 @@ import pytest
 
 matplotlib.use("Agg")
 
+from suppliers import decision_tree as dt  # noqa: E402
 from suppliers import local_search as ls  # noqa: E402
 from suppliers import matrix as mx  # noqa: E402
 from suppliers import model as mo  # noqa: E402
@@ -43,6 +44,15 @@ def test_table4_decision_matrix_of_the_batteries():
     assert {k: round(100 * v) for k, v in mx.weights_with_price(0.40).items()} == {
         "Quality": 21, "Delivery reliability": 15, "Sustainability": 12, "Financial strength": 12, "Price": 40}
     assert mx.ranking(mx.with_price("batteries", 0)) == ["C", "E", "B", "F"]
+
+
+def test_batteries_matrix_without_f():
+    without_f = ["A", "B", "C", "D", "E"]
+    assert {s: round(v, 2) for s, v in mx.price_scores("batteries", without_f).items()} == {
+        "B": 6.67, "C": 10.0, "E": 0.0}
+    with_price = mx.with_price("batteries", 0.40, without_f)
+    assert {s: round(v, 2) for s, v in with_price.items()} == {"C": 8.77, "B": 6.90, "E": 4.50}
+    assert mx.ranking(with_price) == ["C", "B", "E"]
 
 
 def test_table5_buyer_rule_and_distributor_alone():
@@ -137,6 +147,37 @@ def test_table11_tree_one_constraint_per_supplier():
     ]
     assert [n.get("uncovered") for n in nodes[7:]] == [["batteries"], ["motors"]]
     assert mo.best_of(nodes)["selection"] == ("B", "C")
+
+
+def test_tables12_13_decision_tree():
+    strategies = dt.strategies()
+    assert strategies == {"Everything from E": ("E",), "Buyer's rule": ("A", "B", "C", "D")}
+    assert dt.uncertain(("E",)) == ["E"] and dt.uncertain(("A", "B", "C", "D")) == ["C"]
+    assert dt.served(("A", "B", "C", "D"))["C"] == ["frames", "batteries", "wheels"]
+    rows = {name: [(r["stopped"], r["moved"], round(r["probability"], 2), r["cost"])
+                   for r in dt.branches(s)] for name, s in strategies.items()}
+    assert rows == {"Everything from E": [((), 0, 0.95, 2580), (("E",), 6, 0.05, 3180)],
+                    "Buyer's rule": [((), 0, 0.90, 2630), (("C",), 3, 0.10, 2930)]}
+    assert dt.summary(("E",)) == pytest.approx({"planned": 2580, "expected": 2610, "worst": 3180})
+    assert dt.summary(("A", "B", "C", "D")) == pytest.approx({"planned": 2630, "expected": 2660,
+                                                             "worst": 2930})
+    assert dt.threshold() == pytest.approx(80 / 600)
+    assert round(dt.threshold(), 4) == 0.1333
+
+
+def test_final_branches_of_a_tree_with_every_selection():
+    covering = sel.covering_selections()
+    assert sorted(len(s) for s in covering).count(3) == 10
+    assert dt.leaves(covering) == 210
+
+
+def test_decision_tree_needs_the_probability_of_every_uncertain_supplier():
+    with pytest.raises(ValueError, match="No probability of stopping for C"):
+        dt.branches(("A", "B", "C", "D"), probability={"E": 0.05})
+    # Two uncertain suppliers stop independently: four branches
+    rows = dt.branches(("C", "E"), probability={"C": 0.1, "E": 0.05})
+    assert [r["stopped"] for r in rows] == [(), ("E",), ("C",), ("C", "E")]
+    assert sum(r["probability"] for r in rows) == pytest.approx(1)
 
 
 def test_wrong_selection_gives_a_clear_message():
