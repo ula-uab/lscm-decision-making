@@ -26,6 +26,8 @@ def test_script_prints_the_tables():
                  "Demand of BCN-RIX Economy BASIC           no     55.00  tickets",
                  "RIX->HEL                     35.00                35.00               -35.00",
                  "RIX-HEL   Economy BASIC      45.00       35.00                       10.00",
+                 "RIX->HEL    BCN-HEL Economy BASIC                1.00          2.00           3.00                           110.00",
+                 "RIX->HEL    BCN-RIX Economy BASIC              106.00        105.00         104.00                           -75.00",
                  "BCN->RIX         75.00 EUR/seat    115.00    275.00",
                  "RIX->HEL         35.00 EUR/seat    138.00    218.00",
                  "    10            120.00          100.00                20.00",

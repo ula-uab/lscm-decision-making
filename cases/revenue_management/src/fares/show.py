@@ -151,8 +151,9 @@ def optimal_plan() -> dict:
 
 def bid_prices(flight: str = "RIX → HEL") -> None:
     """Table 6: the bid price of each flight, and the chosen one checked by solving
-    again with one seat more and one seat less; Table 7: the bid price of each
-    product against its price, and the shadow price of its demand."""
+    again with one seat more and one seat less; Table 7: the products whose tickets
+    change with that seat; Table 8: the bid price of each product against its price,
+    and the shadow price of its demand."""
     if flight not in L:
         raise ValueError(f"The flight must be one of {', '.join(L)}.")
     solution = m.solve()
@@ -162,6 +163,15 @@ def bid_prices(flight: str = "RIX → HEL") -> None:
     up, down = m.change_capacity(flight, 1), m.change_capacity(flight, -1)
     print(f"{flight}: with {C[flight] + 1} seats the revenue changes by {_signed(up)} €; "
           f"with {C[flight] - 1} seats, by {_signed(down)} €. Bid price: {_num(bid[flight])} €/seat.")
+    rows = m.seat_change(flight)
+    print(f"Products whose tickets change with one seat less and one seat more on {flight}:")
+    _display(pd.DataFrame([{"Trip": row["product"][0], "Fare": row["product"][1],
+                            f"{C[flight] - 1} seats (tickets)": _num(row["less"]),
+                            f"{C[flight]} seats, optimal plan (tickets)": _num(row["plan"]),
+                            f"{C[flight] + 1} seats (tickets)": _num(row["more"]),
+                            "Change with one seat more (€)": _signed(row["change"])} for row in rows])
+             .set_index(["Trip", "Fare"]))
+    print(f"Total with one seat more: {_signed(sum(row['change'] for row in rows))} €, the bid price of {flight}.")
     rows = []
     for p in P:
         product_bid = m.product_bid_price(p, bid)

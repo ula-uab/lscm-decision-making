@@ -5,10 +5,11 @@
 # the flights and the products (Tables 1 and 2), the plan of the rule
 # "highest fare first" (Table 3), the optimal plan against the rule (Table 4),
 # the binding constraints and their slack (Table 5), the bid prices of the
-# flights checked by solving again (Table 6), the bid prices of the products
-# and the shadow prices of the demand (Table 7), the ranges of the bid prices
-# (Table 8), an offer of a tour operator (Table 9) and two other aircraft for
-# the second flight (Table 10).
+# flights checked by solving again (Table 6), the products whose tickets
+# change with one seat less and one seat more (Table 7), the bid prices of the
+# products and the shadow prices of the demand (Table 8), the ranges of the bid
+# prices (Table 9), an offer of a tour operator (Table 10) and two other
+# aircraft for the second flight (Table 11).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -292,7 +293,25 @@ if __name__ == "__main__":
             changes.append(solve_model(new_capacity, D)[0] - revenue)
         print(f"{l:<12}{num(bid[l]):>22}{num(changes[0]):>21}{num(changes[1]):>21}")
     print()
-    print("Table 7. Bid price of each product and shadow price of its demand (EUR/ticket)")
+    print("Table 7. Products whose tickets change with one seat less and one seat more (tickets)")
+    print(f"{'Flight':<12}{'Product':<26}{'One seat less':>15}{'Optimal plan':>14}{'One seat more':>15}"
+          f"{'Change with one seat more (EUR)':>33}")
+    for l in L:
+        plans = []
+        for delta in (-1, 0, 1):
+            new_capacity = dict(C)
+            new_capacity[l] += delta
+            plans.append(solve_model(new_capacity, D)[1])
+        less, base, more = plans
+        changed = [p for p in P if abs(less[p] - base[p]) > 1e-6 or abs(more[p] - base[p]) > 1e-6]
+        # First the products that take the extra seat, then those it displaces
+        changed.sort(key=lambda p: -r[p] * (more[p] - base[p]))
+        for p in changed:
+            print(f"{l:<12}{p[0] + ' ' + p[1]:<26}{num(less[p]):>15}{num(base[p]):>14}{num(more[p]):>15}"
+                  f"{num(r[p] * (more[p] - base[p])):>33}")
+        print(f"{'':<12}{'Total with one seat more':<26}{'':>44}{num(sum(r[p] * (more[p] - base[p]) for p in changed)):>33}")
+    print()
+    print("Table 8. Bid price of each product and shadow price of its demand (EUR/ticket)")
     print(f"{'Trip':<10}{'Fare':<16}{'Price':>8}{'Bid price':>12}{'Shadow price of the demand':>28}")
     for p in P:
         product_bid = sum(a(p, l) * bid[l] for l in L)
@@ -300,7 +319,7 @@ if __name__ == "__main__":
 
     # §6 Ranges
     title("§6 Ranges of the bid prices")
-    print("Table 8. Capacities for which the bid price of each flight holds (seats)")
+    print("Table 9. Capacities for which the bid price of each flight holds (seats)")
     ranges = {l: validity_range(l, C, D) for l in L}
     for l in L:
         low, high = ranges[l]
@@ -310,7 +329,7 @@ if __name__ == "__main__":
     title("§7 Offer of a tour operator")
     trip_bid = sum(bid[l] for l in USES[OFFER_TRIP])
     print(f"Bid price of a seat {OFFER_TRIP}: {num(trip_bid)} EUR/seat")
-    print("Table 9. Offer of seats BCN-HEL on top of the forecast demand")
+    print("Table 10. Offer of seats BCN-HEL on top of the forecast demand")
     print(f"{'Seats':>6}{'Price (EUR/seat)':>18}{'Estimate (EUR)':>16}{'Solving again (EUR)':>21}")
     for n, q in OFFERS:
         new_revenue = solve_model(C, D, offer=(n, q))[0]
@@ -320,7 +339,7 @@ if __name__ == "__main__":
     title("§8 Another aircraft on RIX->HEL")
     flight = "RIX->HEL"
     low, high = ranges[flight]
-    print("Table 10. Another aircraft on RIX->HEL, against 140 seats")
+    print("Table 11. Another aircraft on RIX->HEL, against 140 seats")
     print(f"{'Seats':>6}{'Revenue (EUR)':>15}{'Change (EUR)':>14}{'Estimate (EUR)':>16}{'Inside range':>14}"
           f"{'Cost change (EUR)':>19}{'Net (EUR)':>12}")
     for seats, cost in OTHER_AIRCRAFT:

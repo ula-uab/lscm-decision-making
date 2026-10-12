@@ -169,6 +169,19 @@ def change_capacity(flight: str, delta: float, capacity: dict = C, demand: dict 
     return new["revenue"] - base["revenue"]
 
 
+def seat_change(flight: str, capacity: dict = C, demand: dict = D) -> list[dict]:
+    """Products whose tickets change when the capacity of a flight changes by one seat:
+    tickets with one seat less, in the optimal plan and with one seat more, and the
+    change in revenue each one brings with one seat more (EUR). The changes with one
+    seat more add up to the bid price of the flight."""
+    plans = [solve(dict(capacity, **{flight: capacity[flight] + delta}), demand)["plan"] for delta in (-1, 0, 1)]
+    less, base, more = plans
+    rows = [{"product": p, "less": less[p], "plan": base[p], "more": more[p], "change": r[p] * (more[p] - base[p])}
+            for p in P if abs(less[p] - base[p]) > TOL or abs(more[p] - base[p]) > TOL]
+    # First the products that take the extra seat, then those it displaces
+    return sorted(rows, key=lambda row: -row["change"])
+
+
 def validity_range(flight: str, capacity: dict = C, demand: dict = D,
                    limit: float = 1e6) -> tuple[float | None, float | None]:
     """The capacities of a flight for which its bid price holds: the model is re-solved

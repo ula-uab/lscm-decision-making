@@ -58,7 +58,19 @@ def test_table6_bid_prices_are_the_change_with_one_seat_more_and_one_less():
         assert m.change_capacity(flight, -1) == pytest.approx(-bid)
 
 
-def test_table7_shadow_price_of_the_demand_is_price_minus_bid_price():
+
+def test_table7_products_whose_tickets_change_with_one_seat():
+    rows = {flight: [(row["product"], row["less"], row["plan"], row["more"], row["change"])
+                     for row in m.seat_change(flight)] for flight in (FIRST, SECOND)}
+    assert rows[FIRST] == [(("BCN–RIX", "Economy BASIC"), 104, 105, 106, 75)]
+    assert rows[SECOND] == [(("BCN–HEL", "Economy BASIC"), 1, 2, 3, 110),
+                            (("BCN–RIX", "Economy BASIC"), 106, 105, 104, -75)]
+    # With one seat more, the changes add up to the bid price of the flight
+    bid = m.solve()["bid price"]
+    for flight in (FIRST, SECOND):
+        assert sum(row["change"] for row in m.seat_change(flight)) == pytest.approx(bid[flight])
+
+def test_table8_shadow_price_of_the_demand_is_price_minus_bid_price():
     solution = m.solve()
     prices = [solution["demand price"][p] for p in P]
     assert prices == pytest.approx([307.5, 105, 0, 147.5, 65, 10, 355, 120, 0])
@@ -67,12 +79,12 @@ def test_table7_shadow_price_of_the_demand_is_price_minus_bid_price():
     assert m.product_bid_price(("BCN–HEL", "Business"), solution["bid price"]) == pytest.approx(165)
 
 
-def test_table8_ranges_of_the_bid_prices():
+def test_table9_ranges_of_the_bid_prices():
     assert m.validity_range(FIRST) == (115, 275)
     assert m.validity_range(SECOND) == (138, 218)
 
 
-def test_table9_offer_of_a_tour_operator():
+def test_table10_offer_of_a_tour_operator():
     assert m.offer(10, 100)["estimate"] == pytest.approx(-100)
     assert m.offer(10, 100)["change"] == pytest.approx(-180)
     assert m.offer(10, 120)["estimate"] == pytest.approx(100)
@@ -80,7 +92,7 @@ def test_table9_offer_of_a_tour_operator():
     assert [m.offer(n, 120)["change"] for n in (1, 2, 3)] == pytest.approx([10, 20, 20])
 
 
-def test_table10_another_aircraft_on_the_second_flight():
+def test_table11_another_aircraft_on_the_second_flight():
     larger = m.other_aircraft(SECOND, 180, 1200)
     assert larger["new"]["revenue"] == pytest.approx(42635)
     assert larger["change"] == pytest.approx(1400) and larger["estimate"] == pytest.approx(1400)

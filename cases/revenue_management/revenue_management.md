@@ -129,10 +129,20 @@ Table 6. Bid prices of the flights, checked by solving again
 | BCN → RIX | 75 | +75 | −75 |
 | RIX → HEL | 35 | +35 | −35 |
 
-The change is the same upwards and downwards, so the bid prices are unique.
+The change is the same upwards and downwards, so the bid prices are unique. Table 7 gives, for each flight, the products whose tickets change when the model is solved again with one seat less and one seat more, and what each change brings with one seat more; the other products do not change.
 
-- **BCN → RIX: 75 €/seat.** One more seat goes to a BCN–RIX BASIC passenger, the only product of this flight alone with unsold demand, at 75 €.
-- **RIX → HEL: 35 €/seat.** One more seat goes to a BCN–HEL BASIC passenger, who pays 110 € but also needs a seat on BCN → RIX. That seat is taken from a BCN–RIX BASIC passenger, worth 75 €. The seat on RIX → HEL is worth 110 − 75 = 35 €. No fare costs 35 €: the value comes from the network, and the rule of §3 cannot see it.
+Table 7. Products whose tickets change with one seat less and one seat more on each flight
+
+| Flight | Product | One seat less (tickets) | Optimal plan (tickets) | One seat more (tickets) | Change with one seat more (€) |
+|---|---|---|---|---|---|
+| BCN → RIX | BCN–RIX Economy BASIC | 104 | 105 | 106 | +75 |
+| RIX → HEL | BCN–HEL Economy BASIC | 1 | 2 | 3 | +110 |
+| RIX → HEL | BCN–RIX Economy BASIC | 106 | 105 | 104 | −75 |
+
+With one seat more, the changes add up to +75 € on BCN → RIX and to 110 − 75 = +35 € on RIX → HEL: the bid prices of Table 6.
+
+- **BCN → RIX: 75 €/seat.** One more seat goes to a BCN–RIX BASIC passenger, the only product of this flight alone with unsold demand, at 75 € (Table 7).
+- **RIX → HEL: 35 €/seat.** One more seat goes to a BCN–HEL BASIC passenger, who pays 110 € but also needs a seat on BCN → RIX. That seat is taken from a BCN–RIX BASIC passenger, worth 75 € (Table 7). The seat on RIX → HEL is worth 110 − 75 = 35 €. No fare costs 35 €: the value comes from the network, and the rule of §3 cannot see it.
 
 **The bid price of a product** is the bid prices of the flights it uses times the seats it uses on each (Ivanov et al., 2025, §18.5.2, Eq. 18.15):
 
@@ -140,9 +150,9 @@ $$
 BP_p = \sum_{l \in L} a_{pl}\, BP_l
 $$
 
-where $BP_l$ is the bid price of flight $l$. It is the value of the seats a ticket of $p$ takes from the network. Table 7 gives the bid price of each product and the shadow price of its demand, the rise in revenue with one more ticket of forecast demand.
+where $BP_l$ is the bid price of flight $l$. It is the value of the seats a ticket of $p$ takes from the network. Table 8 gives the bid price of each product and the shadow price of its demand, the rise in revenue with one more ticket of forecast demand.
 
-Table 7. Bid price of each product and shadow price of its demand (€/ticket)
+Table 8. Bid price of each product and shadow price of its demand (€/ticket)
 
 | Trip | Fare | Price | Bid price of the product | Shadow price of the demand |
 |---|---|---|---|---|
@@ -166,7 +176,7 @@ A bid price holds while the capacity of its flight stays within a range. Outside
 
 **How the ranges are found.** The model is solved again with the capacity of the flight changed, upwards and downwards, with everything else unchanged. The bid price holds while the optimal revenue changes by exactly the bid price for each seat, that is, while the new revenue equals 41,235 € plus the bid price times the change. The range ends at the last capacity where this still holds; past it the revenue changes at a different rate.
 
-Table 8. Capacities for which the bid price of each flight holds
+Table 9. Capacities for which the bid price of each flight holds
 
 | Flight | Capacity (seats) | Bid price (€/seat) | Holds from (seats) | to (seats) |
 |---|---|---|---|---|
@@ -180,7 +190,7 @@ Table 8. Capacities for which the bid price of each flight holds
 
 A tour operator asks for ten BCN–HEL seats on top of the forecast demand, at 100 €/seat, and then at 120 €/seat. A request is worth accepting if the price it offers is above the bid price of the product it asks for and the flights have seats for it (Ivanov et al., 2025, §18.6.2.2). Here the bid price of a BCN–HEL seat is 75 + 35 = 110 €, and the bid prices estimate the change in revenue as the seats times the price minus 110 €. The offer is checked by solving the model again with the seats of the offer forced into the plan: a variable fixed at the number of seats, which uses one seat on each flight and brings the price of the offer.
 
-Table 9. Offer of BCN–HEL seats on top of the forecast demand
+Table 10. Offer of BCN–HEL seats on top of the forecast demand
 
 | Seats | Price (€/seat) | Estimate with the bid prices (€) | Change in revenue, solving again (€) |
 |---|---|---|---|
@@ -197,9 +207,9 @@ The bid prices hold for a small change. When demand that was not forecast is acc
 
 ## 8. Another aircraft on Riga → Helsinki
 
-The airline can fly RIX → HEL with an aircraft of 180 seats, whose operating cost per flight is 1,200 € higher, or with one of 120 seats, whose operating cost is 800 € lower. The bid price of RIX → HEL estimates the change in revenue as 35 € for each seat more or less; Table 10 compares that estimate with the change found by solving the model again.
+The airline can fly RIX → HEL with an aircraft of 180 seats, whose operating cost per flight is 1,200 € higher, or with one of 120 seats, whose operating cost is 800 € lower. The bid price of RIX → HEL estimates the change in revenue as 35 € for each seat more or less; Table 11 compares that estimate with the change found by solving the model again.
 
-Table 10. Another aircraft on RIX → HEL, against 140 seats
+Table 11. Another aircraft on RIX → HEL, against 140 seats
 
 | Seats | Revenue (€) | Change in revenue, solving again (€) | Estimate with the bid price (€) | Inside the range of the bid price | Change in operating cost (€) | Net result (€) |
 |---|---|---|---|---|---|---|
@@ -216,7 +226,7 @@ Inside its range, the bid price answers the question without solving the model a
 
 The Python script `revenue_management_solver.py`, in this folder, reproduces every table of this document. It writes the model of §2 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); how to install and run it is explained at the top of the file. Running it is optional: it is support material, not part of what is assessed.
 
-The script applies the rule of §3 without a solver. It reads the bid prices and the shadow prices that the solver returns and checks the bid prices by solving again with one seat more and one seat less (Table 6). It finds the ranges of Table 8 by solving the model again with the capacity changed, as explained in §6, and the results of Tables 9 and 10 by solving it again with the offer in the plan or with the other aircraft. Tables, figures and model read the same data: the flights, the products and their demand are written once.
+The script applies the rule of §3 without a solver. It reads the bid prices and the shadow prices that the solver returns and checks the bid prices by solving again with one seat more and one seat less, with the products whose tickets change (Tables 6 and 7). It finds the ranges of Table 9 by solving the model again with the capacity changed, as explained in §6, and the results of Tables 10 and 11 by solving it again with the offer in the plan or with the other aircraft. Tables, figures and model read the same data: the flights, the products and their demand are written once.
 
 The notebook [`notebooks/revenue_management.ipynb`](notebooks/revenue_management.ipynb) goes through §1–§8 step by step: the rule and the optimal plan side by side, a drop-down list to check the bid price of either flight by solving again, sliders for the seats and the price of an offer, and a choice of flight, capacity and operating cost for another aircraft. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/revenue_management/notebooks/revenue_management.ipynb). Its code is in the package `fares` of this folder (`src/fares/`).
 
