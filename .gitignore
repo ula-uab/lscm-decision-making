@@ -17,3 +17,10 @@ cases/security_filters/reference/*
 
 # PDFs of the cases are generated locally for the classroom web package, not published here
 cases/*/*.pdf
+
+# Files saved by the panels of the security_filters notebook (scenarios, plans, tables)
+cases/security_filters/notebooks/scenario_*.json
+cases/security_filters/notebooks/plan_*.json
+cases/security_filters/notebooks/ppp.csv
+cases/security_filters/notebooks/ppp_comparison.csv
+cases/security_filters/notebooks/queues.csv
