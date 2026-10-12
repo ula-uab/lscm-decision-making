@@ -1,0 +1,20 @@
+[project]
+name = "revenue-management"
+version = "0.1.0"
+description = "How many tickets of each fare an airline puts on sale for a flight: linear model, bid price and its range (course case, UAB)"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Juan José Ramos", email = "juanjose.ramos@uab.es" }]
+dependencies = [
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "pulp>=3.3",
+    "highspy>=1.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fares"]
