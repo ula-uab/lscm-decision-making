@@ -2,7 +2,7 @@
 
 The running example of T1: two warehouses, four customers, and the decision of which warehouse serves each customer. It compares a rule of thumb with a model, counts the possible plans, weighs cost against delivery time and shows what a forecast error does to the plan. Its last section, «Plans under uncertain demand», keeps a plan for several weeks while the orders of C1 and C3 change, and computes what each plan costs when a pallet that is not served has a cost.
 
-The document [`warehouse_allocation.md`](warehouse_allocation.md) ([PDF](warehouse_allocation.pdf)) explains the example and has all its data and results.
+The document [`warehouse_allocation.md`](warehouse_allocation.md) explains the example and has all its data and results.
 
 ## Notebook
 

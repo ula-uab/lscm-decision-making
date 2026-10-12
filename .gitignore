@@ -14,3 +14,6 @@ __pycache__/
 
 # Working notes in the reference folder of a case are not published
 cases/security_filters/reference/*
+
+# PDFs of the cases are generated locally for the classroom web package, not published here
+cases/*/*.pdf
