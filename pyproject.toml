@@ -9,6 +9,7 @@ dependencies = [
     "pulp>=3.3",
     "highspy>=1.7",
     "production-plan",
+    "revenue-management",
     "security-filters",
     "supplier-selection",
     "warehouse-allocation",
@@ -31,6 +32,7 @@ package = false
 [tool.uv.workspace]
 members = [
     "cases/production_plan",
+    "cases/revenue_management",
     "cases/security_filters",
     "cases/supplier_selection",
     "cases/warehouse_allocation",
@@ -38,6 +40,7 @@ members = [
 
 [tool.uv.sources]
 production-plan = { workspace = true }
+revenue-management = { workspace = true }
 security-filters = { workspace = true }
 supplier-selection = { workspace = true }
 warehouse-allocation = { workspace = true }
@@ -46,6 +49,7 @@ warehouse-allocation = { workspace = true }
 testpaths = [
     "tests",
     "cases/production_plan/tests",
+    "cases/revenue_management/tests",
     "cases/security_filters/tests",
     "cases/supplier_selection/tests",
     "cases/warehouse_allocation/tests",
