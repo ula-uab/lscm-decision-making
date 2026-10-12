@@ -1,177 +1,224 @@
-# Seats of a flight and the bid price
+# Seats of two connected flights and their bid prices
 
-An airline flies from Barcelona (BCN) to Riga (RIX) with an Airbus A321 and sells three fares. Before sales open, the revenue manager decides how many tickets of each fare to put on sale. This document writes that decision as a linear model that maximises revenue, reads its optimal plan, which constraints are binding and how much slack the others have, and gives the shadow prices of the capacity of the cabin and of the demand of each fare. The shadow price of the capacity is the **bid price**: the lowest revenue for which one more seat is worth selling. The range in which the bid price holds is found by solving the model again with other capacities, and it tells when the bid price is enough to estimate the revenue of another aircraft and when the model has to be solved again. The document contains all the data and all the results, so that anyone can follow and check them.
+An airline based in Riga flies Barcelona (BCN) → Riga (RIX) and Riga (RIX) → Helsinki (HEL) on the same day, with a connection in Riga. It sells three trips, BCN–RIX, RIX–HEL and BCN–HEL with the connection, each with three fares: nine products. A BCN–HEL ticket needs a seat on both flights. Before sales open, the revenue manager decides how many tickets of each product to put on sale. This document writes that decision as a linear model of the two flights and compares its optimal plan with the rule «highest fare first». It then reads the **bid price** of each flight, the shadow price of its capacity, and the bid price of each product, and uses them for two decisions: an offer of a tour operator for connecting seats, and the aircraft that flies Riga → Helsinki. The bid prices hold for small changes; the document shows where they stop holding and the model has to be solved again. It contains all the data and all the results, so that anyone can follow and check them.
 
 The practice of deciding how much of a fixed capacity to sell at each price is called *revenue management*; Ivanov et al. (2025, ch. 18) call it *yield management*.
 
-## 1. Flight, fares and forecast demand
+## 1. Flights, products and forecast demand
 
-The aircraft is an Airbus A321 with a flexible cabin of 220 seats. On flights within Europe, Business usually uses the economy seats with the middle seat left free (Finnair, 2026), so each Business ticket uses 1.5 seats: a row of six seats takes four passengers. The cabin divider can be placed at any row.
+Table 1 gives the two flights. Both have a flexible cabin: on flights within Europe, Business usually uses the economy seats with the middle seat left free (Finnair, 2026), so each Business ticket uses 1.5 seats, and the cabin divider can be placed at any row.
 
-Table 1 gives the three fares. The prices are those of a one-way ticket. The last column divides the price by the seats one ticket uses: it is the revenue that one seat brings when it is sold in that fare.
+Table 1. Flights
 
-Table 1. Fares of the flight
+| Flight | Aircraft | Capacity $C_l$ (seats) |
+|---|---|---|
+| BCN → RIX | Airbus A321 | 220 |
+| RIX → HEL | smaller aircraft | 140 |
 
-| Fare | What it includes | Price $r_f$ (€/ticket) | Seats per ticket $a_f$ | Forecast demand $D_f$ (tickets) | Revenue per seat $r_f / a_f$ (€/seat) |
-|---|---|---|---|---|---|
-| Business | everything, meals and drinks on board included | 420 | 1.5 | 24 | 280 |
-| Economy FLEX | date change, priority boarding, checked bag, seat selection | 180 | 1 | 120 | 180 |
-| Economy BASIC | cabin bag only | 75 | 1 | 140 | 75 |
+Table 2 gives the nine products: the price of a one-way ticket and the forecast demand. Business includes everything, meals and drinks on board included; Economy FLEX, date change, priority boarding, checked bag and seat selection; Economy BASIC, a cabin bag only.
 
-If every forecast ticket were sold, the three fares would need 36 + 120 + 140 = 296 seats, 76 more than the cabin has.
+Table 2. Products: price $r_p$ (€/ticket) / forecast demand $D_p$ (tickets)
 
-## 2. Linear model of the seat allocation
+| Trip | Flights used | Business | Economy FLEX | Economy BASIC |
+|---|---|---|---|---|
+| BCN–RIX | BCN → RIX | 420 / 16 | 180 / 60 | 75 / 160 |
+| RIX–HEL | RIX → HEL | 200 / 6 | 100 / 40 | 45 / 60 |
+| BCN–HEL | both | 520 / 6 | 230 / 20 | 110 / 80 |
+
+If every forecast ticket were sold, BCN → RIX would need 353 seats and RIX → HEL 218: neither flight can carry its whole demand.
+
+## 2. Linear model of the two flights
 
 **Data.**
 
-- $F$ is the set of fares (Business, FLEX, BASIC), with index $f$.
-- $r_f$ is the price of a ticket of fare $f$ (€/ticket).
-- $a_f$ is the number of seats one ticket of fare $f$ uses.
-- $D_f$ is the forecast demand of fare $f$ (tickets).
-- $C$ is the capacity of the cabin (seats).
+- $L$ is the set of flights, with index $l$, and $P$ the set of products (a trip and a fare), with index $p$.
+- $r_p$ is the price of a ticket of product $p$ (€/ticket).
+- $D_p$ is the forecast demand of product $p$ (tickets).
+- $a_{pl}$ is the number of seats one ticket of product $p$ uses on flight $l$: 1.5 for Business, 1 for the economy fares, and 0 if the trip of $p$ does not use flight $l$.
+- $C_l$ is the capacity of flight $l$ (seats).
 
-**What is decided.** $x_f$ is the number of tickets of fare $f$ put on sale (tickets), a continuous variable, $x_f \ge 0$.
+**What is decided.** $x_p$ is the number of tickets of product $p$ put on sale (tickets), a continuous variable, $x_p \ge 0$.
 
 **The model.**
 
 $$
 \begin{aligned}
-\max \quad & \sum_{f \in F} r_f\, x_f && && \text{(revenue)} \\
-\text{s.t.} \quad & \sum_{f \in F} a_f\, x_f \le C && && \text{(capacity of the cabin)} \\
-& x_f \le D_f && \forall f \in F && \text{(demand of each fare)} \\
-& x_f \ge 0 && \forall f \in F
+\max \quad & \sum_{p \in P} r_p\, x_p && && \text{(revenue)} \\
+\text{s.t.} \quad & \sum_{p \in P} a_{pl}\, x_p \le C_l && \forall l \in L && \text{(capacity of each flight)} \\
+& x_p \le D_p && \forall p \in P && \text{(demand of each product)} \\
+& x_p \ge 0 && \forall p \in P
 \end{aligned}
 $$
 
-The objective is the revenue of the flight, in euros: the tickets of each fare times their price. The model is the one of Ivanov et al. (2025, §18.5.1, Eq. 18.7–18.10) for one resource sold as several products.
+The objective is the revenue of the two flights, in euros: the tickets of each product times their price. The model has 9 variables, 2 capacity constraints and 9 demand constraints. It is the model of Ivanov et al. (2025, §18.5.2, Eq. 18.11–18.14) for a network of resources sold as products that use one or several of them.
 
-- **Capacity of the cabin.** The seats used by the tickets on sale, 1.5 per Business ticket and 1 per economy ticket, do not exceed the 220 seats of the cabin. Without this constraint, every forecast ticket would be put on sale: 42,180 € of revenue, with 296 seats that the aircraft does not have.
-- **Demand of each fare.** No fare has more tickets on sale than its forecast demand. Without this constraint, the whole cabin would go to Business, the fare with the highest revenue per seat: 146.67 Business tickets and 61,600 € of revenue, about six times the forecast demand of Business.
-- **Non-negativity.** No fare has a negative number of tickets on sale. With these data, removing it does not change the optimal plan; it is kept because a negative number of tickets has no meaning.
+- **Capacity of each flight.** The seats used on a flight by the tickets on sale do not exceed its capacity. A BCN–HEL ticket appears in the constraints of both flights, and this links them: a seat sold to a connecting passenger on one flight needs a seat on the other. Without this constraint, every forecast ticket would be put on sale: 53,940 € of revenue, with 353 seats on BCN → RIX and 218 on RIX → HEL that the aircraft do not have.
+- **Demand of each product.** No product has more tickets on sale than its forecast demand. Without this constraint, each flight would be filled with Business tickets of its own trip: 146.67 BCN–RIX and 93.33 RIX–HEL Business tickets, 80,266.67 € of revenue, many times the forecast demand of Business.
+- **Non-negativity.** No product has a negative number of tickets on sale. With these data, removing it does not change the optimal plan; it is kept because a negative number of tickets has no meaning.
 
-**The demand is written as a constraint, not as a bound of the variable**, so that the solver reports its shadow price as such. Some tools (Excel Solver, for example) treat $x_f \le D_f$ as a bound of the variable and report that same value as the reduced cost of $x_f$.
+**The demand is written as a constraint, not as a bound of the variable**, so that the solver reports its shadow price as such. Some tools (Excel Solver, for example) treat $x_p \le D_p$ as a bound of the variable and report that same value as the reduced cost of $x_p$.
 
 **Assumptions.**
 
-1. The decision is taken before sales open, with the forecast demand of each fare as a fixed number: no uncertainty, no cancellations and no passengers who do not show up.
-2. A passenger who finds no ticket of the chosen fare does not buy another fare.
-3. Each Business ticket uses 1.5 seats, and the cabin divider can be placed at any row.
-4. The variables are continuous: a plan may have fractional tickets. With these data the optimal plan is in whole numbers.
-5. The revenue is the price times the tickets sold; the costs that do not depend on the plan are left out.
+1. The plan is set before sales open, with the forecast demand of each product as a fixed number: no uncertainty, no cancellations and no passengers who do not show up.
+2. A passenger who finds no ticket of the chosen product does not buy another one.
+3. A connecting passenger needs a seat on both flights; the connection in Riga always works.
+4. Each Business ticket uses 1.5 seats, and the cabin divider can be placed at any row.
+5. The variables are continuous. With these data, every plan of this document is in whole numbers.
+6. The revenue is the price times the tickets sold. The costs that do not depend on the plan are left out; the operating cost of the aircraft enters only when two aircraft are compared (§8).
 
-## 3. Optimal plan and binding constraints
+## 3. The rule «highest fare first»
 
-Table 2 gives the optimal plan with 220 seats.
+A simple rule sells the products in decreasing order of price, each one up to its demand or until one of the flights it uses is full. The nine prices are all different, so the order is unique: BCN–HEL Business (520 €), BCN–RIX Business (420 €), BCN–HEL FLEX (230 €), RIX–HEL Business (200 €), BCN–RIX FLEX (180 €), BCN–HEL BASIC (110 €), RIX–HEL FLEX (100 €), BCN–RIX BASIC (75 €) and RIX–HEL BASIC (45 €). Table 3 gives its plan.
 
-Table 2. Optimal plan
+Table 3. Plan of the rule «highest fare first» (tickets on sale)
 
-| Fare | Tickets on sale | Seats used | Revenue (€) |
+| Trip | Business | Economy FLEX | Economy BASIC |
 |---|---|---|---|
-| Business | 24 | 36 | 10,080 |
-| Economy FLEX | 120 | 120 | 21,600 |
-| Economy BASIC | 64 | 64 | 4,800 |
-| Total | 208 | 220 | 36,480 |
+| BCN–RIX | 16 | 60 | 27 |
+| RIX–HEL | 6 | 22 | 0 |
+| BCN–HEL | 6 | 20 | 80 |
 
-The revenue of the plan is 36,480 €. The plan follows the order of the fares by revenue per seat in Table 1. Business, at 280 €/seat, sells its whole demand of 24 tickets, which use 36 seats. FLEX, at 180 €/seat, sells its whole demand of 120 tickets. The 220 − 36 − 120 = 64 seats left go to BASIC, at 75 €/seat, which has a demand of 140 tickets.
+The revenue of the rule is 39,465 €, and both flights are full. The Business and FLEX tickets of the three trips come first. The 80 BCN–HEL BASIC tickets come next and take 80 seats on each flight. After them, RIX → HEL has 22 seats left, for 22 of the 40 RIX–HEL FLEX tickets, and BCN → RIX has 27 seats left, for BCN–RIX BASIC. No RIX–HEL BASIC ticket is sold.
 
-A constraint is **binding** when the plan uses all of its right-hand side, and its **slack** is what is left. Table 3 gives the four constraints.
+## 4. Optimal plan, against the rule
 
-Table 3. Binding constraints and slack
+Table 4 gives the optimal plan of the model next to the plan of the rule, and the difference product by product.
+
+Table 4. Plan of the rule and optimal plan (tickets), and the difference
+
+| Trip | Fare | Rule | Model | Rule − model (tickets) | Rule − model (€) |
+|---|---|---|---|---|---|
+| BCN–RIX | Business | 16 | 16 | 0 | 0 |
+| BCN–RIX | Economy FLEX | 60 | 60 | 0 | 0 |
+| BCN–RIX | Economy BASIC | 27 | 105 | −78 | −5,850 |
+| RIX–HEL | Business | 6 | 6 | 0 | 0 |
+| RIX–HEL | Economy FLEX | 22 | 40 | −18 | −1,800 |
+| RIX–HEL | Economy BASIC | 0 | 60 | −60 | −2,700 |
+| BCN–HEL | Business | 6 | 6 | 0 | 0 |
+| BCN–HEL | Economy FLEX | 20 | 20 | 0 | 0 |
+| BCN–HEL | Economy BASIC | 80 | 2 | +78 | +8,580 |
+| Total | | | | | −1,770 |
+
+The optimal revenue is 41,235 €, with both flights full (220 of 220 and 140 of 140 seats). The optimal plan is unique: among the plans with that revenue, the smallest and the largest value of each variable coincide.
+
+The rule loses 1,770 €, 4.3 % of the optimal revenue. It sells 78 more BCN–HEL BASIC tickets at 110 €, +8,580 €. Each of them takes a seat on both flights, and for them the rule gives up 78 BCN–RIX BASIC tickets at 75 € (−5,850 €), 60 RIX–HEL BASIC tickets at 45 € (−2,700 €) and 18 RIX–HEL FLEX tickets at 100 € (−1,800 €). A BCN–HEL BASIC ticket pays more than either of the tickets it displaces, but less than the two together. The rule looks at the price of one ticket; the model looks at what its seats are worth on both flights.
+
+Table 5. Binding constraints and slack
 
 | Constraint | Used by the plan | Right-hand side | Binding | Slack |
 |---|---|---|---|---|
-| Capacity of the cabin | 220 seats | 220 seats | yes | 0 seats |
-| Demand of Business | 24 tickets | 24 tickets | yes | 0 tickets |
-| Demand of Economy FLEX | 120 tickets | 120 tickets | yes | 0 tickets |
-| Demand of Economy BASIC | 64 tickets | 140 tickets | no | 76 tickets |
+| Capacity of BCN → RIX | 220 seats | 220 seats | yes | 0 seats |
+| Capacity of RIX → HEL | 140 seats | 140 seats | yes | 0 seats |
+| Demand of BCN–RIX Economy BASIC | 105 tickets | 160 tickets | no | 55 tickets |
+| Demand of BCN–HEL Economy BASIC | 2 tickets | 80 tickets | no | 78 tickets |
+| Demand of the other seven products | their demand | their demand | yes | 0 tickets |
 
-Three constraints are binding: the capacity of the cabin and the demand of Business and of FLEX. The demand of BASIC has a slack of 76 tickets: 76 BASIC passengers who would buy a ticket find none on sale.
+Both capacities are binding, and so is the demand of seven products. Two products have unsold demand: 55 BCN–RIX BASIC and 78 BCN–HEL BASIC tickets.
 
-## 4. Shadow prices and the bid price
+## 5. Bid prices of the flights and of the products
 
-The shadow price of a constraint is the change in the optimal revenue when its right-hand side grows by one unit, with everything else unchanged. It is given here as the rise in revenue: one more seat of capacity, in €/seat, or one more ticket of forecast demand, in €/ticket.
+The shadow price of a constraint is the change in the optimal revenue when its right-hand side grows by one unit, with everything else unchanged. It is given here as the rise in revenue.
 
-The shadow price of the capacity of the cabin is called the **bid price**. It is the value of one more seat, and therefore the lowest revenue for which the airline should sell one more seat: below it, the seat brings less than the revenue it displaces. It is also the opportunity cost of the last free seat (Ivanov et al., 2025, §18.5.1).
+The shadow price of the capacity of a flight is its **bid price**: the value of one more seat on that flight, and therefore the lowest revenue for which the airline should sell one more seat on it. It is also the opportunity cost of the last free seat (Ivanov et al., 2025, §18.5.1). Table 6 gives the bid price of each flight and checks it by solving the model again with one seat more and one seat less.
 
-Table 4 gives the four shadow prices and checks each one by solving the model again with one more unit of the right-hand side.
+Table 6. Bid prices of the flights, checked by solving again
 
-Table 4. Shadow prices, checked by solving again with one more unit of the right-hand side
-
-| Constraint | Right-hand side | Shadow price | Right-hand side + 1 | Revenue solving again (€) | Change in revenue (€) |
-|---|---|---|---|---|---|
-| Capacity of the cabin (bid price) | 220 seats | 75 €/seat | 221 seats | 36,555 | 75 |
-| Demand of Business | 24 tickets | 307.5 €/ticket | 25 tickets | 36,787.5 | 307.5 |
-| Demand of Economy FLEX | 120 tickets | 105 €/ticket | 121 tickets | 36,585 | 105 |
-| Demand of Economy BASIC | 140 tickets | 0 €/ticket | 141 tickets | 36,480 | 0 |
-
-- **Capacity of the cabin: 75 €/seat.** One more seat goes to BASIC, the only fare with unsold demand, and brings the price of a BASIC ticket.
-- **Demand of Business: 307.5 €/ticket.** One more Business ticket brings 420 €, but it uses 1.5 seats, which are taken from BASIC: 420 − 1.5 × 75 = 307.5 €.
-- **Demand of Economy FLEX: 105 €/ticket.** One more FLEX ticket brings 180 € and takes one seat from BASIC: 180 − 75 = 105 €.
-- **Demand of Economy BASIC: 0 €/ticket.** BASIC already has 76 tickets of demand that are not served; one more changes nothing.
-
-A constraint with slack has a shadow price of zero, and a constraint with a shadow price other than zero is binding. The three binding constraints have positive shadow prices.
-
-**Sign of the shadow prices in the code.** The solver HiGHS, called from PuLP, reports the shadow prices of this maximisation with the opposite sign (−75 for the capacity), the same with PuLP 3 and PuLP 4. The code changes the sign, so that every shadow price is the rise in revenue, and the last two columns of Table 4 check it.
-
-## 5. Ranges of the shadow prices
-
-A shadow price holds while the right-hand side of its constraint stays within a range. Outside the range the plan changes in another way, and one more unit is worth a different amount.
-
-**How the ranges are found.** The model is solved again with the right-hand side changed, upwards and downwards, with everything else unchanged. The shadow price holds while the optimal revenue changes by exactly the shadow price for each unit, that is, while the new revenue equals 36,480 € plus the shadow price times the change. The range ends at the last value where this still holds; past it the revenue changes at a different rate.
-
-Table 5. Values of the right-hand side for which each shadow price holds
-
-| Constraint | Right-hand side | Shadow price | Holds from | to |
-|---|---|---|---|---|
-| Capacity of the cabin (bid price) | 220 seats | 75 €/seat | 156 seats | 296 seats |
-| Demand of Business | 24 tickets | 307.5 €/ticket | 0 tickets | 66.67 tickets |
-| Demand of Economy FLEX | 120 tickets | 105 €/ticket | 44 tickets | 184 tickets |
-| Demand of Economy BASIC | 140 tickets | 0 €/ticket | 64 tickets | no upper limit |
-
-- **Capacity of the cabin: 156 to 296 seats.** The bid price of 75 €/seat holds while a change of capacity is absorbed by BASIC alone. Below 156 seats (36 for Business and 120 for FLEX) no BASIC ticket is left, and fewer seats take FLEX tickets away. Above 296 seats (156 + 140) every forecast ticket is on sale, and more seats stay empty.
-- **Demand of Business: 0 to 66.67 tickets.** Each extra Business ticket takes 1.5 seats from BASIC. With 66.67 Business tickets, which use 100 seats, BASIC has 220 − 100 − 120 = 0 seats left; above that, an extra Business ticket takes seats from FLEX.
-- **Demand of Economy FLEX: 44 to 184 tickets.** Each extra FLEX ticket takes one seat from BASIC. With 184 FLEX tickets, 36 + 184 = 220 seats, BASIC has none left. With 44 FLEX tickets, BASIC sells its whole demand of 140 (36 + 44 + 140 = 220); below that, seats are left empty and one more FLEX ticket brings its whole price.
-- **Demand of Economy BASIC: 64 tickets or more.** Above 64 tickets BASIC has unsold demand and one more ticket of demand is worth nothing. Below 64, BASIC sells its whole demand and seats are left empty.
-
-## 6. Revenue against the capacity of the cabin
-
-Solving the model for every capacity from 0 to 320 seats gives the optimal revenue as a function of the capacity. The function is made of straight pieces. The slope of each piece is the value of one more seat at that capacity, the bid price, and the capacities where the slope changes are the ends of the ranges of the bid price.
-
-Table 6. Pieces of the revenue curve, from 0 to 320 seats
-
-| From (seats) | To (seats) | Slope (€/seat) | Fare that takes the extra seats |
+| Flight | Bid price (€/seat) | Change in revenue with one seat more (€) | Change in revenue with one seat less (€) |
 |---|---|---|---|
-| 0 | 36 | 280 | Business |
-| 36 | 156 | 180 | Economy FLEX |
-| 156 | 296 | 75 | Economy BASIC |
-| 296 | 320 | 0 | none: the seats stay empty |
+| BCN → RIX | 75 | +75 | −75 |
+| RIX → HEL | 35 | +35 | −35 |
 
-Read from the largest cabin to the smallest: above 296 seats there are more seats than forecast tickets, and a seat is worth nothing. From 296 to 156 seats each seat less is a BASIC ticket less, 75 €. From 156 to 36 seats BASIC sells nothing, and each seat less is a FLEX ticket less, 180 €. Below 36 seats only Business is sold, and each seat less is two thirds of a Business ticket, 280 €. The slopes fall as the capacity grows: the first seats go to the fare with the highest revenue per seat. The 220 seats of the A321 lie on the third piece, whose slope is the bid price of Table 4 and whose ends, 156 and 296 seats, are its range in Table 5.
+The change is the same upwards and downwards, so the bid prices are unique.
 
-## 7. Another aircraft
+- **BCN → RIX: 75 €/seat.** One more seat goes to a BCN–RIX BASIC passenger, the only product of this flight alone with unsold demand, at 75 €.
+- **RIX → HEL: 35 €/seat.** One more seat goes to a BCN–HEL BASIC passenger, who pays 110 € but also needs a seat on BCN → RIX. That seat is taken from a BCN–RIX BASIC passenger, worth 75 €. The seat on RIX → HEL is worth 110 − 75 = 35 €. No fare costs 35 €: the value comes from the network, and the rule of §3 cannot see it.
 
-If the flight is moved to an aircraft with fewer seats, the loss of revenue can be estimated with the bid price: 75 € for each seat less. Table 7 compares that estimate with the loss found by solving the model again, for two smaller cabins.
+**The bid price of a product** is the bid prices of the flights it uses times the seats it uses on each (Ivanov et al., 2025, §18.5.2, Eq. 18.15):
 
-Table 7. Plan and revenue with another capacity, against 220 seats
+$$
+BP_p = \sum_{l \in L} a_{pl}\, BP_l
+$$
 
-| Capacity (seats) | Business | Economy FLEX | Economy BASIC | Revenue (€) | Loss, solving again (€) | Loss estimated with the bid price (€) | Inside the range of the bid price |
-|---|---|---|---|---|---|---|---|
-| 220 | 24 | 120 | 64 | 36,480 | — | — | — |
-| 180 | 24 | 120 | 24 | 33,480 | 3,000 | 40 × 75 = 3,000 | yes |
-| 150 | 24 | 114 | 0 | 30,600 | 5,880 | 70 × 75 = 5,250 | no |
+where $BP_l$ is the bid price of flight $l$. It is the value of the seats a ticket of $p$ takes from the network. Table 7 gives the bid price of each product and the shadow price of its demand, the rise in revenue with one more ticket of forecast demand.
 
-- **180 seats, inside the range (156 to 296).** The 40 seats less are 40 BASIC tickets less. The bid price gives the loss exactly, 3,000 €, without solving the model again.
-- **150 seats, outside the range.** The first 64 seats less take away every BASIC ticket, 64 × 75 = 4,800 €. The next 6 seats less are FLEX tickets, worth 180 € each, 1,080 €. The loss is 5,880 €, and the bid price, which assumes 75 € for every seat, falls 630 € short.
+Table 7. Bid price of each product and shadow price of its demand (€/ticket)
 
-The bid price answers a change of capacity within its range. Outside it, the plan changes in another way and the model has to be solved again: this is the difference between a sensitivity analysis, which reads the shadow prices of one solution, and a what-if analysis, which solves the model again for the new data.
+| Trip | Fare | Price | Bid price of the product | Shadow price of the demand |
+|---|---|---|---|---|
+| BCN–RIX | Business | 420 | 1.5 × 75 = 112.5 | 307.5 |
+| BCN–RIX | Economy FLEX | 180 | 75 | 105 |
+| BCN–RIX | Economy BASIC | 75 | 75 | 0 |
+| RIX–HEL | Business | 200 | 1.5 × 35 = 52.5 | 147.5 |
+| RIX–HEL | Economy FLEX | 100 | 35 | 65 |
+| RIX–HEL | Economy BASIC | 45 | 35 | 10 |
+| BCN–HEL | Business | 520 | 1.5 × (75 + 35) = 165 | 355 |
+| BCN–HEL | Economy FLEX | 230 | 75 + 35 = 110 | 120 |
+| BCN–HEL | Economy BASIC | 110 | 75 + 35 = 110 | 0 |
 
-## 8. Reproducing the numbers
+In every row the shadow price of the demand is the price minus the bid price of the product: one more ticket of demand brings its price and takes seats worth the bid price. The two products with unsold demand, BCN–RIX BASIC and BCN–HEL BASIC, have a price equal to their bid price, and one more ticket of their demand is worth nothing. RIX–HEL BASIC, the cheapest fare, has a price above its bid price (45 against 35 €) and sells its whole demand; the rule of §3 sold none of it.
+
+**Sign of the shadow prices in the code.** The solver HiGHS, called from PuLP, reports the shadow prices of this maximisation with the opposite sign (−75 for the capacity of BCN → RIX), the same with PuLP 3 and PuLP 4. The code changes the sign, so that every shadow price is the rise in revenue, and Table 6 checks it.
+
+## 6. Ranges of the bid prices
+
+A bid price holds while the capacity of its flight stays within a range. Outside the range the plan changes in another way, and one more seat is worth a different amount.
+
+**How the ranges are found.** The model is solved again with the capacity of the flight changed, upwards and downwards, with everything else unchanged. The bid price holds while the optimal revenue changes by exactly the bid price for each seat, that is, while the new revenue equals 41,235 € plus the bid price times the change. The range ends at the last capacity where this still holds; past it the revenue changes at a different rate.
+
+Table 8. Capacities for which the bid price of each flight holds
+
+| Flight | Capacity (seats) | Bid price (€/seat) | Holds from (seats) | to (seats) |
+|---|---|---|---|---|
+| BCN → RIX | 220 | 75 | 115 | 275 |
+| RIX → HEL | 140 | 35 | 138 | 218 |
+
+- **BCN → RIX: 115 to 275 seats.** The bid price of 75 €/seat holds while a change of capacity is absorbed by BCN–RIX BASIC. With 115 seats no BCN–RIX BASIC ticket is left (220 − 105), and below that each seat less is a BCN–HEL BASIC ticket, 110 €. With 275 seats BCN–RIX BASIC sells its whole demand (105 + 55 = 160 tickets); above that, one more seat lets a BCN–HEL BASIC passenger replace a RIX–HEL BASIC passenger on the second flight, 110 − 45 = 65 €.
+- **RIX → HEL: 138 to 218 seats.** The bid price of 35 €/seat holds while a change of capacity is absorbed by BCN–HEL BASIC tickets, each one in exchange for a BCN–RIX BASIC ticket. With 138 seats no BCN–HEL BASIC ticket is left, and below that each seat less is a RIX–HEL BASIC ticket, 45 €. With 218 seats BCN–HEL BASIC sells its whole demand of 80 tickets, and above that one more seat stays empty, 0 €.
+
+## 7. Offer of a tour operator
+
+A tour operator asks for ten BCN–HEL seats on top of the forecast demand, at 100 €/seat, and then at 120 €/seat. A request is worth accepting if the price it offers is above the bid price of the product it asks for and the flights have seats for it (Ivanov et al., 2025, §18.6.2.2). Here the bid price of a BCN–HEL seat is 75 + 35 = 110 €, and the bid prices estimate the change in revenue as the seats times the price minus 110 €. The offer is checked by solving the model again with the seats of the offer forced into the plan: a variable fixed at the number of seats, which uses one seat on each flight and brings the price of the offer.
+
+Table 9. Offer of BCN–HEL seats on top of the forecast demand
+
+| Seats | Price (€/seat) | Estimate with the bid prices (€) | Change in revenue, solving again (€) |
+|---|---|---|---|
+| 10 | 100 | 10 × (100 − 110) = −100 | −180 |
+| 10 | 120 | 10 × (120 − 110) = +100 | +20 |
+| 1 | 120 | +10 | +10 |
+| 2 | 120 | +20 | +20 |
+| 3 | 120 | +30 | +20 |
+
+- **At 100 €/seat** the price is below the bid price, and the offer lowers the revenue: by 180 € when the model is solved again, more than the 100 € the bid prices estimate.
+- **At 120 €/seat** the price is above the bid price, and the offer raises the revenue, but by 20 €, not by 100 €. The first two seats replace the two BCN–HEL BASIC tickets of the plan, at 110 €: +10 € each. From the third seat on, each seat of the offer takes a BCN–RIX BASIC seat (75 €) and a RIX–HEL BASIC seat (45 €), 120 € in all, the price of the offer, so the revenue does not change. With the ten seats in the plan, the bid price of RIX → HEL is 45 €/seat instead of 35 €.
+
+The bid prices hold for a small change. When demand that was not forecast is accepted, the seats left are worth something else, and the bid prices are found again by solving the model with the new data (Ivanov et al., 2025, §18.6.2.3).
+
+## 8. Another aircraft on Riga → Helsinki
+
+The airline can fly RIX → HEL with an aircraft of 180 seats, whose operating cost per flight is 1,200 € higher, or with one of 120 seats, whose operating cost is 800 € lower. The bid price of RIX → HEL estimates the change in revenue as 35 € for each seat more or less; Table 10 compares that estimate with the change found by solving the model again.
+
+Table 10. Another aircraft on RIX → HEL, against 140 seats
+
+| Seats | Revenue (€) | Change in revenue, solving again (€) | Estimate with the bid price (€) | Inside the range of the bid price | Change in operating cost (€) | Net result (€) |
+|---|---|---|---|---|---|---|
+| 140 | 41,235 | — | — | — | — | — |
+| 180 | 42,635 | +1,400 | 40 × 35 = +1,400 | yes | +1,200 | +200 |
+| 120 | 40,355 | −880 | −20 × 35 = −700 | no | −800 | −80 |
+
+- **180 seats, inside the range (138 to 218).** The 40 extra seats go to BCN–HEL BASIC passengers (2 → 42 tickets), each in exchange for a BCN–RIX BASIC ticket (105 → 65). The bid price gives the change in revenue exactly, +1,400 €, and after the higher operating cost the larger aircraft brings +200 €.
+- **120 seats, outside the range.** The first 2 seats less take away the two BCN–HEL BASIC tickets (the BCN → RIX seats they free go to BCN–RIX BASIC, 105 → 107); the next 18 are RIX–HEL BASIC tickets at 45 € (60 → 42). The revenue falls by 880 €, not by 700 €. With the 800 € saved, the smaller aircraft loses 80 €, whereas the estimate with the bid price would have shown a gain of 100 €.
+
+Inside its range, the bid price answers the question without solving the model again. Outside it, the plan changes in another way and only solving the model again gives the change: this is the difference between a sensitivity analysis, which reads the shadow prices of one solution, and a what-if analysis, which solves the model again for the new data.
+
+## 9. Reproducing the numbers
 
 The Python script `revenue_management_solver.py`, in this folder, reproduces every table of this document. It writes the model of §2 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); how to install and run it is explained at the top of the file. Running it is optional: it is support material, not part of what is assessed.
 
-The script reads the shadow prices that the solver returns and checks them by solving again with one more unit (Table 4). It finds the ranges of Table 5 by solving the model again with the right-hand side changed, as explained in §5, and the pieces of Table 6 by solving it for every whole capacity from 0 to 320 seats. Tables, figures and model read the same data: the fares, the demand and the capacity are written once.
+The script applies the rule of §3 without a solver. It reads the bid prices and the shadow prices that the solver returns and checks the bid prices by solving again with one seat more and one seat less (Table 6). It finds the ranges of Table 8 by solving the model again with the capacity changed, as explained in §6, and the results of Tables 9 and 10 by solving it again with the offer in the plan or with the other aircraft. Tables, figures and model read the same data: the flights, the products and their demand are written once.
 
-The notebook [`notebooks/revenue_management.ipynb`](notebooks/revenue_management.ipynb) goes through §1–§7 step by step: a drop-down list to check the shadow price of any constraint by solving again, the curve of revenue against capacity with the range of the bid price, and a slider for the capacity of another aircraft. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/revenue_management/notebooks/revenue_management.ipynb). Its code is in the package `fares` of this folder (`src/fares/`).
+The notebook [`notebooks/revenue_management.ipynb`](notebooks/revenue_management.ipynb) goes through §1–§8 step by step: the rule and the optimal plan side by side, a drop-down list to check the bid price of either flight by solving again, sliders for the seats and the price of an offer, and a choice of flight, capacity and operating cost for another aircraft. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/revenue_management/notebooks/revenue_management.ipynb). Its code is in the package `fares` of this folder (`src/fares/`).
 
 ## References
 
@@ -180,4 +227,4 @@ The notebook [`notebooks/revenue_management.ipynb`](notebooks/revenue_management
 
 ---
 
-The data of this case are invented (2026); they do not describe a real airline. The model is adapted from Ivanov et al. (2025, §18.5.1).
+The data of this case are invented (2026); they do not describe a real airline. The model is that of Ivanov et al. (2025, §18.5.2).

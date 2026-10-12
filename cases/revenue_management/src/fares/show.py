@@ -12,14 +12,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from . import model as m
-from .data import CURVE, INCLUDES, C, D, F, a, r
+from .data import AIRCRAFT, FARES, INCLUDES, OFFER_TRIP, SEATS, TRIPS, USES, C, D, L, P, a, r
 
-COLOURS = {"Business": "tab:blue", "Economy FLEX": "tab:orange", "Economy BASIC": "tab:purple"}
-RANGE = "tab:green"
+COLOURS = {"rule": "tab:orange", "model": "tab:blue"}
 ESTIMATE = "tab:red"
-
-# Constraints as the drop-down list of the notebook names them
-CONSTRAINTS = {m.name(key): key for key in m.KEYS}
 
 
 def _light(func):
@@ -41,23 +37,32 @@ def _display(obj) -> None:
 
 
 def _num(x: float) -> str:
-    """A number with a comma for thousands and no trailing zeros: 36,480; 307.5; 66.67."""
+    """A number with a comma for thousands and no trailing zeros: 41,235; 307.5."""
     text = f"{x:,.2f}".rstrip("0").rstrip(".")
     return "0" if text == "-0" else text
+
+
+def _signed(x: float) -> str:
+    return ("+" if x > 0 else "") + _num(x)
 
 
 def _euros(x: float) -> str:
     return f"{_num(x)} €"
 
 
-def _unit(key: str) -> str:
-    return "seat" if key == m.CAPACITY else "ticket"
+def _grid(values: dict, name: str) -> pd.DataFrame:
+    """A table with one row per trip and one column per fare."""
+    return pd.DataFrame({fare: {trip: values[trip, fare] for trip in TRIPS} for fare in FARES}).rename_axis(name)
+
+
+def _seats_text(seats: dict, capacity: dict = C) -> str:
+    return "; ".join(f"{l}: {_num(seats[l])} of {_num(capacity[l])} seats" for l in L)
 
 
 def _range_text(low, high) -> str:
-    if high is None:
-        return f"{_num(low)} or more"
-    return f"{_num(low)} to {_num(high)}"
+    low_text = "no lower limit" if low is None else _num(low)
+    high_text = "no upper limit" if high is None else _num(high)
+    return f"{low_text} to {high_text}"
 
 
 # ---------------------------------------------------------------------------
@@ -65,159 +70,181 @@ def _range_text(low, high) -> str:
 # ---------------------------------------------------------------------------
 
 def show_data() -> None:
-    """Table 1: the fares, with the revenue per seat of each one."""
-    print(f"Capacity of the cabin: {C} seats. Prices of a one-way ticket.")
-    _display(pd.DataFrame({f: {"What it includes": INCLUDES[f], "Price (€/ticket)": r[f],
-                               "Seats per ticket": _num(a[f]), "Forecast demand (tickets)": D[f],
-                               "Revenue per seat (€/seat)": _num(r[f] / a[f])} for f in F})
-             .T.rename_axis("Fare"))
-
-
-# ---------------------------------------------------------------------------
-# §3 Optimal plan and binding constraints
-# ---------------------------------------------------------------------------
-
-def _plan_table(solution: dict) -> pd.DataFrame:
-    rows = {f: {"Tickets on sale": _num(solution["plan"][f]), "Forecast demand (tickets)": D[f],
-                "Seats used": _num(a[f] * solution["plan"][f]),
-                "Revenue (€)": _num(r[f] * solution["plan"][f])} for f in F}
-    rows["Total"] = {"Tickets on sale": _num(sum(solution["plan"].values())), "Forecast demand (tickets)": "",
-                     "Seats used": _num(solution["seats"]), "Revenue (€)": _num(solution["revenue"])}
-    return pd.DataFrame(rows).T.rename_axis("Fare")
-
-
-def optimal_plan() -> dict:
-    """Table 2: the optimal plan; Table 3: which constraints are binding and the
-    slack of the others."""
-    solution = m.solve()
-    print(f"Optimal plan: revenue {_euros(solution['revenue'])}, "
-          f"{_num(solution['seats'])} of {C} seats used.")
-    _display(_plan_table(solution))
+    """Tables 1 and 2: the flights and the nine products, with the flights each one uses."""
+    _display(pd.DataFrame({l: {"Aircraft": AIRCRAFT[l], "Capacity (seats)": C[l]} for l in L})
+             .T.rename_axis("Flight"))
     rows = []
-    for key in m.KEYS:
-        left = solution["seats"] if key == m.CAPACITY else solution["plan"][key]
-        unit = "seats" if key == m.CAPACITY else "tickets"
-        gap = m.slack(solution, key)
-        rows.append({"Constraint": m.name(key), "Used by the plan": f"{_num(left)} {unit}",
-                     "Right-hand side": f"{_num(m.rhs(key))} {unit}",
-                     "Binding": "yes" if abs(gap) < m.TOL else "no", "Slack": f"{_num(gap)} {unit}"})
+    for trip, fare in P:
+        rows.append({"Trip": trip, "Fare": fare, "Flights used": " and ".join(USES[trip]),
+                     "Price (€/ticket)": r[trip, fare], "Forecast demand (tickets)": D[trip, fare],
+                     "Seats per ticket on each flight": _num(SEATS[fare])})
+    _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
+    _display(pd.DataFrame({f: {"What it includes": INCLUDES[f]} for f in FARES}).T.rename_axis("Fare"))
+
+
+# ---------------------------------------------------------------------------
+# §3 The rule «highest fare first»
+# ---------------------------------------------------------------------------
+
+def rule() -> dict:
+    """Table 3: the plan of the rule, its revenue and the seats it uses on each flight."""
+    result = m.highest_fare_first()
+    print("Order of the rule, from the highest price to the lowest:")
+    print("  " + "; ".join(f"{trip} {fare} {r[trip, fare]} €" for trip, fare in result["order"]))
+    print(f"Revenue of the rule: {_euros(result['revenue'])}. Seats used: {_seats_text(result['seats'])}.")
+    _display(_grid({p: f"{_num(result['plan'][p])} of {D[p]}" for p in P}, "Tickets on sale (of the demand)"))
+    return result
+
+
+# ---------------------------------------------------------------------------
+# §4 Optimal plan, against the rule
+# ---------------------------------------------------------------------------
+
+@_light
+def optimal_plan() -> dict:
+    """Table 4: the optimal plan next to the plan of the rule, and the difference
+    product by product; Table 5: binding constraints and slack."""
+    solution = m.solve()
+    rule_ = m.highest_fare_first()
+    gap = solution["revenue"] - rule_["revenue"]
+    print(f"Optimal plan: revenue {_euros(solution['revenue'])}. Seats used: {_seats_text(solution['seats'])}.")
+    print(f"Rule «highest fare first»: {_euros(rule_['revenue'])}. "
+          f"The rule loses {_euros(gap)}, {gap / solution['revenue'] * 100:.1f} % of the optimal revenue.")
+    rows = []
+    for p in P:
+        diff = rule_["plan"][p] - solution["plan"][p]
+        rows.append({"Trip": p[0], "Fare": p[1], "Rule (tickets)": _num(rule_["plan"][p]),
+                     "Model (tickets)": _num(solution["plan"][p]), "Rule − model (tickets)": _signed(diff),
+                     "Rule − model (€)": _signed(r[p] * diff)})
+    _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
+
+    fig, ax = plt.subplots(figsize=(9, 3.6))
+    xs = range(len(P))
+    ax.bar([x - 0.2 for x in xs], [rule_["plan"][p] for p in P], width=0.4, color=COLOURS["rule"],
+           label="rule «highest fare first»")
+    ax.bar([x + 0.2 for x in xs], [solution["plan"][p] for p in P], width=0.4, color=COLOURS["model"],
+           label="optimal plan of the model")
+    ax.set_xticks(list(xs), [f"{trip}\n{fare.replace('Economy ', '')}" for trip, fare in P], fontsize=8)
+    ax.set_ylabel("Tickets on sale")
+    ax.legend(fontsize=8, frameon=False)
+    ax.spines[["top", "right"]].set_visible(False)
+    plt.show()
+
+    rows = []
+    for l in L:
+        rows.append({"Constraint": f"Capacity of {l}", "Used by the plan": f"{_num(solution['seats'][l])} seats",
+                     "Right-hand side": f"{_num(C[l])} seats",
+                     "Binding": "yes" if solution["spare seats"][l] < m.TOL else "no",
+                     "Slack": f"{_num(solution['spare seats'][l])} seats"})
+    for p in P:
+        rows.append({"Constraint": f"Demand of {p[0]} {p[1]}", "Used by the plan": f"{_num(solution['plan'][p])} tickets",
+                     "Right-hand side": f"{_num(D[p])} tickets",
+                     "Binding": "yes" if solution["unsold demand"][p] < m.TOL else "no",
+                     "Slack": f"{_num(solution['unsold demand'][p])} tickets"})
     _display(pd.DataFrame(rows).set_index("Constraint"))
     return solution
 
 
 # ---------------------------------------------------------------------------
-# §4 Shadow prices, checked by solving again
+# §5 Bid prices
 # ---------------------------------------------------------------------------
 
-def shadow_prices(constraint: str = "Capacity of the cabin") -> None:
-    """Table 4: the shadow price of each constraint; then the chosen constraint is
-    checked by solving the model again with one more unit of its right-hand side."""
-    if constraint not in CONSTRAINTS:
-        raise ValueError(f"The constraint must be one of {', '.join(CONSTRAINTS)}.")
+def bid_prices(flight: str = "RIX → HEL") -> None:
+    """Table 6: the bid price of each flight, and the chosen one checked by solving
+    again with one seat more and one seat less; Table 7: the bid price of each
+    product against its price, and the shadow price of its demand."""
+    if flight not in L:
+        raise ValueError(f"The flight must be one of {', '.join(L)}.")
     solution = m.solve()
-    _display(pd.DataFrame([{"Constraint": m.name(key), "Right-hand side": f"{_num(m.rhs(key))} {_unit(key)}s",
-                            "Shadow price": f"{_num(m.shadow_price(solution, key))} €/{_unit(key)}"}
-                           for key in m.KEYS]).set_index("Constraint"))
-    key = CONSTRAINTS[constraint]
-    check = m.one_more(key)
-    unit = "seats" if key == m.CAPACITY else "tickets"
-    print(f"{constraint}: {_num(m.rhs(key))} {unit} → {_num(m.rhs(key) + 1)} {unit}.")
-    print(f"Revenue: {_euros(check['revenue'])} → {_euros(check['revenue with one more'])}, "
-          f"a change of {_euros(check['change'])}.")
-    print(f"Shadow price: {_num(check['shadow price'])} €/{_unit(key)}.")
-
-
-# ---------------------------------------------------------------------------
-# §5 and §6 Ranges and revenue against capacity
-# ---------------------------------------------------------------------------
-
-def _draw_curve(ax, curve) -> None:
-    ax.plot([k for k, _ in curve], [z for _, z in curve], color="black", lw=1.8, label="optimal revenue")
-    ax.set_xlim(CURVE[0], CURVE[1])
-    ax.set_ylim(0, max(z for _, z in curve) * 1.12)
-    ax.set_xlabel("Capacity of the cabin (seats)")
-    ax.set_ylabel("Revenue (€)")
-    ax.yaxis.set_major_formatter(lambda y, _: f"{y:,.0f}")
-    ax.spines[["top", "right"]].set_visible(False)
-
-
-@_light
-def revenue_against_capacity() -> None:
-    """Figure and Tables 5 and 6: the revenue for every capacity from 0 to 320 seats,
-    the slope of each piece, the points where it changes and the range of the bid
-    price; then the range of every shadow price."""
-    curve = m.revenue_curve()
-    pieces = m.segments()
-    low, high = m.validity_range(m.CAPACITY)
-    revenue = dict(curve)
-    fig, ax = plt.subplots(figsize=(8, 4.6))
-    ax.axvspan(low, high, color=RANGE, alpha=0.12, label=f"range of the bid price: {_range_text(low, high)} seats")
-    _draw_curve(ax, curve)
-    for piece in pieces:
-        middle = (piece["from"] + piece["to"]) / 2
-        last = piece is pieces[-1]
-        ax.annotate(f"{_num(piece['slope'])} €/seat", (middle, revenue[round(middle)]),
-                    xytext=(0, 6) if last else (6, -16), textcoords="offset points",
-                    ha="center" if last else "left", fontsize=8, weight="bold")
-    for piece in pieces[1:]:
-        k = piece["from"]
-        ax.axvline(k, color="0.6", ls=":", lw=1)
-        ax.annotate(f"{k}", (k, 0), xytext=(3, 4), textcoords="offset points", fontsize=8, color="0.3")
-    ax.scatter([C], [revenue[C]], s=60, color=RANGE, zorder=3)
-    ax.annotate(f"{C} seats\n{_euros(revenue[C])}", (C, revenue[C]), xytext=(-8, 10),
-                textcoords="offset points", ha="right", fontsize=8)
-    ax.legend(fontsize=8, loc="upper left", frameon=False)
-    plt.show()
-
-    _display(pd.DataFrame([{"From (seats)": p["from"], "To (seats)": p["to"],
-                            "Slope (€/seat)": _num(p["slope"]),
-                            "Fare that takes the extra seats": p["fare"] or "none: the seats stay empty"}
-                           for p in pieces], index=range(1, len(pieces) + 1)).rename_axis("Piece"))
-    solution = m.solve()
+    bid = solution["bid price"]
+    _display(pd.DataFrame({l: {"Capacity (seats)": C[l], "Bid price (€/seat)": _num(bid[l])} for l in L})
+             .T.rename_axis("Flight"))
+    up, down = m.change_capacity(flight, 1), m.change_capacity(flight, -1)
+    print(f"{flight}: with {C[flight] + 1} seats the revenue changes by {_signed(up)} €; "
+          f"with {C[flight] - 1} seats, by {_signed(down)} €. Bid price: {_num(bid[flight])} €/seat.")
     rows = []
-    for key in m.KEYS:
-        unit = "seats" if key == m.CAPACITY else "tickets"
-        rows.append({"Constraint": m.name(key), "Right-hand side": f"{_num(m.rhs(key))} {unit}",
-                     "Shadow price": f"{_num(m.shadow_price(solution, key))} €/{_unit(key)}",
-                     "Holds from … to …": f"{_range_text(*m.validity_range(key))} {unit}"})
-    _display(pd.DataFrame(rows).set_index("Constraint"))
+    for p in P:
+        product_bid = m.product_bid_price(p, bid)
+        terms = " + ".join(f"{_num(a(p, l))} × {_num(bid[l])}" for l in L if a(p, l) > 0)
+        rows.append({"Trip": p[0], "Fare": p[1], "Price (€/ticket)": r[p],
+                     "Bid price of the product (€/ticket)": f"{terms} = {_num(product_bid)}",
+                     "Price − bid price (€/ticket)": _num(r[p] - product_bid),
+                     "Shadow price of the demand (€/ticket)": _num(solution["demand price"][p])})
+    _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
 
 
 # ---------------------------------------------------------------------------
-# §7 Another capacity
+# §7 Offer of a tour operator
 # ---------------------------------------------------------------------------
 
 @_light
-def other_capacity(seats: float = 180) -> dict:
-    """The plan with another capacity, the change in revenue against 220 seats found
-    by solving again, and the change estimated with the bid price."""
-    result = m.other_capacity(seats)
+def tour_operator_offer(seats: int = 10, price: float = 120) -> dict | None:
+    """An offer of seats BCN–HEL at price €/seat on top of the forecast demand: the
+    estimate with the bid prices against the change found by solving again, seat by
+    seat, and the plan with the offer."""
+    result = m.offer(seats, price)
+    if result is None:
+        print(f"{seats} seats {OFFER_TRIP} do not fit in the flights: the model has no solution.")
+        return None
+    bid = result["trip bid price"]
+    print(f"Bid price of a seat {OFFER_TRIP}: {' + '.join(_num(result['base']['bid price'][l]) for l in USES[OFFER_TRIP])}"
+          f" = {_num(bid)} €/seat.")
+    print(f"Estimate with the bid prices: {seats} × ({_num(price)} − {_num(bid)}) = {_signed(result['estimate'])} €.")
+    print(f"Solving again with the {seats} seats in the plan: {_signed(result['change'])} €.")
+    print("Bid prices with the offer in the plan: "
+          + "; ".join(f"{l} {_num(result['new']['bid price'][l])} €/seat" for l in L) + ".")
+    changed = {p: (result["base"]["plan"][p], result["new"]["plan"][p]) for p in P
+               if abs(result["base"]["plan"][p] - result["new"]["plan"][p]) > m.TOL}
+    if changed:
+        _display(pd.DataFrame([{"Trip": p[0], "Fare": p[1], "Without the offer (tickets)": _num(old),
+                                "With the offer (tickets)": _num(new)} for p, (old, new) in changed.items()])
+                 .set_index(["Trip", "Fare"]))
+
+    counts = list(range(0, seats + 1))
+    changes = [0.0] + [m.offer(k, price)["change"] for k in counts[1:]]
+    fig, ax = plt.subplots(figsize=(7, 3.8))
+    ax.plot(counts, [k * (price - bid) for k in counts], color=ESTIMATE, ls="--",
+            label=f"estimate: seats × ({_num(price)} − {_num(bid)})")
+    ax.plot(counts, changes, color="black", marker="o", ms=4, label="solving again")
+    ax.axhline(0, color="0.6", lw=0.8)
+    ax.set_xlabel(f"Seats {OFFER_TRIP} of the offer")
+    ax.set_ylabel("Change in revenue (€)")
+    ax.legend(fontsize=8, frameon=False)
+    ax.spines[["top", "right"]].set_visible(False)
+    plt.show()
+    return result
+
+
+# ---------------------------------------------------------------------------
+# §8 Another aircraft
+# ---------------------------------------------------------------------------
+
+def other_aircraft(flight: str = "RIX → HEL", seats: float = 180, cost_change: float = 1200) -> dict:
+    """Another aircraft on a flight: new plan and revenue, change found by solving again
+    against the estimate with the bid price, inside or outside its range, and the net
+    result after the change in operating cost."""
+    if flight not in L:
+        raise ValueError(f"The flight must be one of {', '.join(L)}.")
+    result = m.other_aircraft(flight, seats, cost_change)
     base, new = result["base"], result["new"]
     low, high = result["range"]
-    table = pd.DataFrame({f"{C} seats": {f: _num(base["plan"][f]) for f in F},
-                          f"{_num(seats)} seats": {f: _num(new["plan"][f]) for f in F}})
-    table.loc["Revenue (€)"] = [_num(base["revenue"]), _num(new["revenue"])]
-    _display(table.rename_axis("Tickets on sale"))
     where = "inside" if result["inside"] else "outside"
-    print(f"Change in revenue, solving again: {_euros(result['change'])}.")
-    print(f"Estimate with the bid price: {_num(base['bid price'])} €/seat × ({_num(seats)} − {C}) seats "
-          f"= {_euros(result['estimate'])}.")
-    print(f"{_num(seats)} seats is {where} the range of the bid price ({_range_text(low, high)} seats). "
-          f"Difference between the change and the estimate: {_euros(result['change'] - result['estimate'])}.")
-
-    curve = m.revenue_curve()
-    fig, ax = plt.subplots(figsize=(8, 4.6))
-    ax.axvspan(low, high, color=RANGE, alpha=0.12, label=f"range of the bid price: {_range_text(low, high)} seats")
-    _draw_curve(ax, curve)
-    xs = [CURVE[0], CURVE[1]]
-    ax.plot(xs, [base["revenue"] + base["bid price"] * (k - C) for k in xs], color=ESTIMATE, ls="--", lw=1.2,
-            label=f"estimate with the bid price: {_num(base['bid price'])} €/seat from {C} seats")
-    ax.scatter([C], [base["revenue"]], s=60, color=RANGE, zorder=3)
-    ax.scatter([seats], [new["revenue"]], s=60, color="black", zorder=3)
-    ax.scatter([seats], [base["revenue"] + result["estimate"]], s=60, facecolor="none", edgecolor=ESTIMATE,
-               lw=1.5, zorder=3)
-    ax.annotate(f"{_num(seats)} seats\n{_euros(new['revenue'])}", (seats, new["revenue"]), xytext=(8, -26),
-                textcoords="offset points", fontsize=8)
-    ax.legend(fontsize=8, loc="upper left", frameon=False)
-    plt.show()
+    print(f"{flight} with {_num(seats)} seats instead of {_num(C[flight])}: "
+          f"revenue {_euros(new['revenue'])} instead of {_euros(base['revenue'])}.")
+    rows = []
+    for p in P:
+        if abs(base["plan"][p] - new["plan"][p]) > m.TOL:
+            rows.append({"Trip": p[0], "Fare": p[1], f"{_num(C[flight])} seats (tickets)": _num(base["plan"][p]),
+                         f"{_num(seats)} seats (tickets)": _num(new["plan"][p])})
+    if rows:
+        print("Products whose tickets change:")
+        _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
+    bid = base["bid price"][flight]
+    print(f"Change in revenue, solving again: {_signed(result['change'])} €.")
+    print(f"Estimate with the bid price: {_num(bid)} €/seat × ({_num(seats)} − {_num(C[flight])}) seats "
+          f"= {_signed(result['estimate'])} €.")
+    print(f"{_num(seats)} seats is {where} the range of the bid price of {flight} ({_range_text(low, high)} seats).")
+    print(f"Change in operating cost: {_signed(cost_change)} €. Net result: {_signed(result['change'])} − "
+          f"({_signed(cost_change)}) = {_signed(result['net'])} €; with the estimate it would be "
+          f"{_signed(result['net estimate'])} €.")
     return result

@@ -9,67 +9,94 @@ import pytest
 matplotlib.use("Agg")
 
 from fares import model as m  # noqa: E402
-from fares.data import D, C  # noqa: E402
+from fares.data import C, D, P, TRIPS  # noqa: E402
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "revenue_management.ipynb"
-BUSINESS, FLEX, BASIC = "Business", "Economy FLEX", "Economy BASIC"
+FIRST, SECOND = "BCN → RIX", "RIX → HEL"
 
 
-def test_table2_optimal_plan():
+def by_trip(plan):
+    """A plan as one list per trip: Business, FLEX, BASIC."""
+    return [[plan[trip, fare] for trip_, fare in P if trip_ == trip] for trip in TRIPS]
+
+
+def test_table3_rule_highest_fare_first():
+    rule = m.highest_fare_first()
+    assert rule["revenue"] == pytest.approx(39465)
+    assert by_trip(rule["plan"]) == [[16, 60, 27], [6, 22, 0], [6, 20, 80]]
+    assert rule["seats"] == {FIRST: 220, SECOND: 140}
+
+
+def test_table4_optimal_plan_and_difference_with_the_rule():
     solution = m.solve()
-    assert solution["plan"] == {BUSINESS: 24, FLEX: 120, BASIC: 64}
-    assert solution["revenue"] == pytest.approx(36480)
-    assert solution["seats"] == pytest.approx(220)
+    assert solution["revenue"] == pytest.approx(41235)
+    assert by_trip(solution["plan"]) == [[16, 60, 105], [6, 40, 60], [6, 20, 2]]
+    assert solution["seats"] == {FIRST: 220, SECOND: 140}
+    diff = m.difference(m.highest_fare_first()["plan"], solution["plan"])
+    assert diff == {("BCN–HEL", "Economy BASIC"): (78, 8580), ("BCN–RIX", "Economy BASIC"): (-78, -5850),
+                    ("RIX–HEL", "Economy BASIC"): (-60, -2700), ("RIX–HEL", "Economy FLEX"): (-18, -1800)}
+    assert sum(v for _, v in diff.values()) == pytest.approx(-1770)
 
 
-def test_table3_binding_constraints_and_slack():
+def test_the_optimal_plan_is_unique():
+    for low, high in m.plan_bounds().values():
+        assert low == pytest.approx(high, abs=1e-6)
+
+
+def test_table5_binding_constraints_and_slack():
     solution = m.solve()
-    assert solution["spare seats"] == 0
-    assert solution["unsold demand"] == {BUSINESS: 0, FLEX: 0, BASIC: 76}
+    assert solution["spare seats"] == {FIRST: 0, SECOND: 0}
+    assert {p: v for p, v in solution["unsold demand"].items() if v} == {
+        ("BCN–RIX", "Economy BASIC"): 55, ("BCN–HEL", "Economy BASIC"): 78}
 
 
-def test_table4_shadow_prices_are_the_rise_in_revenue():
+def test_table6_bid_prices_are_the_change_with_one_seat_more_and_one_less():
     solution = m.solve()
-    assert solution["bid price"] == pytest.approx(75)
-    assert solution["demand price"] == {BUSINESS: pytest.approx(307.5), FLEX: pytest.approx(105), BASIC: 0}
-    # Solving again with one more seat or one more ticket of demand gives the same change
-    for key, change in (("capacity", 75), (BUSINESS, 307.5), (FLEX, 105), (BASIC, 0)):
-        check = m.one_more(key)
-        assert check["change"] == pytest.approx(change)
-        assert check["change"] == pytest.approx(check["shadow price"])
+    assert solution["bid price"] == {FIRST: pytest.approx(75), SECOND: pytest.approx(35)}
+    for flight, bid in ((FIRST, 75), (SECOND, 35)):
+        assert m.change_capacity(flight, 1) == pytest.approx(bid)
+        assert m.change_capacity(flight, -1) == pytest.approx(-bid)
 
 
-def test_table5_ranges():
-    assert m.validity_range("capacity") == (156, 296)
-    low, high = m.validity_range(BUSINESS)
-    assert low == 0 and high == pytest.approx(200 / 3, abs=1e-5)
-    assert m.validity_range(FLEX) == (44, 184)
-    assert m.validity_range(BASIC) == (64, None)
+def test_table7_shadow_price_of_the_demand_is_price_minus_bid_price():
+    solution = m.solve()
+    prices = [solution["demand price"][p] for p in P]
+    assert prices == pytest.approx([307.5, 105, 0, 147.5, 65, 10, 355, 120, 0])
+    for p in P:
+        assert solution["demand price"][p] == pytest.approx(m.r[p] - m.product_bid_price(p, solution["bid price"]))
+    assert m.product_bid_price(("BCN–HEL", "Business"), solution["bid price"]) == pytest.approx(165)
 
 
-def test_table6_revenue_against_capacity():
-    pieces = m.segments()
-    assert [(p["from"], p["to"], p["slope"]) for p in pieces] == [
-        (0, 36, 280), (36, 156, 180), (156, 296, 75), (296, 320, 0)]
-    assert [p["fare"] for p in pieces] == [BUSINESS, FLEX, BASIC, None]
+def test_table8_ranges_of_the_bid_prices():
+    assert m.validity_range(FIRST) == (115, 275)
+    assert m.validity_range(SECOND) == (138, 218)
 
 
-def test_table7_another_capacity():
-    inside = m.other_capacity(180)
-    assert inside["new"]["plan"] == {BUSINESS: 24, FLEX: 120, BASIC: 24}
-    assert inside["new"]["revenue"] == pytest.approx(33480)
-    assert inside["change"] == pytest.approx(-3000) and inside["estimate"] == pytest.approx(-3000)
-    assert inside["inside"]
-    outside = m.other_capacity(150)
-    assert outside["new"]["plan"] == {BUSINESS: 24, FLEX: 114, BASIC: 0}
-    assert outside["new"]["revenue"] == pytest.approx(30600)
-    assert outside["change"] == pytest.approx(-5880) and outside["estimate"] == pytest.approx(-5250)
-    assert not outside["inside"]
+def test_table9_offer_of_a_tour_operator():
+    assert m.offer(10, 100)["estimate"] == pytest.approx(-100)
+    assert m.offer(10, 100)["change"] == pytest.approx(-180)
+    assert m.offer(10, 120)["estimate"] == pytest.approx(100)
+    assert m.offer(10, 120)["change"] == pytest.approx(20)
+    assert [m.offer(n, 120)["change"] for n in (1, 2, 3)] == pytest.approx([10, 20, 20])
+
+
+def test_table10_another_aircraft_on_the_second_flight():
+    larger = m.other_aircraft(SECOND, 180, 1200)
+    assert larger["new"]["revenue"] == pytest.approx(42635)
+    assert larger["change"] == pytest.approx(1400) and larger["estimate"] == pytest.approx(1400)
+    assert larger["inside"] and larger["net"] == pytest.approx(200)
+    assert by_trip(larger["new"]["plan"]) == [[16, 60, 65], [6, 40, 60], [6, 20, 42]]
+    smaller = m.other_aircraft(SECOND, 120, -800)
+    assert smaller["new"]["revenue"] == pytest.approx(40355)
+    assert smaller["change"] == pytest.approx(-880) and smaller["estimate"] == pytest.approx(-700)
+    assert not smaller["inside"]
+    assert smaller["net"] == pytest.approx(-80) and smaller["net estimate"] == pytest.approx(100)
+    assert by_trip(smaller["new"]["plan"]) == [[16, 60, 107], [6, 40, 42], [6, 20, 0]]
 
 
 def test_one_source_of_data():
     # The model, the tables and the figures read the same demand and capacity
-    assert m.D is D and m.C == C
+    assert m.D is D and m.C is C
 
 
 def test_notebook_runs():
