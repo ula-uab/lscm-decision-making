@@ -1,7 +1,7 @@
 [project]
 name = "revenue-management"
 version = "0.1.0"
-description = "How many tickets of each product an airline puts on sale on two connected flights: network model, rule against model, bid prices and their range (course case, UAB)"
+description = "How many tickets of each fare of each trip an airline puts on sale on two connected flights: network model, rule against model, bid prices and their range (course case, UAB)"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Juan José Ramos", email = "juanjose.ramos@uab.es" }]

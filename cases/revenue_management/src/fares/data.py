@@ -3,17 +3,18 @@
 The data are invented (2026); they do not describe a real airline.
 """
 
-# Flights (resources) and their capacity C[l] (seats), Table 1
+# Flights l (resources) and the seats C[l] of the aircraft of each, Table 1
 L = ["BCN → RIX", "RIX → HEL"]
 AIRCRAFT = {"BCN → RIX": "Airbus A321", "RIX → HEL": "smaller aircraft"}
 C = {"BCN → RIX": 220, "RIX → HEL": 140}
 
-# Trips and the flights each one uses, Table 2: a BCN–HEL ticket needs a seat on both flights
+# Trips t and the flights each one uses (L_t in the document), Table 2: a BCN–HEL
+# ticket needs a seat on both flights
 TRIPS = ["BCN–RIX", "RIX–HEL", "BCN–HEL"]
 USES = {"BCN–RIX": ["BCN → RIX"], "RIX–HEL": ["RIX → HEL"], "BCN–HEL": ["BCN → RIX", "RIX → HEL"]}
 
-# Fares, what each one includes, and the seats one ticket uses on each flight of its trip:
-# a Business ticket leaves the middle seat free
+# Fares f, what each one includes, and the seats s_f one ticket uses on each flight of
+# its trip: a Business ticket leaves the middle seat free
 FARES = ["Business", "Economy FLEX", "Economy BASIC"]
 INCLUDES = {
     "Business": "everything, meals and drinks on board included",
@@ -22,8 +23,9 @@ INCLUDES = {
 }
 SEATS = {"Business": 1.5, "Economy FLEX": 1, "Economy BASIC": 1}
 
-# Products p = (trip, fare): price r[p] of a one-way ticket (EUR/ticket) and
-# forecast demand D[p] (tickets), Table 2
+# The nine fares of the trips, each one a pair p = (trip, fare), written t, f in the
+# document: price r[p] of a one-way ticket (EUR/ticket, r_tf) and forecast demand
+# D[p] (tickets, D_tf), Table 2
 P = [(trip, fare) for trip in TRIPS for fare in FARES]
 r = dict(zip(P, [420, 180, 75,
                  200, 100, 45,
@@ -34,7 +36,8 @@ D = dict(zip(P, [16, 60, 160,
 
 
 def a(p, l) -> float:
-    """Seats a[p, l] that one ticket of product p uses on flight l: 0 if the trip does not use l."""
+    """Seats that one ticket of p = (trip, fare) uses on flight l: s_f if the trip uses l,
+    0 if it does not."""
     trip, fare = p
     return SEATS[fare] if l in USES[trip] else 0
 
@@ -45,6 +48,6 @@ OFFER_TRIP = "BCN–HEL"
 OFFER_SEATS = 10
 OFFER_PRICES = [100, 120]
 
-# Other aircraft for RIX → HEL, §8: capacity (seats) and operating cost per flight
+# Other aircraft for RIX → HEL, §8: seats of the aircraft and operating cost per flight
 # against the 140-seat aircraft (EUR; negative: a saving)
 OTHER_AIRCRAFT = {"RIX → HEL": [(180, 1200), (120, -800)]}

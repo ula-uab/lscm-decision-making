@@ -107,7 +107,7 @@ def test_table11_another_aircraft_on_the_second_flight():
 
 
 def test_one_source_of_data():
-    # The model, the tables and the figures read the same demand and capacity
+    # The model, the tables and the figures read the same demand and seats of the aircraft
     assert m.D is D and m.C is C
 
 

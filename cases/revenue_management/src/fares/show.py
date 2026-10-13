@@ -70,8 +70,9 @@ def _range_text(low, high) -> str:
 # ---------------------------------------------------------------------------
 
 def show_data() -> None:
-    """Tables 1 and 2: the flights and the nine products, with the flights each one uses."""
-    _display(pd.DataFrame({l: {"Aircraft": AIRCRAFT[l], "Capacity (seats)": C[l]} for l in L})
+    """Tables 1 and 2: the flights and the nine fares of the trips, with the flights each
+    trip uses."""
+    _display(pd.DataFrame({l: {"Aircraft": AIRCRAFT[l], "Seats of the aircraft": C[l]} for l in L})
              .T.rename_axis("Flight"))
     rows = []
     for trip, fare in P:
@@ -83,7 +84,7 @@ def show_data() -> None:
 
 
 # ---------------------------------------------------------------------------
-# §3 The rule «highest fare first»
+# §2 The rule «highest fare first»
 # ---------------------------------------------------------------------------
 
 def rule() -> dict:
@@ -102,8 +103,8 @@ def rule() -> dict:
 
 @_light
 def optimal_plan() -> dict:
-    """Table 4: the optimal plan next to the plan of the rule, and the difference
-    product by product; Table 5: binding constraints and slack."""
+    """Table 4: the optimal plan next to the plan of the rule, and the difference fare
+    by fare and trip by trip; Table 5: binding constraints and slack."""
     solution = m.solve()
     rule_ = m.highest_fare_first()
     gap = solution["revenue"] - rule_["revenue"]
@@ -132,7 +133,7 @@ def optimal_plan() -> dict:
 
     rows = []
     for l in L:
-        rows.append({"Constraint": f"Capacity of {l}", "Used by the plan": f"{_num(solution['seats'][l])} seats",
+        rows.append({"Constraint": f"Seats of {l}", "Used by the plan": f"{_num(solution['seats'][l])} seats",
                      "Right-hand side": f"{_num(C[l])} seats",
                      "Binding": "yes" if solution["spare seats"][l] < m.TOL else "no",
                      "Slack": f"{_num(solution['spare seats'][l])} seats"})
@@ -151,20 +152,20 @@ def optimal_plan() -> dict:
 
 def bid_prices(flight: str = "RIX → HEL") -> None:
     """Table 6: the bid price of each flight, and the chosen one checked by solving
-    again with one seat more and one seat less; Table 7: the products whose tickets
-    change with that seat; Table 8: the bid price of each product against its price,
-    and the shadow price of its demand."""
+    again with one seat more and one seat less; Table 7: the fares of the trips whose
+    tickets change with that seat; Table 8: the bid price of the ticket of each fare of
+    each trip against its price, and the shadow price of its demand."""
     if flight not in L:
         raise ValueError(f"The flight must be one of {', '.join(L)}.")
     solution = m.solve()
     bid = solution["bid price"]
-    _display(pd.DataFrame({l: {"Capacity (seats)": C[l], "Bid price (€/seat)": _num(bid[l])} for l in L})
+    _display(pd.DataFrame({l: {"Seats of the aircraft": C[l], "Bid price (€/seat)": _num(bid[l])} for l in L})
              .T.rename_axis("Flight"))
     up, down = m.change_capacity(flight, 1), m.change_capacity(flight, -1)
     print(f"{flight}: with {C[flight] + 1} seats the revenue changes by {_signed(up)} €; "
           f"with {C[flight] - 1} seats, by {_signed(down)} €. Bid price: {_num(bid[flight])} €/seat.")
     rows = m.seat_change(flight)
-    print(f"Products whose tickets change with one seat less and one seat more on {flight}:")
+    print(f"Fares of the trips whose tickets change with one seat less and one seat more on {flight}:")
     _display(pd.DataFrame([{"Trip": row["product"][0], "Fare": row["product"][1],
                             f"{C[flight] - 1} seats (tickets)": _num(row["less"]),
                             f"{C[flight]} seats, optimal plan (tickets)": _num(row["plan"]),
@@ -177,7 +178,7 @@ def bid_prices(flight: str = "RIX → HEL") -> None:
         product_bid = m.product_bid_price(p, bid)
         terms = " + ".join(f"{_num(a(p, l))} × {_num(bid[l])}" for l in L if a(p, l) > 0)
         rows.append({"Trip": p[0], "Fare": p[1], "Price (€/ticket)": r[p],
-                     "Bid price of the product (€/ticket)": f"{terms} = {_num(product_bid)}",
+                     "Bid price of the ticket (€/ticket)": f"{terms} = {_num(product_bid)}",
                      "Price − bid price (€/ticket)": _num(r[p] - product_bid),
                      "Shadow price of the demand (€/ticket)": _num(solution["demand price"][p])})
     _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
@@ -247,7 +248,7 @@ def other_aircraft(flight: str = "RIX → HEL", seats: float = 180, cost_change:
             rows.append({"Trip": p[0], "Fare": p[1], f"{_num(C[flight])} seats (tickets)": _num(base["plan"][p]),
                          f"{_num(seats)} seats (tickets)": _num(new["plan"][p])})
     if rows:
-        print("Products whose tickets change:")
+        print("Fares of the trips whose tickets change:")
         _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
     bid = base["bid price"][flight]
     print(f"Change in revenue, solving again: {_signed(result['change'])} €.")

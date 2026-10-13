@@ -1,13 +1,13 @@
-# Revenue management - how many tickets of each product an airline puts on
-# sale on two connected flights
+# Revenue management - how many tickets of each fare of each trip an airline
+# puts on sale on two connected flights
 #
 # This script reproduces every table of revenue_management.md (same folder):
-# the flights and the products (Tables 1 and 2), the plan of the rule
+# the flights, the trips and the fares (Tables 1 and 2), the plan of the rule
 # "highest fare first" (Table 3), the optimal plan against the rule (Table 4),
 # the binding constraints and their slack (Table 5), the bid prices of the
-# flights checked by solving again (Table 6), the products whose tickets
-# change with one seat less and one seat more (Table 7), the bid prices of the
-# products and the shadow prices of the demand (Table 8), the ranges of the bid
+# flights checked by solving again (Table 6), the fares of the trips whose
+# tickets change with one seat less and one seat more (Table 7), the bid
+# prices of the tickets and the shadow prices of the demand (Table 8), the ranges of the bid
 # prices (Table 9), an offer of a tour operator (Table 10) and two other
 # aircraft for the second flight (Table 11).
 #
@@ -40,21 +40,23 @@ import pulp
 # §1 Data (Tables 1 and 2). Invented (2026)
 # ---------------------------------------------------------------------------
 
-# Flights and their capacity C[l] (seats)
+# Flights l and the seats C[l] of the aircraft of each (seats)
 L = ["BCN->RIX", "RIX->HEL"]
 C = {"BCN->RIX": 220, "RIX->HEL": 140}
 
-# Trips and the flights each one uses: a BCN-HEL ticket needs a seat on both
+# Trips t and the flights each one uses (L_t): a BCN-HEL ticket needs a seat
+# on both
 TRIPS = ["BCN-RIX", "RIX-HEL", "BCN-HEL"]
 USES = {"BCN-RIX": ["BCN->RIX"], "RIX-HEL": ["RIX->HEL"], "BCN-HEL": ["BCN->RIX", "RIX->HEL"]}
 
-# Fares and the seats one ticket uses on each flight of its trip: a Business
-# ticket leaves the middle seat free
+# Fares f and the seats s_f one ticket uses on each flight of its trip: a
+# Business ticket leaves the middle seat free
 FARES = ["Business", "Economy FLEX", "Economy BASIC"]
 SEATS = {"Business": 1.5, "Economy FLEX": 1, "Economy BASIC": 1}
 
-# Products p = (trip, fare): price r[p] of a one-way ticket (EUR/ticket) and
-# forecast demand D[p] (tickets)
+# The nine fares of the trips, each one a pair p = (trip, fare), written t, f
+# in the document: price r[p] of a one-way ticket (EUR/ticket, r_tf) and
+# forecast demand D[p] (tickets, D_tf)
 P = [(trip, fare) for trip in TRIPS for fare in FARES]
 r = dict(zip(P, [420, 180, 75,
                  200, 100, 45,
@@ -73,7 +75,8 @@ OTHER_AIRCRAFT = [(180, 1200), (120, -800)]
 
 
 def a(p, l):
-    """Seats one ticket of product p uses on flight l: 0 if its trip does not use l."""
+    """Seats one ticket of p = (trip, fare) uses on flight l: s_f if its trip uses
+    l, 0 if it does not."""
     trip, fare = p
     return SEATS[fare] if l in USES[trip] else 0
 
@@ -84,7 +87,7 @@ def label(text):
 
 
 # ---------------------------------------------------------------------------
-# §2 The model, written with PuLP and solved with HiGHS
+# §3 The model, written with PuLP and solved with HiGHS
 # ---------------------------------------------------------------------------
 
 def solve_model(capacity, demand, offer=None):
@@ -93,7 +96,7 @@ def solve_model(capacity, demand, offer=None):
     of OFFER_TRIP at q EUR/seat, forced into the plan."""
     model = pulp.LpProblem("revenue_management", pulp.LpMaximize)
 
-    # x[p] = tickets of product p put on sale (continuous, >= 0)
+    # x[p] = tickets of trip and fare p put on sale (x_tf, continuous, >= 0)
     x = {p: model.add_variable(f"x_{label(p[0])}_{label(p[1])}", lowBound=0) for p in P}
     revenue = pulp.lpSum(r[p] * x[p] for p in P)
 
@@ -107,15 +110,15 @@ def solve_model(capacity, demand, offer=None):
     # Maximise the revenue
     model += revenue
 
-    # The seats used on each flight do not exceed its capacity
+    # Seats of the aircraft: the seats used on each flight do not exceed them
     for l in L:
         used = pulp.lpSum(a(p, l) * x[p] for p in P)
         if y is not None and l in USES[OFFER_TRIP]:
             used += y
         model += (used <= capacity[l], f"capacity_{label(l)}")
 
-    # No product sells more tickets than its forecast demand. The demand is a
-    # constraint, not a bound of the variable, so that it has its own shadow
+    # Forecast demand: no fare of a trip sells more tickets than its forecast
+    # demand. The demand is a constraint, not a bound of the variable, so that it has its own shadow
     # price.
     for p in P:
         model += (x[p] <= demand[p], f"demand_{label(p[0])}_{label(p[1])}")
@@ -151,9 +154,9 @@ def seats_used(plan):
 
 
 # ---------------------------------------------------------------------------
-# §3 The rule "highest fare first", without a solver: the products in
-# decreasing order of price, each up to its demand or until a flight it uses
-# is full
+# §2 The rule "highest fare first", without a solver: the tickets in
+# decreasing order of price, each fare of each trip up to its demand or until
+# a flight of its trip is full
 # ---------------------------------------------------------------------------
 
 def highest_fare_first(capacity, demand):
@@ -169,15 +172,16 @@ def highest_fare_first(capacity, demand):
 
 # ---------------------------------------------------------------------------
 # §6 The range in which a bid price holds: re-solve the model with the
-# capacity of the flight changed, one seat at a time, while the revenue
-# changes by exactly the bid price for each seat. The revenue is a concave
-# piecewise linear function of the capacity, so the values that pass form an
+# seats of the aircraft of the flight changed, while the revenue changes by
+# exactly the bid price for each seat. The revenue is a concave piecewise
+# linear function of the seats, so the values that pass form an
 # interval: the search doubles the step, then halves it. An end between two
 # whole numbers is found by halving further, to a millionth.
 # ---------------------------------------------------------------------------
 
 def validity_range(flight, capacity, demand, limit=1e6):
-    """(lowest, highest) capacity of a flight for which its bid price holds. None: no limit."""
+    """(lowest, highest) seats of the aircraft of a flight for which its bid price
+    holds. None: no limit."""
     base_revenue, _, bid, _ = solve_model(capacity, demand)
     start, price = capacity[flight], bid[flight]
 
@@ -244,16 +248,16 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §1 Data
-    title("§1 Flights and products")
-    print("Table 1. Flights")
+    title("§1 Flights, trips and fares")
+    print("Table 1. Flights: seats of the aircraft")
     for l in L:
         print(f"{l:<12}{C[l]:>6} seats")
     print()
-    print("Table 2. Products: price (EUR/ticket) / forecast demand (tickets)")
+    print("Table 2. Trips: price (EUR/ticket) / forecast demand (tickets) of each fare")
     grid("Trip", {p: f"{r[p]} / {D[p]}" for p in P})
 
-    # §3 The rule
-    title("§3 The rule 'highest fare first'")
+    # §2 The rule
+    title("§2 The rule 'highest fare first'")
     rule = highest_fare_first(C, D)
     rule_revenue = sum(r[p] * rule[p] for p in P)
     print("Table 3. Plan of the rule (tickets on sale)")
@@ -276,7 +280,7 @@ if __name__ == "__main__":
     print("Table 5. Binding constraints and slack")
     for l in L:
         gap = C[l] - seats_used(plan)[l]
-        print(f"{'Capacity of ' + l:<36}{'yes' if abs(gap) < 1e-6 else 'no':>8}{num(gap):>10}  seats")
+        print(f"{'Seats of ' + l:<36}{'yes' if abs(gap) < 1e-6 else 'no':>8}{num(gap):>10}  seats")
     for p in P:
         gap = D[p] - plan[p]
         print(f"{'Demand of ' + p[0] + ' ' + p[1]:<36}{'yes' if abs(gap) < 1e-6 else 'no':>8}{num(gap):>10}  tickets")
@@ -293,8 +297,8 @@ if __name__ == "__main__":
             changes.append(solve_model(new_capacity, D)[0] - revenue)
         print(f"{l:<12}{num(bid[l]):>22}{num(changes[0]):>21}{num(changes[1]):>21}")
     print()
-    print("Table 7. Products whose tickets change with one seat less and one seat more (tickets)")
-    print(f"{'Flight':<12}{'Product':<26}{'One seat less':>15}{'Optimal plan':>14}{'One seat more':>15}"
+    print("Table 7. Fares of the trips whose tickets change with one seat less and one seat more (tickets)")
+    print(f"{'Flight':<12}{'Trip and fare':<26}{'One seat less':>15}{'Optimal plan':>14}{'One seat more':>15}"
           f"{'Change with one seat more (EUR)':>33}")
     for l in L:
         plans = []
@@ -304,14 +308,14 @@ if __name__ == "__main__":
             plans.append(solve_model(new_capacity, D)[1])
         less, base, more = plans
         changed = [p for p in P if abs(less[p] - base[p]) > 1e-6 or abs(more[p] - base[p]) > 1e-6]
-        # First the products that take the extra seat, then those it displaces
+        # First the tickets that take the extra seat, then those it displaces
         changed.sort(key=lambda p: -r[p] * (more[p] - base[p]))
         for p in changed:
             print(f"{l:<12}{p[0] + ' ' + p[1]:<26}{num(less[p]):>15}{num(base[p]):>14}{num(more[p]):>15}"
                   f"{num(r[p] * (more[p] - base[p])):>33}")
         print(f"{'':<12}{'Total with one seat more':<26}{'':>44}{num(sum(r[p] * (more[p] - base[p]) for p in changed)):>33}")
     print()
-    print("Table 8. Bid price of each product and shadow price of its demand (EUR/ticket)")
+    print("Table 8. Bid price of the ticket of each fare of each trip and shadow price of its demand (EUR/ticket)")
     print(f"{'Trip':<10}{'Fare':<16}{'Price':>8}{'Bid price':>12}{'Shadow price of the demand':>28}")
     for p in P:
         product_bid = sum(a(p, l) * bid[l] for l in L)
@@ -319,7 +323,7 @@ if __name__ == "__main__":
 
     # §6 Ranges
     title("§6 Ranges of the bid prices")
-    print("Table 9. Capacities for which the bid price of each flight holds (seats)")
+    print("Table 9. Seats of the aircraft for which the bid price of each flight holds (seats)")
     ranges = {l: validity_range(l, C, D) for l in L}
     for l in L:
         low, high = ranges[l]

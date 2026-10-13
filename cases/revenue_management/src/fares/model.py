@@ -1,11 +1,11 @@
-"""The network model of §2, written with PuLP and solved with HiGHS; the rule
-«highest fare first»; the bid prices of the flights and of the products, their
+"""The rule «highest fare first»; the network model of §3, written with PuLP and
+solved with HiGHS; the bid prices of the flights and of the tickets, their
 ranges, an offer of a tour operator and another aircraft.
 
-A capacity is given as a dict capacity[l] (seats) and a demand as a dict
-demand[p] (tickets), with p = (trip, fare). The demand of each product is
-written as a constraint, not as a bound of the variable, so that it has its
-own shadow price.
+The seats of the aircraft are given as a dict capacity[l] (seats) and the demand
+as a dict demand[p] (tickets), with p = (trip, fare). The demand of each fare of
+each trip is written as a constraint, not as a bound of the variable, so that
+it has its own shadow price.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def _clean(v: float) -> float:
 
 def _build(capacity: dict, demand: dict, offer: tuple | None):
     model = pulp.LpProblem("revenue_management", pulp.LpMaximize)
-    # x[p] = tickets of product p put on sale (continuous, >= 0)
+    # x[p] = tickets of trip and fare p put on sale (x_tf, continuous, >= 0)
     x = {p: model.add_variable(f"x_{_label(p[0])}_{_label(p[1])}", lowBound=0) for p in P}
     revenue = pulp.lpSum(r[p] * x[p] for p in P)
     # An offer of n seats of a trip at q EUR/seat, forced into the plan (one seat on each flight of the trip)
@@ -52,13 +52,13 @@ def _build(capacity: dict, demand: dict, offer: tuple | None):
         revenue += q * y
     # Maximise the revenue
     model += revenue
-    # The seats used on each flight do not exceed its capacity
+    # Seats of the aircraft: the seats used on each flight do not exceed them
     for l in L:
         used = pulp.lpSum(a(p, l) * x[p] for p in P)
         if y is not None and l in USES[OFFER_TRIP]:
             used += y
         model += (used <= capacity[l], f"capacity_{_label(l)}")
-    # No product sells more tickets than its forecast demand
+    # Forecast demand: no fare of a trip sells more tickets than its forecast demand
     for p in P:
         model += (x[p] <= demand[p], f"demand_{_label(p[0])}_{_label(p[1])}")
     return model, x, revenue
@@ -67,8 +67,8 @@ def _build(capacity: dict, demand: dict, offer: tuple | None):
 def solve(capacity: dict = C, demand: dict = D, offer: tuple | None = None) -> dict | None:
     """Solve the model. Returns the revenue (EUR), the plan x[p] (tickets), the seats
     used on each flight, the bid price of each flight (EUR/seat), the shadow price of
-    the demand of each product (EUR/ticket), the spare seats of each flight and the
-    unsold demand of each product (tickets); None if the model has no solution.
+    the demand of each fare of each trip (EUR/ticket), the spare seats of each flight
+    and the unsold demand of each fare of each trip (tickets); None if the model has no solution.
 
     offer = (n, q): n seats of the trip OFFER_TRIP sold at q EUR/seat on top of the plan."""
     model, x, _ = _build(capacity, demand, offer)
@@ -95,7 +95,7 @@ def solve(capacity: dict = C, demand: dict = D, offer: tuple | None = None) -> d
 
 def plan_bounds(capacity: dict = C, demand: dict = D) -> dict:
     """Smallest and largest value of each x[p] among the plans with the optimal
-    revenue. The optimal plan is unique if the two coincide for every product."""
+    revenue. The optimal plan is unique if the two coincide for every fare of every trip."""
     best = solve(capacity, demand)["revenue"]
     bounds = {}
     for p in P:
@@ -122,12 +122,12 @@ def seats_of(plan: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# The rule «highest fare first» (§3): no solver
+# The rule «highest fare first» (§2): no solver
 # ---------------------------------------------------------------------------
 
 def highest_fare_first(capacity: dict = C, demand: dict = D) -> dict:
-    """Sell the products in decreasing order of price, each up to its demand or until
-    a flight it uses is full. Returns the plan (tickets), the order followed, the
+    """Put the tickets on sale in decreasing order of price, each fare of each trip up
+    to its demand or until a flight of its trip is full. Returns the plan (tickets), the order followed, the
     revenue (EUR) and the seats used on each flight."""
     order = sorted(P, key=lambda p: -r[p])          # the nine prices are all different
     left = dict(capacity)
@@ -142,8 +142,8 @@ def highest_fare_first(capacity: dict = C, demand: dict = D) -> dict:
 
 
 def difference(plan: dict, other: dict) -> dict:
-    """Tickets and revenue (EUR) of plan minus those of other, product by product,
-    for the products where they differ."""
+    """Tickets and revenue (EUR) of plan minus those of other, fare by fare and trip by
+    trip, where they differ."""
     return {p: (plan[p] - other[p], r[p] * (plan[p] - other[p])) for p in P if abs(plan[p] - other[p]) > TOL}
 
 
@@ -152,8 +152,8 @@ def difference(plan: dict, other: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def product_bid_price(p, bid: dict) -> float:
-    """Bid price of a product: the bid prices of the flights it uses times the seats
-    it uses on each (Ivanov et al., 2025, Eq. 18.15)."""
+    """Bid price b_tf of a ticket of p = (trip, fare): the bid prices of the flights of
+    its trip times the seats it uses on each (Ivanov et al., 2025, Eq. 18.15)."""
     return sum(a(p, l) * bid[l] for l in L)
 
 
@@ -163,14 +163,16 @@ def trip_bid_price(trip: str, bid: dict) -> float:
 
 
 def change_capacity(flight: str, delta: float, capacity: dict = C, demand: dict = D) -> float:
-    """Change in the optimal revenue when the capacity of a flight changes by delta seats."""
+    """Change in the optimal revenue when the seats of the aircraft of a flight change by
+    delta seats."""
     base = solve(capacity, demand)
     new = solve(dict(capacity, **{flight: capacity[flight] + delta}), demand)
     return new["revenue"] - base["revenue"]
 
 
 def seat_change(flight: str, capacity: dict = C, demand: dict = D) -> list[dict]:
-    """Products whose tickets change when the capacity of a flight changes by one seat:
+    """Fares of the trips whose tickets change when the aircraft of a flight has one seat
+    less or one seat more:
     tickets with one seat less, in the optimal plan and with one seat more, and the
     change in revenue each one brings with one seat more (EUR). The changes with one
     seat more add up to the bid price of the flight."""
@@ -178,17 +180,17 @@ def seat_change(flight: str, capacity: dict = C, demand: dict = D) -> list[dict]
     less, base, more = plans
     rows = [{"product": p, "less": less[p], "plan": base[p], "more": more[p], "change": r[p] * (more[p] - base[p])}
             for p in P if abs(less[p] - base[p]) > TOL or abs(more[p] - base[p]) > TOL]
-    # First the products that take the extra seat, then those it displaces
+    # First the tickets that take the extra seat, then those it displaces
     return sorted(rows, key=lambda row: -row["change"])
 
 
 def validity_range(flight: str, capacity: dict = C, demand: dict = D,
                    limit: float = 1e6) -> tuple[float | None, float | None]:
-    """The capacities of a flight for which its bid price holds: the model is re-solved
-    with the capacity changed, and the bid price holds while the revenue changes by
+    """The seats of the aircraft of a flight for which its bid price holds: the model is
+    re-solved with the seats changed, and the bid price holds while the revenue changes by
     exactly the bid price for each seat. None: no limit.
 
-    The revenue is a concave piecewise linear function of the capacity, so the values
+    The revenue is a concave piecewise linear function of the seats, so the values
     that pass form an interval. Its ends are found by doubling the step and then
     halving it; an end between two whole numbers is found by halving further, to a
     millionth."""
