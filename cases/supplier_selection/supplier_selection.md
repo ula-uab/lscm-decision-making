@@ -59,7 +59,7 @@ A supplier is acceptable if its weighted score is at least 6 points, $q_s \ge 6$
 
 Four suppliers offer batteries: B, C, E and F. By weighted score alone, they rank C (7.95), E (7.50), B (7.05) and F (4.50).
 
-### The price as one more criterion
+### Price as a criterion of the decision matrix
 
 A common step is to add the price to the matrix as a fifth criterion. With a weight of 40 % for the price, the weights of the four criteria of the scorecard are multiplied by 0.6, so that the five weights still add up to 100 %: quality 21 %, delivery reliability 15 %, sustainability 12 % and financial strength 12 %. The price is turned into a score from 0 to 10, the price score of supplier $s$:
 
@@ -78,15 +78,15 @@ Table 4. Decision matrix for the batteries, with the price weighing 40 % (points
 | B | 140 | 4.44 | 7.05 | 6.01 |
 | E | 148 | 0.00 | 7.50 | 4.50 |
 
-### Price score and the offers compared
+### Dependence of the price score on the offers compared
 
 Since $p_{\max}$ and $p_{\min}$ come from the offers compared, the price score of a supplier depends on the offers of the others. If F is left out, the lowest price is 136 €/unit (C) and the highest is still 148 €/unit (E). The price scores become 10.00 for C, 6.67 for B and 0.00 for E, and the scores with the price 8.77, 6.90 and 4.50. Although the offers of B, C and E have not changed, their scores rise by different amounts: 1.33 points for C, 0.89 for B and none for E. Here C, B and E keep their order; with other prices, scores that rise by different amounts can reverse the order of two suppliers whose offers have not changed.
 
-### Price and quality in one score
+### Compensation between price and quality
 
 With the price, F comes second although its quality rating is 4: in a weighted sum, a low price makes up for poor quality. This is why the company uses the scorecard only to decide which suppliers are acceptable, and chooses among the acceptable ones by cost: for the batteries, C, at 680 k€/year. Ivanov et al. (2025, §5.4.2) describe the scoring of suppliers as the step that produces a shortlist, the final choice being made in the negotiation of the commercial conditions; when two suppliers have close scores, the ranking has to be checked against changes in the weights and the ratings.
 
-## 3. Buyer's rule and the distributor alone
+## 3. Buyer's rule and everything from E
 
 ### Buyer's rule
 
@@ -108,7 +108,7 @@ Table 5. Selection of the buyer's rule
 
 Following the rule, the company contracts four suppliers. Without fixed costs, the rule would give the cheapest selection, because the cost of each component would depend only on the supplier it is bought from. With fixed costs, the components are no longer separate decisions: whether a supplier is worth its 50 k€/year depends on everything that is bought from it, and choosing one component at a time leaves this out.
 
-### The distributor alone
+### Everything from E
 
 E is the cheapest supplier of no component, so it is never chosen under the rule. Yet buying everything from E costs $2{,}530 + 50 = 2{,}580$ k€/year, 50 k€/year less than the rule: the purchases cost 100 k€/year more, and contracting one supplier instead of four saves 150 k€/year of fixed costs.
 
@@ -245,7 +245,7 @@ Removing A moves the brakes to D, 5 k€/year dearer, and saves the 50 k€/year
 
 The optimum of the model is two moves away from B, C, D: swapping D for E gives B, C, E (2,590 k€/year), and removing B then gives C, E (2,545 k€/year). The first move raises the cost, and a search that only makes moves that lower the cost never makes it.
 
-### Search from the distributor alone
+### Search from E alone
 
 Starting from E (2,580 k€/year), the best move adds C and gives C, E, the optimum of the model, where the search stops.
 
@@ -383,10 +383,10 @@ Four Python scripts in this folder reproduce the tables of this document, one pe
 
 | Script | What it prints | What must be installed |
 |---|---|---|
-| `supplier_selection_rule.py` | The weighted scores, the decision matrix of the batteries (Table 4) and the same matrix without F (§2), the buyer's rule (Table 5) and the distributor alone | Nothing beyond Python |
+| `supplier_selection_rule.py` | The weighted scores, the decision matrix of the batteries (Table 4) and the same matrix without F (§2), the buyer's rule (Table 5) and everything from E | Nothing beyond Python |
 | `supplier_selection_local_search.py` | The buyer's rule, the 31 sets of suppliers and the 21 that cover every component (Table 6), the local search from the selection of the rule (Table 8) and from a selection set at the top of the script, and the local optima | Nothing beyond Python |
 | `supplier_selection_solver.py` | The buyer's rule, the optimal selection of the model (Table 7), the costs of the reduced version (Table 9), its linear relaxation and rounding, and the two branch-and-bound trees (Tables 10 and 11) | The libraries PuLP and HiGHS (`pip install pulp highspy`) |
-| `supplier_selection_decision_tree.py` | The buyer's rule, the distributor alone, the branches of the decision tree (Table 12), the planned cost, expected cost and worst case of each strategy (Table 13), the threshold probability and the 210 final branches of a tree with every selection | Nothing beyond Python |
+| `supplier_selection_decision_tree.py` | The buyer's rule, everything from E, the branches of the decision tree (Table 12), the planned cost, expected cost and worst case of each strategy (Table 13), the threshold probability and the 210 final branches of a tree with every selection | Nothing beyond Python |
 
 The four scripts print the buyer's rule in the same way, so that each method can be compared with it on the same data. In the branch-and-bound trees, HiGHS only solves the linear relaxation of each node; the branching, the order of the nodes and the closing rules are written in the script.
 

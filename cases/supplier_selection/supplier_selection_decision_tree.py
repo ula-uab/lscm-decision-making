@@ -212,7 +212,7 @@ def print_buyer_rule():
 if __name__ == "__main__":
 
     # §3 The two strategies of the tree
-    title("§3 The buyer's rule and the distributor alone")
+    title("§3 The buyer's rule and everything from E")
 
     print_buyer_rule()
     rule = tuple(sorted(set(buyer_rule().values())))

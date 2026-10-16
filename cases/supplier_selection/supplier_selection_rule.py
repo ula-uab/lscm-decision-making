@@ -200,8 +200,8 @@ if __name__ == "__main__":
     print(f"Batteries, decided in euros among the acceptable suppliers: "
           f"{best}, {c[best]['batteries']:.2f} kEUR/year")
 
-    # §3 The buyer's rule and the distributor alone
-    title("§3 The buyer's rule and the distributor alone")
+    # §3 The buyer's rule and everything from E
+    title("§3 The buyer's rule and everything from E")
 
     print_buyer_rule()
     rule = tuple(sorted(set(buyer_rule().values())))
