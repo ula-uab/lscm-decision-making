@@ -1,6 +1,6 @@
 # Supplier selection - decision tree with a supplier that may stop delivering
 #
-# This script reproduces §8 of supplier_selection.md (same folder): the buyer's
+# This script reproduces §7 of supplier_selection.md (same folder): the buyer's
 # rule (Table 5) and buying everything from the distributor E, compared with a
 # decision tree when the supplier that serves more than one component may stop
 # delivering during the year. It prints the branches of the tree (Table 12),
@@ -81,7 +81,7 @@ ACCEPTABLE = [s for s in S if q[s] >= MIN_SCORE]
 
 
 # ---------------------------------------------------------------------------
-# §8 Data of the decision tree. Invented (2026)
+# §7 Data of the decision tree. Invented (2026)
 # ---------------------------------------------------------------------------
 
 # Probability that a supplier stops delivering during the year. Only the
@@ -96,7 +96,7 @@ MOVE_COST = 100
 
 
 # ---------------------------------------------------------------------------
-# §4 The buyer's rule
+# §3 The buyer's rule
 # ---------------------------------------------------------------------------
 
 def buyer_rule():
@@ -125,7 +125,7 @@ def cost(contracted):
 
 
 # ---------------------------------------------------------------------------
-# §8 The decision tree
+# §7 The decision tree
 # ---------------------------------------------------------------------------
 
 def served(contracted):
@@ -199,7 +199,7 @@ def print_purchase(name, contracted):
 
 
 def print_buyer_rule():
-    """§4 The buyer's rule and its cost (Table 5)."""
+    """§3 The buyer's rule and its cost (Table 5)."""
     rule = buyer_rule()
     print_purchase("Table 5. The buyer's rule: for each component, the cheapest acceptable supplier",
                    tuple(sorted(set(rule.values()))))
@@ -211,16 +211,16 @@ def print_buyer_rule():
 
 if __name__ == "__main__":
 
-    # §4 The two strategies of the tree
-    title("§4 The buyer's rule and the distributor alone")
+    # §3 The two strategies of the tree
+    title("§3 The buyer's rule and the distributor alone")
 
     print_buyer_rule()
     rule = tuple(sorted(set(buyer_rule().values())))
     print()
     print_purchase("Everything from the distributor E", ("E",))
 
-    # §8 Decision tree
-    title("§8 Decision tree with a supplier that may stop delivering")
+    # §7 Decision tree
+    title("§7 Decision tree with a supplier that may stop delivering")
 
     strategies = {"Everything from E": ("E",), "Buyer's rule": rule}
     print(f"Probability of stopping: {', '.join(f'{s} {p}' for s, p in STOP_PROBABILITY.items())}. "

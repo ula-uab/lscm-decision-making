@@ -1,11 +1,11 @@
-"""The integer model of §2, its linear relaxation and branch and bound (§5, §7),
+"""The integer model, its linear relaxation and branch and bound (§4 and §6),
 written with PuLP and solved with HiGHS.
 
 Two ways of writing "bought from implies contracted":
 
-- ``"pair"``: one constraint per supplier and component, x[s][m] <= y[s] (§2);
+- ``"pair"``: one constraint per supplier and component, x[s][m] <= y[s] (§4);
 - ``"supplier"``: one constraint per supplier, sum over m of x[s][m] <= n[s] y[s],
-  where n[s] is the number of components that s offers (§7).
+  where n[s] is the number of components that s offers (§6).
 
 Both give the same integer solutions; their linear relaxations differ.
 """
@@ -108,7 +108,7 @@ def most_fractional(y: dict, tol: float = 1e-6) -> str | None:
 
 def branch_and_bound(suppliers, components, formulation: str = "pair") -> list[dict]:
     """Branch and bound written out, with the linear relaxation of each node
-    solved by HiGHS (§7). Rules:
+    solved by HiGHS (§6). Rules:
 
     - branch on the most fractional y (alphabetical order if tied);
     - the branch y = 1 first, then y = 0; depth first;

@@ -1,7 +1,7 @@
 # Supplier selection - the integer model, solved with a solver
 #
-# This script reproduces §5 and §7 of supplier_selection.md (same folder): the
-# optimal selection given by the integer model of §2 (Table 7), compared with
+# This script reproduces §4 and §6 of supplier_selection.md (same folder): the
+# optimal selection given by the integer model of §4 (Table 7), compared with
 # the buyer's rule (Table 5), and the reduced version used to see how an
 # integer model is solved: its linear relaxation, the rounding of the
 # relaxation and the two branch-and-bound trees (Tables 10 and 11).
@@ -85,16 +85,16 @@ MIN_SCORE = 6
 a = {s: {m: int(m in PRICE[s] and q[s] >= MIN_SCORE) for m in M} for s in S}
 ACCEPTABLE = [s for s in S if q[s] >= MIN_SCORE]
 
-# §7 Reduced version: three suppliers, three components, the same costs
+# §6 Reduced version: three suppliers, three components, the same costs
 REDUCED_S = ["A", "B", "C"]
 REDUCED_M = ["frames", "motors", "batteries"]
 
 
 # ---------------------------------------------------------------------------
-# §2 The model, written with PuLP and solved with HiGHS
+# §4 The model, written with PuLP and solved with HiGHS
 #
-# Two ways of writing "bought from implies contracted" (§7):
-#   "pair":     one constraint per supplier and component, x[s,m] <= y[s] (§2);
+# Two ways of writing "bought from implies contracted" (§6):
+#   "pair":     one constraint per supplier and component, x[s,m] <= y[s] (§4);
 #   "supplier": one constraint per supplier, sum over m of x[s,m] <= n[s] y[s],
 #               where n[s] is the number of components that s offers.
 # ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ def is_integer(y, x):
 
 
 # ---------------------------------------------------------------------------
-# §4 The buyer's rule, for comparison
+# §3 The buyer's rule, for comparison
 # ---------------------------------------------------------------------------
 
 def buyer_rule():
@@ -181,7 +181,7 @@ def cost(contracted, components=M):
 
 
 # ---------------------------------------------------------------------------
-# §7 Branch and bound, written out. Rules:
+# §6 Branch and bound, written out. Rules:
 #   - branch on the most fractional y (the one closest to 0.5; alphabetical
 #     order if tied);
 #   - the branch y = 1 first, then y = 0; depth first;
@@ -243,7 +243,7 @@ def print_purchase(name, contracted):
 
 
 def print_buyer_rule():
-    """§4 The buyer's rule and its cost (Table 5)."""
+    """§3 The buyer's rule and its cost (Table 5)."""
     rule = buyer_rule()
     print_purchase("Table 5. The buyer's rule: for each component, the cheapest acceptable supplier",
                    tuple(sorted(set(rule.values()))))
@@ -271,13 +271,13 @@ if __name__ == "__main__":
         print("    python3 -m pip install highspy    (macOS and Linux)")
         sys.exit(1)
 
-    # §4 The buyer's rule, for comparison
-    title("§4 The buyer's rule")
+    # §3 The buyer's rule, for comparison
+    title("§3 The buyer's rule")
     print_buyer_rule()
     rule = tuple(sorted(set(buyer_rule().values())))
 
-    # §5 The optimal selection
-    title("§5 Optimal selection")
+    # §4 The optimal selection
+    title("§4 Optimal selection")
     value, y, x = solve_model()
     best = tuple(s for s in ACCEPTABLE if y[s] > 0.5)
     print(f"Binary variables: {len(y)} y and {len(x)} x, {len(y) + len(x)} in all")
@@ -288,8 +288,8 @@ if __name__ == "__main__":
     print(f"Linear relaxation of the model: {relaxed[0]:.2f} kEUR/year, "
           f"integer solution: {'yes' if is_integer(relaxed[1], relaxed[2]) else 'no'}")
 
-    # §7 Reduced version
-    title("§7 Reduced version: relaxation, rounding and branch and bound")
+    # §6 Reduced version
+    title("§6 Reduced version: relaxation, rounding and branch and bound")
     print("Table 9. Annual cost of each selection of the reduced version (kEUR/year)")
     for chosen in (("A",), ("B",), ("C",), ("A", "B"), ("A", "C"), ("B", "C"), ("A", "B", "C")):
         purchase = assign(chosen, REDUCED_M)

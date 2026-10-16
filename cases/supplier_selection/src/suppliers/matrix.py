@@ -1,4 +1,4 @@
-"""Weighted decision matrix for one component (§3).
+"""Weighted decision matrix for one component (§2).
 
 Each supplier gets a weighted score: the sum of its scores on the criteria
 times their weights. With the price as one more criterion, the price score is

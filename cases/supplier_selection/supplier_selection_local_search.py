@@ -1,6 +1,6 @@
 # Supplier selection - buyer's rule followed by a local search
 #
-# This script reproduces §4 to §6 of supplier_selection.md (same folder): the
+# This script reproduces §3 to §5 of supplier_selection.md (same folder): the
 # buyer's rule (Table 5), the 31 sets of contracted suppliers and the 21 that
 # cover every component (Table 6), and the local search, step by step, from
 # the selection of the rule (Table 8) and from a selection chosen below. It
@@ -117,7 +117,7 @@ def label(contracted):
 
 
 # ---------------------------------------------------------------------------
-# §4 The buyer's rule
+# §3 The buyer's rule
 # ---------------------------------------------------------------------------
 
 def buyer_rule():
@@ -127,7 +127,7 @@ def buyer_rule():
 
 
 # ---------------------------------------------------------------------------
-# §5 Every set of suppliers
+# §4 Every set of suppliers
 # ---------------------------------------------------------------------------
 
 def all_selections():
@@ -144,7 +144,7 @@ def covering_selections():
 
 
 # ---------------------------------------------------------------------------
-# §6 Local search
+# §5 Local search
 #
 # A move removes a supplier, adds one, or swaps a contracted supplier for one
 # that is not contracted. A move that leaves a component without a supplier is
@@ -217,7 +217,7 @@ def print_purchase(name, contracted):
 
 
 def print_buyer_rule():
-    """§4 The buyer's rule and its cost (Table 5)."""
+    """§3 The buyer's rule and its cost (Table 5)."""
     rule = buyer_rule()
     print_purchase("Table 5. The buyer's rule: for each component, the cheapest acceptable supplier",
                    tuple(sorted(set(rule.values()))))
@@ -245,13 +245,13 @@ def print_search(start):
 
 if __name__ == "__main__":
 
-    # §4 The buyer's rule
-    title("§4 The buyer's rule")
+    # §3 The buyer's rule
+    title("§3 The buyer's rule")
     print_buyer_rule()
     rule = tuple(sorted(set(buyer_rule().values())))
 
-    # §5 How many selections
-    title("§5 Number of selections")
+    # §4 How many selections
+    title("§4 Number of selections")
     selections = all_selections()
     covering = covering_selections()
     print(f"Sets of contracted suppliers: 2^{len(ACCEPTABLE)} - 1 = {len(selections)}")
@@ -268,8 +268,8 @@ if __name__ == "__main__":
               f"{cost(s):>25.2f}{optimum:>15}")
     print(f"Cheapest selection: {label(covering[0])}, {cost(covering[0]):.2f} kEUR/year")
 
-    # §6 Local search
-    title("§6 Local search")
+    # §5 Local search
+    title("§5 Local search")
     print(f"Table 8. Local search from the selection of the buyer's rule ({label(rule)})")
     print_search(rule)
     print()

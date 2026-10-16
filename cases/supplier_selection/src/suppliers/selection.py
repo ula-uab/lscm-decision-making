@@ -1,4 +1,4 @@
-"""Selections of suppliers and their annual cost, without a solver (§4-§6).
+"""Selections of suppliers and their annual cost, without a solver (§3-§5).
 
 A selection is the set of contracted suppliers, written as a tuple in
 alphabetical order: ("C", "E"). Given the set, each component is bought from

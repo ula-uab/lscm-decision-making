@@ -87,7 +87,7 @@ def show_data() -> None:
 
 
 # ---------------------------------------------------------------------------
-# §3 Decision matrix for the batteries
+# §2 Decision matrix for the batteries
 # ---------------------------------------------------------------------------
 
 @_light
@@ -141,7 +141,7 @@ def batteries_matrix(price_weight_percent: float = 100 * PRICE_WEIGHT, include_f
 
 
 # ---------------------------------------------------------------------------
-# §4 The buyer's rule and the cost of any selection
+# §3 The buyer's rule and the cost of any selection
 # ---------------------------------------------------------------------------
 
 @_light
@@ -174,7 +174,7 @@ def _selection_summary(contracted) -> None:
 
 
 def buyer_rule() -> tuple:
-    """§4: for each component, the cheapest acceptable supplier."""
+    """§3: for each component, the cheapest acceptable supplier."""
     rule = sel.buyer_rule()
     contracted = sel.contracted_by(rule)
     print("The buyer's rule: for each component, the cheapest acceptable supplier.")
@@ -214,7 +214,7 @@ def check_selection(suppliers) -> float | None:
 
 
 # ---------------------------------------------------------------------------
-# §5 The number of selections and the optimum of the model
+# §4 The number of selections and the optimum of the model
 # ---------------------------------------------------------------------------
 
 def selections_table() -> pd.DataFrame:
@@ -232,7 +232,7 @@ def selections_table() -> pd.DataFrame:
 
 
 def count_selections() -> pd.DataFrame:
-    """§5: 31 sets of suppliers, 21 of them cover every component; and how 2^n grows."""
+    """§4: 31 sets of suppliers, 21 of them cover every component; and how 2^n grows."""
     n = len(sel.ACCEPTABLE)
     print(f"With {n} acceptable suppliers there are 2^{n} − 1 = {len(sel.all_selections())} sets of "
           f"contracted suppliers; {len(sel.covering_selections())} of them cover the six components.")
@@ -243,7 +243,7 @@ def count_selections() -> pd.DataFrame:
 
 
 def solve_model() -> tuple:
-    """§5: the optimum of the integer model, against the buyer's rule."""
+    """§4: the optimum of the integer model, against the buyer's rule."""
     solution = mo.solve()
     best = mo.contracted(solution)
     rule = sel.contracted_by(sel.buyer_rule())
@@ -261,7 +261,7 @@ def solve_model() -> tuple:
 
 
 # ---------------------------------------------------------------------------
-# §6 Local search
+# §5 Local search
 # ---------------------------------------------------------------------------
 
 def neighbours_table(contracted) -> pd.DataFrame:
@@ -273,7 +273,7 @@ def neighbours_table(contracted) -> pd.DataFrame:
 
 @_light
 def local_search_steps(suppliers) -> tuple | None:
-    """§6: the local search from the suppliers chosen in the form, step by step."""
+    """§5: the local search from the suppliers chosen in the form, step by step."""
     start = tuple(s for s in sel.selection(suppliers) if s != "F")
     if not start:
         print("Choose at least one acceptable supplier.")
@@ -316,7 +316,7 @@ def local_search_steps(suppliers) -> tuple | None:
 
 
 # ---------------------------------------------------------------------------
-# §7 Reduced version: relaxation, rounding and branch and bound
+# §6 Reduced version: relaxation, rounding and branch and bound
 # ---------------------------------------------------------------------------
 
 def reduced_data() -> None:
@@ -422,7 +422,7 @@ def branch_and_bound() -> None:
 
 
 # ---------------------------------------------------------------------------
-# §8 Decision tree with a supplier that may stop delivering
+# §7 Decision tree with a supplier that may stop delivering
 # ---------------------------------------------------------------------------
 
 def _outcome(row: dict, risky: list[str]) -> str:
@@ -492,7 +492,7 @@ def plot_decision_tree(probability: dict, move_cost: float, ax=None):
 
 def disruption_tree(stop_e: float = STOP_PROBABILITY["E"], stop_c: float = STOP_PROBABILITY["C"],
                   move_cost: float = MOVE_COST) -> None:
-    """§8: the buyer's rule against everything from E when the supplier that serves
+    """§7: the buyer's rule against everything from E when the supplier that serves
     more than one component may stop delivering during the year."""
     probability = {"E": stop_e, "C": stop_c}
     for name, contracted in dt.strategies().items():

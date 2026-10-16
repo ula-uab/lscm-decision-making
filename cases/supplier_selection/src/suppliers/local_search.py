@@ -1,4 +1,4 @@
-"""Local search on the set of contracted suppliers (§6).
+"""Local search on the set of contracted suppliers (§5).
 
 A solution is the set of contracted suppliers; given the set, each component is
 bought from the cheapest contracted supplier (``selection.assign``). A move

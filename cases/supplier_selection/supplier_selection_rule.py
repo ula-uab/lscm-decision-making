@@ -1,6 +1,6 @@
 # Supplier selection - decision matrix and buyer's rule
 #
-# This script reproduces §3 and §4 of supplier_selection.md (same folder): the
+# This script reproduces §2 and §3 of supplier_selection.md (same folder): the
 # weighted decision matrix of the batteries, without and with the price
 # (Table 4), the same matrix with F left out of the comparison, the buyer's
 # rule and its cost (Table 5), and the cost of buying everything from the
@@ -74,12 +74,12 @@ MIN_SCORE = 6
 a = {s: {m: int(m in PRICE[s] and q[s] >= MIN_SCORE) for m in M} for s in S}
 ACCEPTABLE = [s for s in S if q[s] >= MIN_SCORE]
 
-# §3 Weight of the price in the decision matrix of the batteries
+# §2 Weight of the price in the decision matrix of the batteries
 PRICE_WEIGHT = 0.40
 
 
 # ---------------------------------------------------------------------------
-# §3 Weighted decision matrix for one component
+# §2 Weighted decision matrix for one component
 # ---------------------------------------------------------------------------
 
 def price_scores(component, suppliers=S):
@@ -99,7 +99,7 @@ def score_with_price(component, price_weight, suppliers=S):
 
 
 # ---------------------------------------------------------------------------
-# §4 The buyer's rule
+# §3 The buyer's rule
 # ---------------------------------------------------------------------------
 
 def buyer_rule():
@@ -151,7 +151,7 @@ def print_purchase(name, contracted):
 
 
 def print_buyer_rule():
-    """§4 The buyer's rule and its cost (Table 5)."""
+    """§3 The buyer's rule and its cost (Table 5)."""
     rule = buyer_rule()
     print_purchase("Table 5. The buyer's rule: for each component, the cheapest acceptable supplier",
                    tuple(sorted(set(rule.values()))))
@@ -163,8 +163,8 @@ def print_buyer_rule():
 
 if __name__ == "__main__":
 
-    # §3 Weighted decision matrix for the batteries
-    title("§3 Weighted decision matrix for the batteries")
+    # §2 Weighted decision matrix for the batteries
+    title("§2 Weighted decision matrix for the batteries")
 
     print("Weighted score of each supplier (points, 0-10):")
     for s in S:
@@ -200,8 +200,8 @@ if __name__ == "__main__":
     print(f"Batteries, decided in euros among the acceptable suppliers: "
           f"{best}, {c[best]['batteries']:.2f} kEUR/year")
 
-    # §4 The buyer's rule and the distributor alone
-    title("§4 The buyer's rule and the distributor alone")
+    # §3 The buyer's rule and the distributor alone
+    title("§3 The buyer's rule and the distributor alone")
 
     print_buyer_rule()
     rule = tuple(sorted(set(buyer_rule().values())))

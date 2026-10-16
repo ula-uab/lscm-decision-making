@@ -1,4 +1,4 @@
-"""Decision tree with a supplier that may stop delivering (§8).
+"""Decision tree with a supplier that may stop delivering (§7).
 
 A strategy is a selection of suppliers. In a strategy, a supplier that serves
 more than one component is uncertain: it may stop delivering during the year;
