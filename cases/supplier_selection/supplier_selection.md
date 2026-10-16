@@ -327,10 +327,6 @@ Table 11. Branch and bound with one constraint per supplier, $\sum_{m} x_{sm} \l
 
 The relaxation of every node has a single optimal solution (checked by minimising and maximising each variable at the optimal cost), so the trees do not depend on the solver used. Both ways of writing the model give the same optimum; the first gives higher bounds and a tree of 3 nodes instead of 9. How a model is written changes the work of the solver. With the model of §4, the relaxation of the full problem already has the integer solution C, E (2,545 k€/year) at the first node.
 
-### Constraint programming
-
-The reduced version can also be written as a constraint programming model, with one variable per component whose domain is the set of its acceptable suppliers: frames $\in \{A, C\}$, motors $\in \{A, B\}$, batteries $\in \{B, C\}$. Each of the $2 \times 2 \times 2 = 8$ combinations of values is a purchase plan. The contracted suppliers are the distinct values taken by the three variables, and the cost of a combination is the cost of its three purchases plus 50 k€/year for each distinct supplier. The scripts of §8 do not solve this version.
-
 ## 7. Decision tree with a supplier that may stop delivering
 
 ### Decision tree
