@@ -7,3 +7,4 @@ cases/security_filters/notebooks/*.ipynb filter=nbstripout diff=ipynb
 cases/supplier_selection/notebooks/*.ipynb filter=nbstripout diff=ipynb
 cases/production_plan/notebooks/*.ipynb filter=nbstripout diff=ipynb
 cases/revenue_management/notebooks/*.ipynb filter=nbstripout diff=ipynb
+cases/traveling_salesman/notebooks/*.ipynb filter=nbstripout diff=ipynb

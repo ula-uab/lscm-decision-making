@@ -12,6 +12,7 @@ dependencies = [
     "revenue-management",
     "security-filters",
     "supplier-selection",
+    "traveling-salesman",
     "warehouse-allocation",
 ]
 
@@ -35,6 +36,7 @@ members = [
     "cases/revenue_management",
     "cases/security_filters",
     "cases/supplier_selection",
+    "cases/traveling_salesman",
     "cases/warehouse_allocation",
 ]
 
@@ -43,6 +45,7 @@ production-plan = { workspace = true }
 revenue-management = { workspace = true }
 security-filters = { workspace = true }
 supplier-selection = { workspace = true }
+traveling-salesman = { workspace = true }
 warehouse-allocation = { workspace = true }
 
 [tool.pytest.ini_options]
@@ -52,6 +55,7 @@ testpaths = [
     "cases/revenue_management/tests",
     "cases/security_filters/tests",
     "cases/supplier_selection/tests",
+    "cases/traveling_salesman/tests",
     "cases/warehouse_allocation/tests",
 ]
 addopts = "--import-mode=importlib"
