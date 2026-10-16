@@ -46,13 +46,17 @@ Table 2. Distance between each pair of cities, $d_{ij}$ (km) (Ivanov et al., 202
 | **HIL** | 255 | 192 | 42 | 62 | 398 | 314 | 388 | 162 | 234 | 89 | 105 | 274 | – | 30 |
 | **SZG** | 256 | 209 | 61 | 40 | 398 | 310 | 375 | 191 | 255 | 67 | 109 | 288 | 30 | – |
 
-**Route and its length.** A route is the sequence of cities $r_0, r_1, \dots, r_{14}$ in the order of visit, with $r_0 = r_{14} = \text{HH}$ and each of the other 13 cities once in positions 1 to 13. Its length is the sum of the distances between consecutive cities:
+### Route and its length
+
+A route is the sequence of cities $r_0, r_1, \dots, r_{14}$ in the order of visit, with $r_0 = r_{14} = \text{HH}$ and each of the other 13 cities once in positions 1 to 13. Its length is the sum of the distances between consecutive cities:
 
 $$
 L(r) = \sum_{k=0}^{13} d_{r_k r_{k+1}}
 $$
 
-**Number of routes.** The first city after Hamburg can be any of the 13; the second, any of the 12 left; and so on. There are $13! = 6{,}227{,}020{,}800$ orders of visit (Ivanov et al., 2025, §14.3.1). Since the distances are symmetric, a route and the same route in the other direction have the same length, so there are $13!/2 = 3{,}113{,}510{,}400$ different round trips.
+### Number of routes
+
+The first city after Hamburg can be any of the 13; the second, any of the 12 left; and so on. There are $13! = 6{,}227{,}020{,}800$ orders of visit (Ivanov et al., 2025, §14.3.1). Since the distances are symmetric, a route and the same route in the other direction have the same length, so there are $13!/2 = 3{,}113{,}510{,}400$ different round trips.
 
 ## 2. Exact and heuristic algorithms
 
@@ -67,7 +71,9 @@ A **greedy** heuristic is a construction heuristic that, at each step, takes the
 
 ## 3. Nearest neighbor
 
-**Method.** From Hamburg, go each time to the nearest city not yet visited; when every city has been visited, return to Hamburg (Ivanov et al., 2025, §14.3.3, where it is called the greedy construction procedure). It is greedy: each step takes the shortest leg available. In this case no step has two cities at the same distance.
+### Rule of the nearest neighbor
+
+From Hamburg, go each time to the nearest city not yet visited; when every city has been visited, return to Hamburg (Ivanov et al., 2025, §14.3.3, where it is called the greedy construction procedure). It is greedy: each step takes the shortest leg available. In this case no step has two cities at the same distance.
 
 Table 3 gives the route, leg by leg.
 
@@ -94,11 +100,15 @@ The route is HH, HL, KI, HR, BHV, OL, HB, H, HIL, SZG, BS, WOB, GÖ, OS, HH, wit
 
 ![Route of the nearest neighbor, 1,745 km](figures/nearest_neighbor.png)
 
-**Its defect.** Each step looks only at the next leg; the way back to Hamburg is not taken into account until every city has been visited (Ivanov et al., 2025, §14.3.3). The last cities are the ones left over, wherever they are. Here the route ends in the south, at Göttingen, and has to cross to Osnabrück and then back north to Hamburg: the last two legs, 205 km and 284 km, are 489 km, 28 % of the route.
+### Defect of the nearest neighbor
+
+Each step looks only at the next leg; the way back to Hamburg is not taken into account until every city has been visited (Ivanov et al., 2025, §14.3.3). The last cities are the ones left over, wherever they are. Here the route ends in the south, at Göttingen, and has to cross to Osnabrück and then back north to Hamburg: the last two legs, 205 km and 284 km, are 489 km, 28 % of the route.
 
 ## 4. Sweep
 
-**Method.** Order the cities by the angle of the line that joins them with Hamburg, measured from north (+*y*) counterclockwise, from the smallest to the largest, and visit them in that order. Table 4 gives the angles. Bremerhaven, almost due west of Hamburg, has an angle of 93.3°; Göttingen, almost due south, 179.4°; Kiel, a little east of due north, 356.4°.
+### Rule of the sweep
+
+Order the cities by the angle of the line that joins them with Hamburg, measured from north (+*y*) counterclockwise, from the smallest to the largest, and visit them in that order. Table 4 gives the angles. Bremerhaven, almost due west of Hamburg, has an angle of 93.3°; Göttingen, almost due south, 179.4°; Kiel, a little east of due north, 356.4°.
 
 Ivanov et al. (2025, §14.4.5) present the sweep, after Gillett and Miller (1974), for routes of several vehicles with a limited capacity: the cities are taken in the order of their angle and assigned to a vehicle until its capacity is full; then the next vehicle starts. Applying it to a single vehicle without a capacity, so that the order of the angles is the whole route, is a choice of this case.
 
@@ -136,7 +146,9 @@ A local search is an improvement heuristic. It starts from a route and changes i
 
 Klein and Faust (2015, §31.5) note that a local search finds local optima quickly, and that it explores little of the set of solutions beyond the neighborhoods it goes through. The search of this case uses the best improvement: at each step it evaluates every move of the neighborhood and makes the one that leaves the shortest route, if it is strictly shorter than the current route; if two moves leave routes of the same length, it makes the first one in the order of evaluation. It stops when no move shortens the route, at a local optimum.
 
-**Two moves.** Both reverse the cities of the route from position $i$ to position $j$:
+### Moves of the local search
+
+Both reverse the cities of the route from position $i$ to position $j$:
 
 - **swap of two adjacent cities:** positions $k$ and $k + 1$, with $k = 1, \dots, 12$, evaluated in that order: 12 moves;
 - **reversal of a sub-path:** positions $i$ to $j$, with $1 \le i < j \le 13$, evaluated in increasing order of $i$ and, for each $i$, in increasing order of $j$: 78 moves.
@@ -149,7 +161,9 @@ $$
 
 the two arcs that come in minus the two that go out. The move shortens the route if $\Delta L < 0$. Reversing positions 1 to 13 gives the same route in the other direction, with $\Delta L = 0$.
 
-**Pass of Ivanov et al.** Ivanov et al. (2025, §14.3.3, iterations 1 to 12) improve the route of the nearest neighbor by swapping adjacent cities in a single pass. For $k = 1, \dots, 12$, they compare the sub-path of four cities at positions $k - 1$ to $k + 2$ with the same sub-path with the cities at $k$ and $k + 1$ swapped, and keep the swap if the sub-path gets shorter. Only the three arcs of that sub-path change, so comparing the sub-paths is the same as comparing the routes. The pass goes on from the route already changed. It differs from the local search above: it makes the first swap that shortens the route at each position, instead of the best one in the neighborhood, and it goes through the positions once.
+### Pass of Ivanov et al.
+
+Ivanov et al. (2025, §14.3.3, iterations 1 to 12) improve the route of the nearest neighbor by swapping adjacent cities in a single pass. For $k = 1, \dots, 12$, they compare the sub-path of four cities at positions $k - 1$ to $k + 2$ with the same sub-path with the cities at $k$ and $k + 1$ swapped, and keep the swap if the sub-path gets shorter. Only the three arcs of that sub-path change, so comparing the sub-paths is the same as comparing the routes. The pass goes on from the route already changed. It differs from the local search above: it makes the first swap that shortens the route at each position, instead of the best one in the neighborhood, and it goes through the positions once.
 
 Table 5. Pass of Ivanov et al. from the route of the nearest neighbor: length of the sub-path before and after the swap (km)
 
@@ -170,7 +184,9 @@ Table 5. Pass of Ivanov et al. from the route of the nearest neighbor: length of
 
 Only the swap of iteration 2, KI and HR, is kept. After the pass, the route is HH, HL, HR, KI, BHV, OL, HB, H, HIL, SZG, BS, WOB, GÖ, OS, HH, with a length of 1,653 km: 92 km shorter than the nearest neighbor.
 
-**Differences with Ivanov et al.** Four numbers of Ivanov et al. (2025, §14.3.3) differ from those obtained with their own distance matrix (Table 2). The routes and the decisions of the pass are the same.
+### Differences with Ivanov et al.
+
+Four numbers of Ivanov et al. (2025, §14.3.3) differ from those obtained with their own distance matrix (Table 2). The routes and the decisions of the pass are the same.
 
 Table 6. Numbers of Ivanov et al. (2025) and the same numbers with the distances of Table 2 (km)
 
@@ -181,9 +197,13 @@ Table 6. Numbers of Ivanov et al. (2025) and the same numbers with the distances
 | Iteration 6, sub-path OL, HB, H, HIL | 264 | 246 (54 + 150 + 42) |
 | Reduction of the pass | 112 | 92 |
 
-**Swap of two adjacent cities from the nearest neighbor.** The search makes one step, the swap of KI and HR, and reaches the route of the pass, 1,653 km. There it stops: the best of the 12 swaps gives a route of 1,655 km.
+### Swap of two adjacent cities from the nearest neighbor
 
-**Reversal of a sub-path from the nearest neighbor.** The search makes five steps (Table 7). The first is the same swap of KI and HR. The second reverses the seven cities from Hannover to Osnabrück, which is the reversal that Ivanov et al. (2025, Fig. 14.8) show, without naming the move: it takes out the legs HB–H (150 km) and OS–HH (284 km) and puts in HB–OS (155 km) and H–HH (218 km), so the route gets 61 km shorter.
+The search makes one step, the swap of KI and HR, and reaches the route of the pass, 1,653 km. There it stops: the best of the 12 swaps gives a route of 1,655 km.
+
+### Reversal of a sub-path from the nearest neighbor
+
+The search makes five steps (Table 7). The first is the same swap of KI and HR. The second reverses the seven cities from Hannover to Osnabrück, which is the reversal that Ivanov et al. (2025, Fig. 14.8) show, without naming the move: it takes out the legs HB–H (150 km) and OS–HH (284 km) and puts in HB–OS (155 km) and H–HH (218 km), so the route gets 61 km shorter.
 
 Table 7. Local search with the reversal of a sub-path from the route of the nearest neighbor
 
@@ -200,11 +220,15 @@ The sub-path reversed is written in its order before the move. The search stops 
 
 ![Route where the local search with the reversal of a sub-path stops from the nearest neighbor, 1,536 km](figures/local_search.png)
 
-**Reversal of a sub-path from the sweep.** The search makes one step: it reverses HL, KI, which takes out HR–HL and KI–HH and puts in HR–KI and HL–HH. It stops at HH, BHV, OL, HB, OS, H, HIL, GÖ, SZG, BS, WOB, HR, KI, HL, HH, with a length of 1,536 km.
+### Reversal of a sub-path from the sweep
+
+The search makes one step: it reverses HL, KI, which takes out HR–HL and KI–HH and puts in HR–KI and HL–HH. It stops at HH, BHV, OL, HB, OS, H, HIL, GÖ, SZG, BS, WOB, HR, KI, HL, HH, with a length of 1,536 km.
 
 ## 6. Shortest route and local optima
 
-**Shortest route.** The shortest route has been calculated with dynamic programming over subsets of cities. For each set $S$ of cities other than Hamburg and each city $j$ of $S$, $B(S, j)$ is the length of the shortest path that leaves Hamburg, visits every city of $S$ once and ends at $j$. With one city, $B(\{j\}, j) = d_{\text{HH}\,j}$. With more, the path to $j$ comes from the best of the other cities $k$ of $S$:
+### Shortest route
+
+The shortest route has been calculated with dynamic programming over subsets of cities. For each set $S$ of cities other than Hamburg and each city $j$ of $S$, $B(S, j)$ is the length of the shortest path that leaves Hamburg, visits every city of $S$ once and ends at $j$. With one city, $B(\{j\}, j) = d_{\text{HH}\,j}$. With more, the path to $j$ comes from the best of the other cities $k$ of $S$:
 
 $$
 B(S, j) = \min_{k \in S \setminus \{j\}} \big( B(S \setminus \{j\}, k) + d_{kj} \big)
@@ -232,7 +256,9 @@ Table 8. Length of each route and how far it is above the shortest route, 1,536 
 | Reversal of a sub-path from the nearest neighbor | 1,536 | 0.0 |
 | Reversal of a sub-path from the sweep | 1,536 | 0.0 |
 
-**Local optima from random routes.** The search with the reversal of a sub-path has been started from 20,000 routes that visit the 13 cities in random order. Table 9 gives, for each length where the search stops, how many starting routes stop there. The random routes are drawn with Python, after `random.seed(1)`, as `random.shuffle` of the list of cities 2 to 14; with another way of drawing them, the counts would be different.
+### Local optima from random routes
+
+The search with the reversal of a sub-path has been started from 20,000 routes that visit the 13 cities in random order. Table 9 gives, for each length where the search stops, how many starting routes stop there. The random routes are drawn with Python, after `random.seed(1)`, as `random.shuffle` of the list of cities 2 to 14; with another way of drawing them, the counts would be different.
 
 Table 9. Where the local search with the reversal of a sub-path stops, from 20,000 random starting routes
 
@@ -250,7 +276,9 @@ Table 9. Where the local search with the reversal of a sub-path stops, from 20,0
 
 The search stops at nine different lengths. Three starts in four reach the shortest route; the other 4,856 (24.3 %) stop at a local optimum up to 101 km longer, from which no reversal of a sub-path leads to a shorter route.
 
-**Where the search stops.** It depends on the move and on the starting route. From the same route of the nearest neighbor, the swap of two adjacent cities stops at 1,653 km and the reversal of a sub-path at 1,536 km; with the reversal of a sub-path, the random starts of Table 9 stop at nine different lengths. A local optimum is only the best route of its own neighborhood. The search cannot tell whether the route where it stops is the shortest one: here the routes of 1,536 km are known to be the shortest because the dynamic programming above proves it, not because the search stopped there.
+### Dependence on the move and the starting route
+
+It depends on the move and on the starting route. From the same route of the nearest neighbor, the swap of two adjacent cities stops at 1,653 km and the reversal of a sub-path at 1,536 km; with the reversal of a sub-path, the random starts of Table 9 stop at nine different lengths. A local optimum is only the best route of its own neighborhood. The search cannot tell whether the route where it stops is the shortest one: here the routes of 1,536 km are known to be the shortest because the dynamic programming above proves it, not because the search stopped there.
 
 ## 7. Reproducing the numbers
 
