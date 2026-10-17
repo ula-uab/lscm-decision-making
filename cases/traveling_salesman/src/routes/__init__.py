@@ -12,14 +12,18 @@ one per step:
 4. ``ivanov_pass`` and ``local_search_steps``: the pass of Ivanov et al. and the
    local search from any starting route with either move (§5);
 5. ``shortest_route`` and ``local_optima``: the shortest route, and where the
-   search stops from random starting routes (§6).
+   search stops from random starting routes (§6);
+6. ``crossover``, ``mutation`` and ``genetic_algorithm``: the operators of a
+   genetic algorithm, step by step, and a small genetic algorithm (``genetic``).
 """
 
-from . import construction, data, exact, local_search
-from .show import (document_figures, ivanov_pass, local_optima, local_search_steps, nearest_neighbor,
-                   plot_route, shortest_route, show_data, sweep)
+from . import construction, data, exact, genetic, local_search
+from .show import (crossover, document_figures, genetic_algorithm, ivanov_pass, local_optima,
+                   local_search_steps, mutation, nearest_neighbor, plot_route, shortest_route, show_data,
+                   sweep)
 
 __all__ = [
-    "construction", "data", "document_figures", "exact", "ivanov_pass", "local_optima", "local_search",
+    "construction", "crossover", "data", "document_figures", "exact", "genetic", "genetic_algorithm",
+    "ivanov_pass", "mutation", "local_optima", "local_search",
     "local_search_steps", "nearest_neighbor", "plot_route", "shortest_route", "show_data", "sweep",
 ]

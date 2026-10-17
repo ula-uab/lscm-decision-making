@@ -19,6 +19,7 @@ import pandas as pd
 
 from . import construction as co
 from . import exact as ex
+from . import genetic as ga
 from . import local_search as ls
 from .data import ABBR, CITIES, HOME, NAME, XY, d
 
@@ -349,6 +350,172 @@ def local_optima(starts: int = 20000, seed: int = 1, move: str = "reversal") -> 
     ax.spines[["top", "right"]].set_visible(False)
     plt.show()
     return table
+
+
+# ---------------------------------------------------------------------------
+# Section 6 of the notebook: genetic algorithm
+# ---------------------------------------------------------------------------
+
+PARENT_1 = "#a6cee3"  # light blue
+PARENT_2 = "#fdbf6f"  # light orange
+MOVED = "#b2df8a"     # light green
+
+
+def _chain(c: list[int]) -> str:
+    """'HL · KI · HR · …' for a chromosome."""
+    return " · ".join(ABBR[i] for i in c)
+
+
+@_light
+def _strips(rows: list[tuple[str, list[int], list[str], tuple[int, int] | None]], cuts=None):
+    """One strip of boxes per row: (label, cities, color of each box, positions
+    first and last of the part that is framed). ``cuts`` draws the two cuts as
+    vertical lines (after the given positions)."""
+    n = len(rows[0][1])
+    fig, ax = plt.subplots(figsize=(0.62 * n + 2.6, 0.62 * len(rows) + 0.5))
+    for r, (label, cities, colors, framed) in enumerate(rows):
+        y = len(rows) - 1 - r
+        ax.text(-0.15, y + 0.4, label, ha="right", va="center", fontsize=9)
+        for k, (city, color) in enumerate(zip(cities, colors)):
+            ax.add_patch(plt.Rectangle((k, y), 0.94, 0.8, facecolor=color, edgecolor="0.4", lw=0.6))
+            ax.text(k + 0.47, y + 0.4, ABBR[city], ha="center", va="center", fontsize=8)
+        if framed:
+            first, last = framed
+            ax.add_patch(plt.Rectangle((first - 0.04, y - 0.05), last - first + 1.02, 0.9, fill=False,
+                                       edgecolor="black", lw=2))
+    for k in range(n):
+        ax.text(k + 0.47, len(rows) - 0.05, str(k + 1), ha="center", va="bottom", fontsize=7, color="0.4")
+    for cut in cuts or ():
+        ax.plot([cut - 0.03, cut - 0.03], [-0.15, len(rows) - 0.1], color="tab:red", lw=1.5, ls="--")
+    ax.set_xlim(-0.2, n)
+    ax.set_ylim(-0.2, len(rows) + 0.3)
+    ax.axis("off")
+    plt.show()
+
+
+@_light
+def crossover(parent_1: str = "nearest neighbor", seed_1: int = 1, parent_2: str = "sweep", seed_2: int = 2,
+              cut_1: int = 6, cut_2: int = 9) -> tuple[list[int], list[int]] | None:
+    """The two children of the order crossover of two routes, with the cuts
+    after positions cut_1 and cut_2 (positions counted from 1)."""
+    x = ga.chromosome(starting_route(parent_1, seed_1))
+    y = ga.chromosome(starting_route(parent_2, seed_2))
+    if not 0 <= cut_1 < cut_2 <= len(x):
+        print(f"The first cut must come before the second: cut_1 = {cut_1} and cut_2 = {cut_2}. "
+              "Change them and run the cell again.")
+        return None
+    c1, c2 = ga.crossover(x, y, cut_1, cut_2)
+    names = [STARTS[p] + (f" (seed {s})" if p == "random" else "") for p, s in ((parent_1, seed_1),
+                                                                               (parent_2, seed_2))]
+    inside = range(cut_1, cut_2)
+    rows = [(f"Parent 1, {_km(ga.length(x))}", x, [PARENT_1] * len(x), (cut_1, cut_2 - 1)),
+            (f"Parent 2, {_km(ga.length(y))}", y, [PARENT_2] * len(y), (cut_1, cut_2 - 1)),
+            (f"Child 1, {_km(ga.length(c1))}", c1,
+             [PARENT_1 if k in inside else PARENT_2 for k in range(len(c1))], (cut_1, cut_2 - 1)),
+            (f"Child 2, {_km(ga.length(c2))}", c2,
+             [PARENT_2 if k in inside else PARENT_1 for k in range(len(c2))], (cut_1, cut_2 - 1))]
+    print(f"Parent 1, {names[0]}: {_chain(x)}, {_km(ga.length(x))}.")
+    print(f"Parent 2, {names[1]}: {_chain(y)}, {_km(ga.length(y))}.")
+    print(f"Cuts after positions {cut_1} and {cut_2}: each child copies positions {cut_1 + 1} to {cut_2} "
+          "of one parent and takes the other cities in the order of the other parent, from position "
+          f"{cut_2 + 1 if cut_2 < len(x) else 1}.")
+    print(f"Child 1: {_chain(c1)}, {_km(ga.length(c1))}.")
+    print(f"Child 2: {_chain(c2)}, {_km(ga.length(c2))}.")
+    print("Each box has the color of the parent the city comes from; the frame marks the positions "
+          "copied. Every route starts and ends in HH, which is not in the strips.")
+    _strips(rows, cuts=(cut_1, cut_2))
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4.6))
+    for ax, c, k in zip(axes, (c1, c2), (1, 2)):
+        plot_route(ga.route(c), ax=ax, title=f"Child {k}: {_km(ga.length(c))}")
+    plt.show()
+    return c1, c2
+
+
+def _edges(r: list[int]) -> set[tuple[int, int]]:
+    """The arcs of a closed route, without direction, each as (smaller, larger)."""
+    return {tuple(sorted(e)) for e in zip(r, r[1:])}
+
+
+@_light
+def mutation(start: str = "nearest neighbor", seed: int = 1, first: int = 4, cities: int = 3,
+             insert_after: str = "OS") -> list[int] | None:
+    """Inversion mutation of a route: the ``cities`` cities from position
+    ``first`` (counted from 1) are taken out, reversed and put back after the
+    city ``insert_after`` ('HH' puts them at the start)."""
+    c = ga.chromosome(starting_route(start, seed))
+    n = len(c)
+    if not 1 <= first <= n - cities + 1:
+        print(f"A sub-path of {cities} cities can start at positions 1 to {n - cities + 1}; "
+              f"first = {first}. Change it and run the cell again.")
+        return None
+    taken = c[first - 1:first - 1 + cities]
+    rest = c[:first - 1] + c[first - 1 + cities:]
+    code = {a: i for i, a in ABBR.items()}
+    if insert_after == "HH":
+        at = 0
+    elif code.get(insert_after) in rest:
+        at = rest.index(code[insert_after]) + 1
+    else:
+        print(f"{insert_after} is in the sub-path taken out ({_chain(taken)}): choose a city outside it.")
+        return None
+    m = ga.inversion_mutation(c, first - 1, first - 2 + cities, at)
+    before, after = ga.length(c), ga.length(m)
+    name = STARTS[start] + (f" (seed {seed})" if start == "random" else "")
+    where = "at the start, just after HH" if at == 0 else f"after {insert_after}"
+    print(f"Route: {name}, {_chain(c)}, {_km(before)}.")
+    print(f"Sub-path taken out: positions {first} to {first + cities - 1}, {_chain(taken)}; reversed, "
+          f"{_chain(taken[::-1])}, and put back {where}.")
+    if at == first - 1:
+        print("It goes back to the place it was taken from: this is the reversal of a sub-path of section 4.")
+    print(f"Mutated route: {_chain(m)}, {_km(after)}, {_km(abs(after - before))} "
+          f"{'longer' if after > before else 'shorter' if after < before else 'the same length'}"
+          f"{'' if after == before else ' than before'}.")
+    k = m.index(taken[-1])
+    rows = [(f"Before, {_km(before)}", c, [MOVED if first - 1 <= j < first - 1 + cities else "white"
+                                           for j in range(n)], (first - 1, first - 2 + cities)),
+            (f"After, {_km(after)}", m, [MOVED if k <= j < k + cities else "white" for j in range(n)],
+             (k, k + cities - 1))]
+    _strips(rows)
+    old, new = _edges(ga.route(c)), _edges(ga.route(m))
+    plot_route(ga.route(m), out=sorted(old - new), new=sorted(new - old),
+               title=f"Mutated route: {_km(before)} → {_km(after)}")
+    plt.show()
+    longer, total = ga.mutations_that_lengthen(c)
+    print(f"Of the {total} mutations of this kind on this route (sub-paths of 2 to 4 cities, from any "
+          f"position, put back anywhere except where they were), {longer} make it longer: "
+          f"{100 * longer / total:.0f} %.")
+    return m
+
+
+@_light
+def genetic_algorithm(population: int = 30, generations: int = 100, mutation: float = 0.1,
+                      local_search: bool = False, seed: int = 1) -> dict:
+    """Run the genetic algorithm and draw, for each generation, the shortest
+    route of the population and the mean length of the population."""
+    started = time.perf_counter()
+    result = ga.genetic_algorithm(population, generations, mutation, local_search, seed)
+    seconds = time.perf_counter() - started
+    shortest, _ = _shortest()
+    print(f"Population {population}, {generations} generations, probability of mutation {mutation:g}, "
+          f"local search {'on' if local_search else 'off'}, seed {seed} ({seconds:.1f} s).")
+    fig, ax = plt.subplots(figsize=(7.5, 4))
+    ax.plot(result["mean"], color="0.6", label="Mean length of the population")
+    ax.plot(result["best"], color=ROUTE, lw=2, label="Shortest route of the population")
+    ax.axhline(shortest, color=IN, ls="--", lw=1.2, label=f"Shortest route of the case, {_km(shortest)}")
+    ax.set_xlabel("Generation (0 is the initial population)")
+    ax.set_ylabel("Length (km)")
+    ax.legend(fontsize=8, frameon=False)
+    ax.spines[["top", "right"]].set_visible(False)
+    plt.show()
+    best = result["length"]
+    reached = next((g for g, v in enumerate(result["best"]) if v == shortest), None)
+    print(f"Shortest route found: {co.label(result['route'])}, {_km(best)}, "
+          f"{ex.gap(result['route'], shortest):.1f} % above the shortest route of the case."
+          + (f" The population first reaches it in generation {reached}." if reached is not None else ""))
+    plot_route(result["route"], title=_route_title("Shortest route found by the genetic algorithm",
+                                                   result["route"]))
+    plt.show()
+    return result
 
 
 # ---------------------------------------------------------------------------

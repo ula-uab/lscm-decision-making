@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 
 from routes import construction as co  # noqa: E402
 from routes import exact as ex  # noqa: E402
+from routes import genetic as ga  # noqa: E402
 from routes import local_search as ls  # noqa: E402
 from routes.data import ABBR, CITIES, d, euclidean  # noqa: E402
 
@@ -139,6 +140,50 @@ def test_random_routes_are_the_draws_of_random_seed():
     rng = random.Random(1)
     assert [co.random_route(rng=rng) for _ in range(3)] == expected
     assert co.random_route(seed=1) == expected[0]
+
+
+def test_order_crossover_example_of_larranaga():
+    # Larrañaga et al. (1999, §4.3.3): cuts after positions 2 and 5
+    assert ga.crossover([1, 2, 3, 4, 5, 6, 7, 8], [2, 4, 6, 8, 7, 5, 3, 1], 2, 5) == (
+        [8, 7, 3, 4, 5, 1, 2, 6], [4, 5, 6, 8, 7, 1, 2, 3])
+
+
+def test_inversion_mutation_example_of_larranaga():
+    # Larrañaga et al. (1999, §4.3.16): sub-path 3 4 5 reversed and put after 7
+    assert ga.inversion_mutation([1, 2, 3, 4, 5, 6, 7, 8], 2, 4, 4) == [1, 2, 6, 7, 5, 4, 3, 8]
+
+
+def test_crossover_of_the_nearest_neighbor_and_the_sweep():
+    child_1, child_2 = ga.crossover(ga.chromosome(NEAREST), ga.chromosome(SWEEP), 6, 9)
+    assert ga.route(child_1) == route("HH, BHV, OL, HB, OS, GÖ, BS, H, HIL, SZG, WOB, HR, HL, KI, HH")
+    assert ga.route(child_2) == route("HH, HR, BHV, OL, HB, H, HIL, GÖ, SZG, BS, WOB, OS, HL, KI, HH")
+    assert (ga.length(child_1), ga.length(child_2)) == (1646, 1948)
+
+
+def test_inversion_mutation_of_the_nearest_neighbor():
+    # BHV, OL, HB (positions 4 to 6) reversed and put back after OS, at the end
+    mutated = ga.inversion_mutation(ga.chromosome(NEAREST), 3, 5, 10)
+    assert ga.route(mutated) == route("HH, HL, KI, HR, H, HIL, SZG, BS, WOB, GÖ, OS, HB, OL, BHV, HH")
+    assert ga.length(mutated) == 1640
+    assert ga.mutations_that_lengthen(ga.chromosome(NEAREST)) == (319, 332)
+
+
+def test_children_and_mutated_routes_visit_each_city_once():
+    x, y = ga.chromosome(NEAREST), ga.chromosome(SWEEP)
+    cities = sorted(x)
+    for cut_1 in range(14):
+        for cut_2 in range(cut_1 + 1, 14):
+            assert all(sorted(c) == cities for c in ga.crossover(x, y, cut_1, cut_2))
+    assert all(sorted(ga.inversion_mutation(x, *m)) == cities for m in ga.mutations(13, range(1, 14)))
+
+
+@pytest.mark.parametrize("local_search", [False, True])
+def test_genetic_algorithm_returns_a_route(local_search):
+    result = ga.genetic_algorithm(population=10, generations=10, mutation=0.3, local_search=local_search, seed=3)
+    r = result["route"]
+    assert r[0] == r[-1] == 1 and sorted(r[1:-1]) == [i for i in CITIES if i != 1]
+    assert result["length"] == co.length(r) == result["best"][-1] >= 1536
+    assert len(result["best"]) == len(result["mean"]) == 11
 
 
 def test_document_figures(tmp_path):
