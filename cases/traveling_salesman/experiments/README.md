@@ -1,7 +1,7 @@
 # Genetic and memetic algorithms against repeated local search
 
 An experiment on the route of the case and on three random cases: how a genetic
-algorithm with crossovers suited to routes, and a memetic algorithm, compare
+algorithm with the edge recombination and order crossovers, and a memetic algorithm, compare
 with local search repeated from random routes, for the same number of routes
 evaluated. It is not part of the case document.
 
@@ -56,7 +56,7 @@ uv run --with deap==1.4.4 pytest cases/traveling_salesman/experiments
 uv run --with deap==1.4.4 python cases/traveling_salesman/experiments/run_experiment.py
 ```
 
-The whole experiment takes about 15 minutes on 10 cores. `--cases`, `--runs`
+The whole experiment takes about 30 minutes on 10 cores. `--cases`, `--runs`
 and `--workers` run a part of it.
 
 ## References
