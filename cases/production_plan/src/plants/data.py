@@ -39,3 +39,30 @@ h_0 = {"Plant 1": 20, "Plant 2": 10, "Plant 3": 0}
 # Stock h_end[f] that each plant must hold at the end of the horizon (bikes): the
 # plan leaves the plants as it found them
 h_end = dict(h_0)
+
+# ---------------------------------------------------------------------------
+# M2 · Central warehouse, Table 1 of central_warehouse.md. Solved with forecast 3
+# ---------------------------------------------------------------------------
+
+# Storage capacity K_h[f] at each plant (bikes): holding at a plant is cheaper
+# than at the warehouse, but little fits there
+K_h = {"Plant 1": 40, "Plant 2": 30, "Plant 3": 20}
+
+# The central warehouse: holding cost c_h_w (EUR/(bike·month)), storage capacity
+# K_h_w (bikes), stock at the end of December h_w_0 and required at the end of the
+# horizon h_w_end (bikes)
+c_h_w = 8
+K_h_w = 150
+h_w_0 = 0
+h_w_end = 0
+
+# Orders served late: cost c_b of serving one bike one month late (EUR/(bike·month)),
+# orders owed at the end of December b_0 and allowed at the end of the horizon b_max
+# (bikes)
+c_b = 60
+b_0 = 0
+b_max = 0
+
+# Forecast 3 (bikes/month): the orders that the warehouse receives; forecast 1 with
+# a peak in February. Kept here, not in FORECASTS, which the notebook of M0 shows whole
+FORECAST_3 = dict(zip(T, [380, 900, 420, 440, 430, 230]))
