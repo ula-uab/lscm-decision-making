@@ -52,7 +52,7 @@ def build(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = 
             # shipped plus the stock at the end of the month
             model += (before + p[f, t] == x[f, t] + h[f, t], f"balance_{_name(f, t)}")
             # A plant ships at most what it held at the start of the month plus
-            # what it assembles: the stock of the previous month, not of this one
+            # what it assembles: the stock of the previous month
             model += (x[f, t] <= before + p[f, t], f"shipment_limit_{_name(f, t)}")
             model += (p[f, t] <= capacity[f][t], f"capacity_{_name(f, t)}")
         if final is not None:
