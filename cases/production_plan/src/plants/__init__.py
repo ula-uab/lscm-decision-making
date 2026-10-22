@@ -8,9 +8,13 @@ functions below, one per step:
 2. ``feasible_region``: the reduced version, two plants and one month (§3);
 3. ``production_plan``: the plan of the full case for a forecast (§4, §5);
 4. ``capacity_and_demand``: capacity against demand, month by month and cumulative (§5).
+
+Each later version of the model has a module of its own, with its model and what
+its notebook shows: ``plant_stock`` (M1, stock at the plants).
 """
 
-from . import data, model
+from . import data, model, plant_stock
 from .show import capacity_and_demand, feasible_region, production_plan, show_data
 
-__all__ = ["capacity_and_demand", "data", "feasible_region", "model", "production_plan", "show_data"]
+__all__ = ["capacity_and_demand", "data", "feasible_region", "model", "plant_stock", "production_plan",
+           "show_data"]

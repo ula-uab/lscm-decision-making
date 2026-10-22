@@ -1,4 +1,6 @@
-"""Data of the example, Tables 1 and 2 of production_plan.md.
+"""Data of the example: Tables 1 and 2 of production_plan.md (M0), and the data
+that each later version adds, with the stock at the plants of plant_stock.md (M1).
+Each version keeps the data of the previous one and adds only its own.
 
 The data are invented (2026); they do not describe a real company.
 """
@@ -22,3 +24,18 @@ d = FORECASTS["Forecast 1"]
 # Reduced version (§3): plants 1 and 2, January, demand of January
 REDUCED_F = ["Plant 1", "Plant 2"]
 REDUCED_T = ["Jan"]
+
+# ---------------------------------------------------------------------------
+# M1 · Stock at the plants, Table 1 of plant_stock.md. Solved with forecast 2
+# ---------------------------------------------------------------------------
+
+# Holding cost c_h[f] (EUR/(bike·month)): different at each plant, so that where
+# the stock is held has one answer
+c_h = {"Plant 1": 5, "Plant 2": 6, "Plant 3": 7}
+
+# Stock h_0[f] at the end of December (bikes)
+h_0 = {"Plant 1": 20, "Plant 2": 10, "Plant 3": 0}
+
+# Stock h_end[f] that each plant must hold at the end of the horizon (bikes): the
+# plan leaves the plants as it found them
+h_end = dict(h_0)
