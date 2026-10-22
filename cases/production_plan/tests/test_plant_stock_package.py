@@ -4,7 +4,6 @@ the notebook of M1 runs from start to end."""
 from pathlib import Path
 
 import matplotlib
-import pulp
 import pytest
 
 matplotlib.use("Agg")
@@ -64,19 +63,13 @@ def test_table7_horizon_from_january_to_march_then_april_to_june():
 
 @pytest.mark.parametrize("months, final", [(T, h_end), (T, None), (T[:3], h_end)])
 def test_each_plan_is_the_only_optimal_plan(months, final):
-    # With the cost fixed at its optimum, every variable has the same minimum and maximum
-    model, p, x, h, cost = ps.build(months=months, final=final)
-    model.solve(pulp.HiGHS(msg=False))
-    optimum = pulp.value(model.objective)
-    model += (cost <= optimum + 1e-6, "optimal_cost")
-    for var in [*p.values(), *x.values(), *h.values()]:
-        ends = []
-        for sense in (pulp.LpMinimize, pulp.LpMaximize):
-            model.sense = sense
-            model.setObjective(var)
-            model.solve(pulp.HiGHS(msg=False))
-            ends.append(var.value())
-        assert ends[0] == pytest.approx(ends[1], abs=1e-3), var.name
+    assert ps.only_plan(months=months, final=final) is True
+
+
+def test_holding_cost_of_25_gives_several_optimal_plans():
+    # The notebook warns when the plan it shows is one of several with the same cost
+    assert ps.only_plan(holding={"Plant 1": 25, "Plant 2": 26, "Plant 3": 27}) is False
+    assert ps.only_plan(holding={"Plant 1": 5, "Plant 2": 6, "Plant 3": 7}) is True
 
 
 def test_shortage_of_plants_1_and_2_with_forecast_2():

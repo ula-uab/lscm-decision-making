@@ -83,6 +83,33 @@ def solve(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = 
     }
 
 
+def only_plan(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = h_0,
+              final: dict | None = h_end, capacity: dict = K, plants=F) -> bool | None:
+    """True if the optimal plan of M1 is the only one: with the cost fixed at its
+    optimum, every variable has the same minimum and maximum. False if several
+    plans have the optimal cost; None if the model has no solution."""
+    model, p, x, h, cost = build(demand, months, holding, initial, final, capacity, plants)
+    if not _optimal(model.solve(pulp.HiGHS(msg=False))):
+        return None
+    model += (cost <= pulp.value(model.objective) + 1e-6, "optimal_cost")
+    for var in [*p.values(), *x.values(), *h.values()]:
+        ends = []
+        for sense in (pulp.LpMinimize, pulp.LpMaximize):
+            model.sense = sense
+            model.setObjective(var)
+            model.solve(pulp.HiGHS(msg=False))
+            ends.append(var.value())
+        if abs(ends[0] - ends[1]) > 1e-3:          # bikes
+            return False
+    return True
+
+
+def _solve(**data) -> tuple[dict | None, bool | None]:
+    """Solve M1 with the data given and check whether its plan is the only optimal one."""
+    solution = solve(**data)
+    return solution, (only_plan(**data) if solution is not None else None)
+
+
 def why_no_plan(demand: dict = DEMAND, months=T, initial: dict = h_0, final: dict | None = h_end,
                 capacity: dict = K, plants=F) -> str:
     """Why M1 has no solution: the first month in which the demand since the start
@@ -171,14 +198,19 @@ def _figure(solution: dict, demand: dict, initial: dict, capacity: dict = K) -> 
     plt.show()
 
 
-def _report(solution: dict | None, demand: dict, initial: dict, heading: str) -> None:
-    """The plan and its cost, the shadow prices of the demand and the figure."""
+def _report(solution: dict | None, demand: dict, initial: dict, heading: str,
+            unique: bool | None = True) -> None:
+    """The plan and its cost, whether other plans have the same cost, the shadow
+    prices of the demand and the figure."""
     if solution is None:
         print(f"{heading}: the model has no solution.")
         return
     months = solution["months"]
     print(f"{heading}: optimal plan, cost {_euros(solution['cost'])}.")
     _display(_plan_table(solution))
+    if not unique:
+        print("With these data the model has several optimal plans with the same cost; "
+              "the table shows one of them.")
     print("Shadow price of the demand of each month (€/bike): what one more bike of demand costs.")
     _display(pd.DataFrame({t: {"Shadow price (€/bike)": solution["demand price"][t]} for t in months}))
     _figure(solution, demand, initial)
@@ -188,8 +220,8 @@ def stock_plan(final_stock_target: bool = True) -> dict | None:
     """The plan with forecast 2, with or without the final-stock target."""
     final = h_end if final_stock_target else None
     heading = f"{FORECAST}, {'with' if final_stock_target else 'without'} the final-stock target"
-    solution = solve(final=final)
-    _report(solution, DEMAND, h_0, heading)
+    solution, unique = _solve(final=final)
+    _report(solution, DEMAND, h_0, heading, unique)
     return solution
 
 
@@ -198,13 +230,13 @@ def holding_cost_test(holding_plant_1: float = 5) -> dict | None:
     more than plant 1, and plant 3 costs 2 more."""
     holding = {"Plant 1": holding_plant_1, "Plant 2": holding_plant_1 + 1, "Plant 3": holding_plant_1 + 2}
     print("Holding cost (€/(bike·month)): " + ", ".join(f"{f.lower()} {v:g}" for f, v in holding.items()) + ".")
-    solution = solve(holding=holding)
+    solution, unique = _solve(holding=holding)
     if solution is not None:
         march = sum(solution["stock"][f, "Mar"] for f in F)
         plant_3 = {t: solution["assembly"]["Plant 3", t] for t in T if solution["assembly"]["Plant 3", t] > TOL}
         print(f"Bikes in stock at the end of March: {march:,.0f}. Bikes assembled at plant 3: "
               + (", ".join(f"{v:,.0f} in {t}" for t, v in plant_3.items()) if plant_3 else "none") + ".")
-    _report(solution, DEMAND, h_0, f"{FORECAST}, with the final-stock target")
+    _report(solution, DEMAND, h_0, f"{FORECAST}, with the final-stock target", unique)
     return solution
 
 
@@ -215,8 +247,8 @@ def demand_test(month: str = "Apr", demand: float = 650) -> dict | None:
         raise ValueError(f"The month must be one of {', '.join(T)}.")
     changed = dict(DEMAND, **{month: demand})
     print("Demand (bikes/month): " + ", ".join(f"{t} {changed[t]:g}" for t in T) + ".")
-    solution = solve(demand=changed)
-    _report(solution, changed, h_0, f"Demand of {month} {demand:g}, with the final-stock target")
+    solution, unique = _solve(demand=changed)
+    _report(solution, changed, h_0, f"Demand of {month} {demand:g}, with the final-stock target", unique)
     if solution is None:
         print(why_no_plan(demand=changed))
     return solution
@@ -229,8 +261,8 @@ def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
         raise ValueError(f"The last month must be one of {', '.join(T)}.")
     i = T.index(last_month)
     first_months, later_months = T[:i + 1], T[i + 1:]
-    first = solve(months=first_months)
-    _report(first, DEMAND, h_0, f"Plan from {first_months[0]} to {last_month}")
+    first, unique = _solve(months=first_months)
+    _report(first, DEMAND, h_0, f"Plan from {first_months[0]} to {last_month}", unique)
     if first is None:
         print(why_no_plan(months=first_months))
         return None, None
@@ -240,9 +272,9 @@ def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
     print(f"Stock left at the end of {last_month} (bikes): "
           + ", ".join(f"{f.lower()} {v:g}" for f, v in left.items()) + ".")
     print()
-    later = solve(months=later_months, initial=left)
+    later, unique = _solve(months=later_months, initial=left)
     _report(later, DEMAND, left,
-            f"Plan from {later_months[0]} to {later_months[-1]}, starting from that stock")
+            f"Plan from {later_months[0]} to {later_months[-1]}, starting from that stock", unique)
     if later is None:
         print(why_no_plan(months=later_months, initial=left))
     return first, later
@@ -256,8 +288,8 @@ def final_stock_test(plant: str = "Plant 1", stock: float = 20) -> dict | None:
     final = dict(h_end, **{plant: stock})
     print("Stock required at the end of June (bikes): "
           + ", ".join(f"{f.lower()} {v:g}" for f, v in final.items()) + ".")
-    solution = solve(final=final)
-    _report(solution, DEMAND, h_0, f"{FORECAST}, with that final-stock target")
+    solution, unique = _solve(final=final)
+    _report(solution, DEMAND, h_0, f"{FORECAST}, with that final-stock target", unique)
     if solution is None:
         print(why_no_plan(final=final))
     return solution
