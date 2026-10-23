@@ -11,12 +11,13 @@ functions below, one per step:
 
 Each later version of the model has a module of its own, with its model and what
 its notebook shows: ``plant_stock`` (M1, stock at the plants),
-``central_warehouse`` (M2, central warehouse and backorders) and
-``distribution_network`` (M3, distribution network).
+``central_warehouse`` (M2, central warehouse and backorders),
+``distribution_network`` (M3, distribution network) and ``retailers`` (M4,
+retailers, backorder shares and lost sales).
 """
 
-from . import central_warehouse, data, distribution_network, model, plant_stock
+from . import central_warehouse, data, distribution_network, model, plant_stock, retailers
 from .show import capacity_and_demand, feasible_region, production_plan, show_data
 
 __all__ = ["capacity_and_demand", "central_warehouse", "data", "distribution_network", "feasible_region", "model",
-           "plant_stock", "production_plan", "show_data"]
+           "plant_stock", "production_plan", "retailers", "show_data"]

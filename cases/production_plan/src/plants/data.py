@@ -146,3 +146,56 @@ K_n = {"Regional warehouse 2": 280}
 # of M2 (c_b, b_0, b_max)
 FORECAST_4 = dict(zip(T, [240, 440, 400, 800, 840, 500]))
 SHARE = {"Local warehouse 1": 0.15, "Local warehouse 2": 0.20, "Local warehouse 3": 0.30, "Local warehouse 4": 0.35}
+
+# ---------------------------------------------------------------------------
+# M4 · Retailers, Tables 1 to 3 of retailers.md. Solved with forecast 5
+# ---------------------------------------------------------------------------
+
+RETAILERS = ["Retailer 1", "Retailer 2", "Retailer 3", "Retailer 4", "Retailer 5", "Retailer 6"]
+NODES_M4 = NODES + RETAILERS
+
+# Place of each retailer, and its latitude and longitude as given by Nominatim
+# (OpenStreetMap), consulted on 23/10/2026
+PLACES_M4 = {**PLACES,
+             "Retailer 1": ("Lleida", 41.6148, 0.6268), "Retailer 2": ("Sabadell", 41.5461, 2.1083),
+             "Retailer 3": ("Alicante", 38.3436, -0.4882), "Retailer 4": ("Murcia", 37.9348, -1.1131),
+             "Retailer 5": ("Córdoba", 37.8846, -4.7760), "Retailer 6": ("Granada", 37.1735, -3.5995)}
+
+# The arcs from the local warehouses to the retailers, by road: origin,
+# destination, mode, distance (km) and arc capacity (bikes/month). Distances: OSRM
+# on OpenStreetMap data, consulted on 23/10/2026. The network of M4 is the network
+# of M3 followed by these arcs
+RETAILER_NETWORK = [
+    ("Local warehouse 2", "Retailer 1", ROAD, 97.0, 1000),
+    ("Local warehouse 1", "Retailer 1", ROAD, 225.9, 1000),
+    ("Local warehouse 1", "Retailer 2", ROAD, 92.3, 1000),
+    ("Local warehouse 2", "Retailer 2", ROAD, 104.7, 1000),
+    ("Local warehouse 3", "Retailer 3", ROAD, 177.1, 1000),
+    ("Local warehouse 4", "Retailer 3", ROAD, 600.3, 1000),
+    ("Local warehouse 3", "Retailer 4", ROAD, 223.7, 1000),
+    ("Local warehouse 4", "Retailer 4", ROAD, 531.2, 1000),
+    ("Local warehouse 4", "Retailer 5", ROAD, 144.1, 150),
+    ("Local warehouse 3", "Retailer 5", ROAD, 521.3, 1000),
+    ("Local warehouse 4", "Retailer 6", ROAD, 254.3, 1000),
+    ("Local warehouse 3", "Retailer 6", ROAD, 478.4, 1000),
+]
+ARCS_M4 = arcs(network=NETWORK + RETAILER_NETWORK)
+
+# The retailers hold no stock; every other node keeps the data of M3
+c_h_node_m4 = {**c_h_node, **{r: 0 for r in RETAILERS}}
+K_h_node_m4 = {**K_h_node, **{r: 0 for r in RETAILERS}}
+h_node_0_m4 = {**h_node_0, **{r: 0 for r in RETAILERS}}
+h_node_end_m4 = {**h_node_end, **{r: 0 for r in RETAILERS}}
+
+# Forecast 5 (bikes/month): the orders of the six retailers together, invented.
+# Each retailer receives the same share of it every month
+FORECAST_5 = dict(zip(T, [250, 500, 450, 900, 900, 550]))
+SHARE_M4 = dict(zip(RETAILERS, [0.14, 0.22, 0.18, 0.16, 0.20, 0.10]))
+
+# Backorder share beta[r]: the share of the demand that retailer r does not receive
+# in its month that is backordered; the rest is lost sales. Invented
+BACKORDER_SHARE = dict(zip(RETAILERS, [0.9, 0.7, 0.5, 0.8, 0.6, 0.4]))
+
+# Lost-sale cost c_l[r] (EUR/bike): the price that the retailer pays for a bike,
+# invented. Backorder cost: c_b of M2, with no backorders at the end of December
+c_l = {r: 700 for r in RETAILERS}
