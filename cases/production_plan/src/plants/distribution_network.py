@@ -66,10 +66,10 @@ def build(demand: dict = DEMAND, months=T, arc_list: list = ARCS, share: dict = 
           storage: dict = K_h_node, node_capacity: dict = K_n, initial: dict = h_node_0,
           final: dict | None = h_node_end, backorder_cost: float = c_b, backorders_initial: float = b_0,
           backorders_end: float | None = b_max, capacity: dict = K, nodes=NODES, plants=F):
-    """The model of M3, not solved. ``share`` gives the nodes with demand and the share
+    """The model of M3, not solved. ``share`` gives the demand nodes and the share
     of the demand that each one receives. Returns the model, a dict of its variables
     by kind ("p" by (f, t); "x" by (a, t); "h" by (i, t); "s", "b" by (i, t) at the
-    nodes with demand) and the cost expression."""
+    demand nodes) and the cost expression."""
     model = pulp.LpProblem("distribution_network", pulp.LpMinimize)
     demand_nodes = list(share)
     # p[f, t] = bikes assembled at plant f; x[a, t] = bikes shipped on arc a;
@@ -134,7 +134,7 @@ def only_plan(**data) -> bool | None:
 def solve(**data) -> dict | None:
     """Solve M3 with the data given (the arguments of ``build``). Returns the cost
     (EUR); the bikes assembled at each plant, shipped on each arc, in stock at each
-    node, and the deliveries and backorders of each node with demand, by month
+    node, and the deliveries and backorders of each demand node, by month
     (bikes); and the shadow prices of the arc, node and storage capacities
     (EUR/bike). None if the model has no solution."""
     model, var, _ = build(**data)
@@ -238,7 +238,7 @@ def _prices(solution: dict) -> None:
 @_light
 def _figure(solution: dict, month: str) -> None:
     """Left: the network on a map, with the flow on each arc in one month; an arc
-    whose capacity is full is drawn in red. Right: stock at each level of the
+    whose capacity is full is drawn in red. Right: stock at each stage of the
     network at the end of each month."""
     arc_list, months = solution["arcs"], solution["months"]
     fig, (left, right) = plt.subplots(1, 2, figsize=(12, 5), gridspec_kw={"width_ratios": [1.3, 1]})
@@ -272,20 +272,20 @@ def _figure(solution: dict, month: str) -> None:
     left.axis("off")
     left.legend(fontsize=7, loc="lower right")
 
-    levels = {"plants": F, "central warehouse": [CENTRAL], "regional warehouses": REGIONAL,
+    stages = {"plants": F, "central warehouse": [CENTRAL], "regional warehouses": REGIONAL,
               "local warehouses": LOCAL}
     colours = {"plants": "tab:blue", "central warehouse": "tab:gray", "regional warehouses": "tab:olive",
                "local warehouses": "tab:cyan"}
     x = range(len(months))
     bottom = [0.0] * len(months)
-    for level, nodes in levels.items():
+    for stage, nodes in stages.items():
         values = [sum(solution["stock"][i, t] for i in nodes) for t in months]
-        right.bar(x, values, bottom=bottom, color=colours[level], width=0.7, label=level)
+        right.bar(x, values, bottom=bottom, color=colours[stage], width=0.7, label=stage)
         bottom = [b + v for b, v in zip(bottom, values)]
     right.set_xticks(list(x), months)
     right.set_ylabel("Bikes at the end of the month")
     right.set_ylim(0, max(500, max(bottom) * 1.15))
-    right.set_title("Stock at each level of the network", fontsize=10)
+    right.set_title("Stock at each stage of the network", fontsize=10)
     right.legend(fontsize=7, loc="upper right")
     right.spines[["top", "right"]].set_visible(False)
     _european_axes(fig)
@@ -316,10 +316,14 @@ def network_plan(month: str = "May") -> dict | None:
     """The plan with forecast 4, with the flows of one month on the map; and, first,
     whether M2 has a plan for forecast 4."""
     if m2_has_no_solution():
+        ordered = sum(DEMAND[t] for t in T[3:])
+        assembled = sum(K[f][t] for f in F for t in T[3:])
+        ending = sum(h_node_end[f] for f in F)
         print(f"M2, with the plants and the central warehouse only, has no solution with {FORECAST.lower()}: "
-              f"from April to June {_number(sum(DEMAND[t] for t in T[3:]))} bikes are ordered, the plants can "
-              f"assemble {_number(sum(K[f][t] for f in F for t in T[3:]))}, and the plants and the central "
-              f"warehouse can hold {_number(sum(K_h_node[f] for f in F) + K_h_node[CENTRAL])}.")
+              f"from April to June {_number(ordered)} bikes are ordered and the plants can assemble "
+              f"{_number(assembled)}, and the plants have to end June with {_number(ending)} bikes. At the end "
+              f"of March {_number(ordered - assembled + ending)} bikes have to be in stock, and the plants and "
+              f"the central warehouse can hold {_number(sum(K_h_node[f] for f in F) + K_h_node[CENTRAL])}.")
         print()
     return _report({}, FORECAST, month)
 
@@ -335,10 +339,10 @@ def _route_summary(solution: dict | None) -> None:
 
 
 def rail_capacity_test(rail_capacity: float = 400, month: str = "May") -> dict | None:
-    """The plan with forecast 4 and the arc capacity of the rail arc changed."""
+    """The plan with forecast 4 and the arc capacity of arc 6, the rail arc, changed."""
     arc_list = [dict(arc) for arc in ARCS]
     arc_list[RAIL_ARC]["capacity"] = rail_capacity
-    print(f"Arc capacity of the rail arc: {_number(rail_capacity)} bikes/month.")
+    print(f"Arc capacity of arc 6 (rail): {_number(rail_capacity)} bikes/month.")
     solution = solve(arc_list=arc_list)
     _route_summary(solution)
     return _report({"arc_list": arc_list}, FORECAST, month, prices=False)

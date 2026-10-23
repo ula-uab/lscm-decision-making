@@ -4,13 +4,13 @@ This document is the fourth version, M3, of the production plan of an electric b
 
 ## 1. Infeasibility of M2 under forecast 4
 
-Forecast 4 gives the orders of the four local warehouses together: 240; 440; 400; 800; 840 and 500 bikes from January to June. With it, M2 has no solution. From April to June 2.140 bikes are ordered, and the plants can assemble 1.800 in those three months. The other 340 bikes have to be assembled before April and held as seasonal stock, and the plants and the central warehouse have a storage capacity of 240 bikes. Backorders do not change this count: every order has to be delivered by the end of June.
+Forecast 4 gives the orders of the four local warehouses together: 240; 440; 400; 800; 840 and 500 bikes from January to June. With it, M2 has no solution. From April to June 2.140 bikes are ordered, and the plants can assemble 1.800 in those three months, so 340 bikes have to be assembled before April; the plants also have to end June with their required ending stock, 30 bikes. At the end of March 370 bikes have to be in stock as seasonal stock, and the plants and the central warehouse have a storage capacity of 240 bikes. Backorders do not change this count: every order has to be delivered by the end of June.
 
 The system can still meet those orders. The regional and local warehouses of the company can hold seasonal stock too. The problem is not in the system but in the model: M2 does not represent the warehouses below the central warehouse.
 
 ## 2. Components added in M3
 
-M3 represents the company's distribution network. The plants ship to the central warehouse in Zaragoza. From there the bikes go to two regional warehouses, in Barcelona and Getafe (Madrid), and from them to four local warehouses, in Girona, Tarragona, Valencia and Seville, which receive the orders. Valencia can receive from both regional warehouses. Two arcs skip a level: plant 3, in Castellón de la Plana, ships directly to the regional warehouse in Getafe, and the central warehouse ships to it by road.
+M3 represents the company's distribution network. The plants ship to the central warehouse in Zaragoza. From there the bikes go to two regional warehouses, in Barcelona and Getafe (Madrid), and from them to four local warehouses, in Girona, Tarragona, Valencia and Seville, which receive the orders. Valencia can receive from both regional warehouses. One arc skips a stage: plant 3, in Castellón de la Plana, ships directly to the regional warehouse in Getafe, without passing through the central warehouse (arc 4). The central warehouse also ships to Getafe by road (arc 8).
 
 The central warehouse also ships to Getafe by rail. The train runs from the dry port of Zaragoza (Terminal Marítima de Zaragoza) to the dry port of Coslada, near Madrid, which is the rail terminal of the network. At the rail terminal the bikes pass from train to truck and leave the same month; the rail terminal holds no stock. Rail has a low transport rate and a high arc capacity, and the road from the rail terminal to Getafe has a lower arc capacity. Distributing with other transport modes, of different capacities and costs, is one of the options of a master plan when transport is the bottleneck (Albrecht et al., 2015, §8.1, pp. 156–157).
 
@@ -33,10 +33,10 @@ Table 1. Nodes of the network
 | Rail terminal | Rail terminal, no stock | Coslada (dry port of Coslada) |
 | Regional warehouse 1 | Warehouse | Barcelona |
 | Regional warehouse 2 | Warehouse | Getafe |
-| Local warehouse 1 | Warehouse with demand | Girona |
-| Local warehouse 2 | Warehouse with demand | Tarragona |
-| Local warehouse 3 | Warehouse with demand | Valencia |
-| Local warehouse 4 | Warehouse with demand | Seville |
+| Local warehouse 1 | Warehouse, demand node | Girona |
+| Local warehouse 2 | Warehouse, demand node | Tarragona |
+| Local warehouse 3 | Warehouse, demand node | Valencia |
+| Local warehouse 4 | Warehouse, demand node | Seville |
 
 Table 2 is the list of arcs. Road distances are those of the fastest road route between the two places, computed with OSRM on OpenStreetMap data. The rail distance is that of the rail route between the two dry ports, computed with OpenRailRouting on conventional lines of Iberian gauge, the network that freight trains use. The transport rates are invented: 0,010 €/(bike·km) by road and 0,006 €/(bike·km) by rail. The transport cost of each arc is its distance times the transport rate of its mode, rounded to the cent. The arc capacities are invented. The arc capacities of arcs 4, 6, 7 and 8 shape the routes to regional warehouse 2; those of the other arcs are above the flow on them in every month of the plan.
 
@@ -60,7 +60,7 @@ Table 2. List of arcs
 
 Regional warehouse 2 is reached by three routes from the plants. By rail through the rail terminal, arcs 6 and 7 cost 2,30 €/bike from the central warehouse. By road from the central warehouse, arc 8 costs 3,30 €/bike. Directly from plant 3, arc 4 costs 4,27 €/bike, against 3,23 + 2,30 = 5,53 €/bike through the central warehouse.
 
-Table 3 gives the data of each node. The plants and the central warehouse keep the data of M2. The holding costs of the regional and local warehouses are invented: higher than at the central warehouse, and different at each warehouse, so that the plan has one answer. The storage capacities of the regional and local warehouses are invented too. Each node ends the horizon with the stock it had at the end of December.
+Table 3 gives the data of each node. The plants and the central warehouse keep the data of M2. The holding costs of the regional and local warehouses are invented: higher than at the central warehouse, and different at each warehouse, so that there is only one optimal plan. The storage capacities of the regional and local warehouses are invented too. Each node ends the horizon with the stock it had at the end of December.
 
 Table 3. Data of the nodes
 
@@ -102,10 +102,10 @@ Table 5. Notation
 | $F$, $f$ | Plants | — | — | M0 |
 | $T$, $t$ | Months, January to June; $t = 0$ is the end of December | — | — | M0 |
 | $\tau$ | Last month of the horizon | — | — | M1 |
-| $V$, $i$ | Nodes of the network: plants and warehouses | — | — | M3 |
+| $V$, $i$ | Nodes of the network: plants, warehouses and the rail terminal | — | — | M3 |
 | $A$, $a$ | Arcs of the network; the arc $a = \langle i, j \rangle$ goes from its origin node $i$ to its destination node $j$ | — | — | M3 |
 | $A^{\text{in}}_j$; $A^{\text{out}}_i$ | Arcs that enter node $j$, $\{\langle i, j\rangle \in A : i \in V\}$; arcs that leave node $i$, $\{\langle i, j\rangle \in A : j \in V\}$ | — | — | M3 |
-| $V^d$ | Nodes with demand: the local warehouses | — | — | M3 |
+| $V^d$ | Demand nodes: the local warehouses | demand node | — | M3 |
 | *Data* | | | | |
 | $c_f$ | Unit assembly cost at plant $f$ | — | €/bike | M0 |
 | $K_{ft}$ | Assembly capacity of plant $f$ in month $t$ | — | bikes/month | M0 |
@@ -214,7 +214,7 @@ Table 8. Stock at the end of the month (bikes)
 | Local warehouse 3 | 0 | 0 | 20 | 0 | 0 | 0 |
 | Local warehouse 4 | 0 | 0 | 20 | 0 | 0 | 0 |
 
-Plants 1 and 2 assemble at their capacity every month, and plant 3 from March. The seasonal stock grows from January and reaches 440 bikes at the end of March, at every level of the network: 90 bikes at the plants, 150 at the central warehouse, 120 at the regional warehouses and 80 at the local warehouses, all of them at their storage capacity. In April and May the seasonal stock covers the orders that exceed what the plants assemble. The plan sets the stock at each node, the flow on each arc and the assembly at each plant together: in March, the storage capacity of every node is full, and the seasonal stock that does not fit at the plants and the central warehouse is held at the regional and local warehouses.
+Plants 1 and 2 assemble at their capacity every month, and plant 3 from March. The seasonal stock grows from January and reaches 440 bikes at the end of March, at every stage of the network: 90 bikes at the plants, 150 at the central warehouse, 120 at the regional warehouses and 80 at the local warehouses, all of them at their storage capacity. In April and May the seasonal stock covers the orders that exceed what the plants assemble. In March the storage capacity of every node is full, and the seasonal stock that does not fit at the plants and the central warehouse is held at the regional and local warehouses.
 
 ### 6.2 Routes to regional warehouse 2
 
@@ -251,7 +251,7 @@ The storage capacities are full at the end of March, when the seasonal stock is 
 
 The notebook (§7) solves M3 again with one datum changed. These are the results for some values of each datum; the other data are those of §3.
 
-The first test changes the arc capacity of the rail arc. From 200 bikes up the plan does not change, because the train carries only what arc 7 carries. With 150 bikes or less the train is full every month, and the bikes that no longer fit reach regional warehouse 2 by road from the central warehouse, or Valencia through regional warehouse 1. With 150 bikes, the plan costs 1.112.221,83 €; with 100, 1.112.498,03 €; with 50, 1.112.833,55 €, and the road from the central warehouse to regional warehouse 2 carries 34; 104; 110; 124; 150 and 65 bikes from January to June. Below 13 bikes there is no solution.
+The first test changes the arc capacity of arc 6, the rail arc. From 200 bikes up the plan does not change, because the train carries only what arc 7 carries. With 150 bikes or less the train is full every month, and the bikes that no longer fit reach regional warehouse 2 by road from the central warehouse, or Valencia through regional warehouse 1. With 150 bikes, the plan costs 1.112.221,83 €; with 100, 1.112.498,03 €; with 50, 1.112.833,55 €, and the road from the central warehouse to regional warehouse 2 carries 34; 104; 110; 124; 150 and 65 bikes from January to June. Below 13 bikes there is no solution.
 
 The second test changes the transport rate of rail. With 0,009 €/(bike·km), the rail route through the rail terminal costs 3,02 + 0,28 = 3,30 €/bike, as much as the road from the central warehouse, and several plans have the same cost (1.113.093,55 €). Below that rate the train carries 200 bikes a month from February, as in §6.1. Above it the road from the central warehouse carries the bikes, up to its arc capacity of 150 bikes a month, and the train carries only what does not fit on that road: with 0,010 €/(bike·km), 4; 10; 4 and 70 bikes from February to May, and the plan costs 1.113.123,47 €.
 

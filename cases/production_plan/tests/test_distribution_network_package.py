@@ -33,6 +33,11 @@ def test_table4_orders_of_the_local_warehouses():
 
 def test_m2_has_no_solution_with_forecast_4():
     assert dn.m2_has_no_solution()
+    # 340 bikes assembled before April and the 30 of the required ending stock of the
+    # plants: M2 has a solution only if the plants and the central warehouse hold 370
+    from plants import central_warehouse as cw
+    assert cw.solve(demand=FORECAST_4, warehouse_storage=370 - 90 - 1) is None
+    assert cw.solve(demand=FORECAST_4, warehouse_storage=370 - 90) is not None
 
 
 def test_tables6_to_8_plan_with_forecast_4():

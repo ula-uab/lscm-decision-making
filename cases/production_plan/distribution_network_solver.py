@@ -105,7 +105,7 @@ c_b, b_0, b_max = 60, 0, 0
 
 def solve_model(nodes, arcs, share, storage):
     """Solve the model on a network: nodes, arcs (origin, destination, mode, km,
-    capacity, cost), the share of forecast 4 of each node with demand, and the
+    capacity, cost), the share of forecast 4 of each demand node, and the
     storage capacity of each node. Returns (cost, values of each kind of
     variable, shadow prices of the arc, node and storage capacities), or None if
     it has no solution."""
@@ -117,7 +117,7 @@ def solve_model(nodes, arcs, share, storage):
     A = range(len(arcs))
     # p[f, t] = bikes assembled at plant f; x[a, t] = bikes shipped on arc a;
     # h[i, t] = stock of node i at the end of month t; s[i, t] = deliveries and
-    # b[i, t] = backorders at the end of month t of node i with demand
+    # b[i, t] = backorders at the end of month t of demand node i
     p = {(f, t): model.add_variable(f"p_{key(f)}_{t}", lowBound=0) for f in F for t in T}
     x = {(a, t): model.add_variable(f"x_{a}_{t}", lowBound=0) for a in A for t in T}
     h = {(i, t): model.add_variable(f"h_{key(i)}_{t}", lowBound=0) for i in nodes for t in T}
