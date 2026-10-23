@@ -57,8 +57,8 @@ def test_table7_horizon_from_january_to_march_then_april_to_june():
     assert left == h_end
     assert ps.solve(months=T[3:], initial=left) is None
     assert ps.why_no_plan(months=T[3:], initial=left).startswith(
-        "Capacity falls short in Apr: in Apr the demand is 650 bikes, the plants can assemble 600 "
-        "and they held 30 in stock at the start: 20 bikes short.")
+        "Unmet demand in Apr: in Apr the demand is 650 bikes, and the plants can assemble 600 "
+        "and held 30 in stock at the start, 20 bikes fewer than the demand.")
 
 
 @pytest.mark.parametrize("months, final", [(T, h_end), (T, None), (T[:3], h_end)])
@@ -89,7 +89,7 @@ def test_initial_and_final_stock():
 def test_no_solution_when_the_demand_is_above_capacity_and_stock():
     demand = dict(FORECASTS["Forecast 2"], Jun=1500)
     assert ps.solve(demand=demand) is None
-    assert ps.why_no_plan(demand=demand).startswith("Capacity falls short in Jun")
+    assert ps.why_no_plan(demand=demand).startswith("Unmet demand in Jun")
 
 
 def test_notebook_runs():

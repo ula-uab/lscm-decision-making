@@ -3,7 +3,8 @@
 # This script reproduces every table of central_warehouse.md (same folder): the
 # data of the plants, the warehouse and forecast 3 (Tables 1 to 3); that M1,
 # with stock at the plants only, has no solution with forecast 3; the plan of
-# M2 with forecast 3 (Table 5); and the shadow prices of the orders and of the
+# M2 with forecast 3 (Table 5); and the shadow prices of the backorder balance
+# and of the
 # storage capacities (Tables 6 and 7).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
@@ -44,7 +45,7 @@ c = {"Plant 1": 310, "Plant 2": 340, "Plant 3": 390}
 K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plant 3": 150}.items()}
 
 # From plant_stock.md (M1): holding cost c_h[f] (EUR/(bike*month)), stock at
-# the end of December h_0[f] and required at the end of the horizon h_end[f]
+# the end of December h_0[f] and required ending stock h_end[f]
 # (bikes)
 c_h = {"Plant 1": 5, "Plant 2": 6, "Plant 3": 7}
 h_0 = {"Plant 1": 20, "Plant 2": 10, "Plant 3": 0}
@@ -52,9 +53,9 @@ h_end = dict(h_0)
 
 # New in M2: storage capacity of the plants K_h[f] (bikes); holding cost
 # c_h_w (EUR/(bike*month)) and storage capacity K_h_w (bikes) of the warehouse,
-# its stock at the end of December h_w_0 and required at the end h_w_end
-# (bikes); cost of serving one bike one month late c_b (EUR/(bike*month)),
-# orders owed at the end of December b_0 and allowed at the end b_max (bikes)
+# its stock at the end of December h_w_0 and required ending stock h_w_end
+# (bikes); backorder cost c_b (EUR/(bike*month)), backorders at the end of
+# December b_0 and maximum backorders at the end of the horizon b_max (bikes)
 K_h = {"Plant 1": 40, "Plant 2": 30, "Plant 3": 20}
 c_h_w, K_h_w, h_w_0, h_w_end = 8, 150, 0, 0
 c_b, b_0, b_max = 60, 0, 0
@@ -69,10 +70,10 @@ d = dict(zip(T, [380, 900, 420, 440, 430, 230]))
 
 def solve_model(m1=False):
     """Solve M2 with forecast 3. Returns (cost, values of each kind of variable,
-    shadow prices of the orders, of the storage at the plants and of the storage
+    shadow prices of the backorder balance, of the storage at the plants and of the storage
     at the warehouse), or None if it has no solution. With m1=True, the model
     of M1 written with the variables of M2: no warehouse (it cannot hold stock),
-    no order served late and no storage limit at the plants."""
+    no backorders and no storage capacity at the plants."""
     model = pulp.LpProblem("central_warehouse", pulp.LpMinimize)
 
     def name(f, t):
@@ -85,12 +86,12 @@ def solve_model(m1=False):
     x = {(f, t): model.add_variable(f"x_{name(f, t)}", lowBound=0) for f in F for t in T}
     h = {(f, t): model.add_variable(f"h_{name(f, t)}", lowBound=0) for f in F for t in T}
     # h_w[t] = bikes in stock at the warehouse at the end of month t (bikes);
-    # s[t] = bikes served in month t; b[t] = orders owed at the end of month t
+    # s[t] = deliveries in month t; b[t] = backorders at the end of month t
     h_w = {t: model.add_variable(f"h_w_{t}", lowBound=0) for t in T}
     s = {t: model.add_variable(f"s_{t}", lowBound=0) for t in T}
     b = {t: model.add_variable(f"b_{t}", lowBound=0) for t in T}
 
-    # Minimise the assembly, holding and late-service cost
+    # Minimise the assembly, holding and backorder cost
     model += (pulp.lpSum(c[f] * p[f, t] + c_h[f] * h[f, t] for f in F for t in T)
               + pulp.lpSum(c_h_w * h_w[t] + c_b * b[t] for t in T))
 
@@ -115,18 +116,19 @@ def solve_model(m1=False):
         arriving = pulp.lpSum(x[f, t] for f in F)
         # Stock balance at the warehouse
         model += (stock_before + arriving == s[t] + h_w[t], f"warehouse_balance_{t}")
-        # Serving limit at the warehouse: at most what it held at the start of
-        # the month plus what arrives
-        model += (s[t] <= stock_before + arriving, f"serving_limit_{t}")
-        # Balance of the orders, written with the demand on the right so that
+        # Shipment limit at the warehouse: it delivers at most what it held at the
+        # start of the month plus what arrives
+        model += (s[t] <= stock_before + arriving, f"shipment_limit_warehouse_{t}")
+        # Backorder balance, written with the demand on the right so that
         # its shadow price is what one more order costs
         model += (s[t] + b[t] - owed_before == d[t], f"orders_{t}")
         # Storage capacity of the warehouse (none in M1)
         model += (h_w[t] <= (0 if m1 else K_h_w), f"warehouse_storage_{t}")
         if m1:
-            model += (b[t] <= 0, f"no_order_late_{t}")
-    # No order owed at the end of the horizon; final stock at the warehouse
-    model += (b[T[-1]] <= b_max, "orders_late_at_the_end")
+            model += (b[t] <= 0, f"no_backorders_{t}")
+    # No backorders at the end of the horizon; required ending stock at the
+    # warehouse
+    model += (b[T[-1]] <= b_max, "backorders_at_the_end")
     model += (h_w[T[-1]] >= h_w_end, "final_stock_warehouse")
 
     # The solver says whether it found an optimal solution: PuLP 3 returns the
@@ -187,13 +189,13 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §3 Data
-    title("§3 Data")
+    title("§3 Data of the plants and the warehouse, forecast 3")
     print("Table 1. Plants")
     print(f"{'Plant':<10}{'c':>6}{'K':>6}{'c_h':>6}{'K_h':>6}{'h_0':>6}{'h_end':>7}")
     for f in F:
         print(f"{f:<10}{c[f]:>6}{K[f]['Jan']:>6}{c_h[f]:>6}{K_h[f]:>6}{h_0[f]:>6}{h_end[f]:>7}")
     print()
-    print("Table 2. Central warehouse and orders served late")
+    print("Table 2. Central warehouse and backorders")
     print(f"c_h_w = {c_h_w} EUR/(bike*month), K_h_w = {K_h_w} bikes, h_w_0 = {h_w_0} bikes,"
           f" h_w_end = {h_w_end} bikes")
     print(f"c_b = {c_b} EUR/(bike*month), b_0 = {b_0} bikes, b_max = {b_max} bikes")
@@ -214,8 +216,8 @@ if __name__ == "__main__":
     print(f"Stock at the plants at the end of December: {sum(h_0.values())} bikes")
     print(f"M1 (stock at the plants only) has a solution: {'yes' if solve_model(m1=True) else 'no'}")
 
-    # §6 Plan of M2 with forecast 3
-    title("§6 Plan with forecast 3")
+    # §6.1 Plan of M2 with forecast 3
+    title("§6.1 Optimal plan under forecast 3")
     cost, v, orders_price, storage_price, warehouse_price = solve_model()
     print("Table 5. Optimal plan (bikes)")
     header()
@@ -223,16 +225,16 @@ if __name__ == "__main__":
         for f in F:
             by_month(f"{label}, {f.lower()}", [v[kind][f, t] for t in T])
     by_month("Stock at the warehouse", [v["h_w"][t] for t in T])
-    by_month("Served by the warehouse", [v["s"][t] for t in T])
-    by_month("Orders owed at the end of the month", [v["b"][t] for t in T])
+    by_month("Deliveries of the warehouse", [v["s"][t] for t in T])
+    by_month("Backorders at the end of the month", [v["b"][t] for t in T])
     print(f"Cost: {cost:.2f} EUR")
     print()
-    print("Table 6. Shadow prices of the orders (EUR/bike)")
+    print("Table 6. Shadow prices of the backorder balance (EUR/bike)")
     header()
-    by_month("Balance of the orders", [orders_price[t] for t in T])
+    by_month("Backorder balance", [orders_price[t] for t in T])
     print()
     print("Table 7. Shadow prices of the storage capacities (EUR/bike)")
     header()
     for f in F:
-        by_month(f"Storage, {f.lower()}", [storage_price[f, t] for t in T])
-    by_month("Storage, warehouse", [warehouse_price[t] for t in T])
+        by_month(f"Storage capacity, {f.lower()}", [storage_price[f, t] for t in T])
+    by_month("Storage capacity, warehouse", [warehouse_price[t] for t in T])

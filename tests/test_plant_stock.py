@@ -17,14 +17,19 @@ def load():
     return module
 
 
+def row(name, values, width=34):
+    """A row of the script output: the name, then one value per month."""
+    return f"{name:<{width}}" + "".join(f"{v:>9.2f}" for v in values)
+
+
 def test_script_prints_the_tables():
     out = subprocess.run([sys.executable, SCRIPT], cwd=CASE, capture_output=True, text=True,
                          check=True).stdout
-    for text in ("Plants 1 and 2 short: Apr 200 bikes, May 170 bikes",
+    for text in ("Demand above the capacity of plants 1 and 2: Apr 200 bikes, May 170 bikes",
                  "Cost: 858460.00 EUR",
                  "Cost: 848700.00 EUR",
-                 "With the final-stock target          370.00   375.00   380.00   385.00   390.00   340.00",
-                 "Without the final-stock target       370.00   375.00   380.00   385.00   390.00   310.00",
+                 row("With the required ending stock", [370, 375, 380, 385, 390, 340]),
+                 row("Without the required ending stock", [370, 375, 380, 385, 390, 310]),
                  "Months with the same plan: Jan, Feb, Mar, Apr, May",
                  "Cost: 361860.00 EUR",
                  "The plan from April to June has a solution: no"):

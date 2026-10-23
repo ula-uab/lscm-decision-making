@@ -1,20 +1,20 @@
 """M2 · Central warehouse (central_warehouse.md): the model of plant_stock.md (M1)
-with a central warehouse that receives the shipments of the plants and serves the
-orders, storage capacities at the plants and at the warehouse, and orders served
-late, written with PuLP and solved with HiGHS; and what the notebook
+with a central warehouse that receives the shipments of the plants and delivers
+the orders, storage capacities at the plants and at the warehouse, and backorders,
+written with PuLP and solved with HiGHS; and what the notebook
 central_warehouse.ipynb shows.
 
 The notebook calls one function per step:
 
 1. ``show_data``: the plants, the warehouse and forecast 3;
 2. ``warehouse_plan``: the plan with forecast 3;
-3. ``orders_at_the_end_test``, ``plant_storage_test``, ``late_cost_test`` and
-   ``warehouse_storage_test``: the plan when one datum changes.
+3. ``backorders_at_the_end_test``, ``plant_storage_test``, ``backorder_cost_test``
+   and ``warehouse_storage_test``: the plan when one datum changes.
 
 A capacity is given as capacity[f][t] (bikes/month), a demand as demand[t]
 (bikes/month), and holding costs, storage capacities and stocks of the plants as
-dicts by plant. ``final=None`` solves the model without final-stock targets, and
-``owed_end=None`` without a limit on the orders owed at the end of the horizon.
+dicts by plant. ``final=None`` solves the model without the required ending stock,
+and ``owed_end=None`` without the limit on the backorders at the end of the horizon.
 """
 
 from __future__ import annotations
@@ -54,13 +54,13 @@ def build(demand: dict = DEMAND, months=T, holding: dict = c_h, plant_storage: d
     x = {(f, t): model.add_variable(f"x_{_name(f, t)}", lowBound=0) for f in plants for t in months}
     h = {(f, t): model.add_variable(f"h_{_name(f, t)}", lowBound=0) for f in plants for t in months}
     # h_w[t] = bikes in stock at the warehouse at the end of month t (bikes);
-    # s[t] = bikes the warehouse serves in month t, to orders of that month or of
-    # earlier months (bikes/month); b[t] = orders received and not yet served at the
-    # end of month t (bikes)
+    # s[t] = deliveries: bikes the warehouse delivers in month t to orders of that
+    # month or to backorders (bikes/month); b[t] = backorders at the end of month t:
+    # orders received and not yet delivered (bikes)
     h_w = {t: model.add_variable(f"h_w_{t}", lowBound=0) for t in months}
     s = {t: model.add_variable(f"s_{t}", lowBound=0) for t in months}
     b = {t: model.add_variable(f"b_{t}", lowBound=0) for t in months}
-    # Minimise the assembly, holding and late-service cost
+    # Minimise the assembly, holding and backorder cost
     cost = pulp.lpSum(c[f] * p[f, t] + holding[f] * h[f, t] for f in plants for t in months) \
         + pulp.lpSum(warehouse_holding * h_w[t] + late_cost * b[t] for t in months)
     model += cost
@@ -81,19 +81,19 @@ def build(demand: dict = DEMAND, months=T, holding: dict = c_h, plant_storage: d
         stock_before = warehouse_initial if i == 0 else h_w[months[i - 1]]
         owed_before = owed_initial if i == 0 else b[months[i - 1]]
         arriving = pulp.lpSum(x[f, t] for f in plants)
-        # Stock at the start of the month plus what arrives is what is served plus
-        # the stock at the end of the month
+        # Stock at the start of the month plus what arrives is what is delivered
+        # plus the stock at the end of the month
         model += (stock_before + arriving == s[t] + h_w[t], f"warehouse_balance_{t}")
-        # The warehouse serves at most what it held at the start of the month plus
-        # what arrives: the stock of the previous month
-        model += (s[t] <= stock_before + arriving, f"serving_limit_{t}")
-        # Orders owed at the start of the month plus the orders of the month are the
-        # orders served plus the orders still owed at the end. Written with the
-        # demand on the right, so that its shadow price is what one more order costs
+        # Shipment limit: the warehouse delivers at most what it held at the start of
+        # the month plus what arrives: the stock of the previous month
+        model += (s[t] <= stock_before + arriving, f"shipment_limit_warehouse_{t}")
+        # Backorder balance: backorders at the start of the month plus the orders of
+        # the month are the deliveries plus the backorders at the end. Written with
+        # the demand on the right, so that its shadow price is what one more order costs
         model += (s[t] + b[t] - owed_before == demand[t], f"orders_{t}")
         model += (h_w[t] <= warehouse_storage, f"warehouse_storage_{t}")
     if owed_end is not None:
-        model += (b[months[-1]] <= owed_end, "orders_late_at_the_end")
+        model += (b[months[-1]] <= owed_end, "backorders_at_the_end")
     if final is not None:
         model += (h_w[months[-1]] >= warehouse_final, "final_stock_warehouse")
     return model, {"p": p, "x": x, "h": h, "h_w": h_w, "s": s, "b": b}, cost
@@ -129,9 +129,9 @@ def only_plan(**data) -> bool | None:
 def solve(**data) -> dict | None:
     """Solve M2 with the data given (the arguments of ``build``). Returns the cost
     (EUR); the bikes assembled, shipped to the warehouse and in stock at each plant
-    and month; the stock of the warehouse, the bikes it serves and the orders owed
-    each month (bikes); the shadow prices of the orders of each month and of the
-    storage capacities (EUR/bike). None if the model has no solution."""
+    and month; the stock of the warehouse, its deliveries and the backorders each
+    month (bikes); the shadow prices of the backorder balance of each month and of
+    the storage capacities (EUR/bike). None if the model has no solution."""
     model, var, _ = build(**data)
     if not _optimal(model.solve(pulp.HiGHS(msg=False))):
         return None
@@ -165,21 +165,21 @@ def m1_has_no_solution(demand: dict = DEMAND) -> str | None:
 
 def show_data() -> None:
     """Tables 1 to 3 of central_warehouse.md: the plants, the warehouse and the
-    orders served late, and forecast 3."""
+    backorders, and forecast 3."""
     _display(pd.DataFrame({f: {"Unit assembly cost (€/bike)": c[f],
                                "Capacity (bikes/month, every month)": K[f]["Jan"],
                                "Holding cost (€/(bike·month))": c_h[f],
                                "Storage capacity (bikes)": K_h[f],
                                "Stock at the end of December (bikes)": h_0[f],
-                               "Stock required at the end of the horizon (bikes)": h_end[f]} for f in F})
+                               "Required ending stock (bikes)": h_end[f]} for f in F})
              .T.rename_axis("Plant"))
     _display(pd.DataFrame({WAREHOUSE: {"Holding cost (€/(bike·month))": c_h_w,
                                        "Storage capacity (bikes)": K_h_w,
                                        "Stock at the end of December (bikes)": h_w_0,
-                                       "Stock required at the end of the horizon (bikes)": h_w_end,
-                                       "Cost of serving one bike one month late (€/(bike·month))": c_b,
-                                       "Orders owed at the end of December (bikes)": b_0,
-                                       "Orders owed allowed at the end of the horizon (bikes)": b_max}})
+                                       "Required ending stock (bikes)": h_w_end,
+                                       "Backorder cost (€/(bike·month))": c_b,
+                                       "Backorders at the end of December (bikes)": b_0,
+                                       "Maximum backorders at the end of the horizon (bikes)": b_max}})
              .rename_axis("Central warehouse"))
     _display(pd.DataFrame({FORECAST: DEMAND}).T.rename_axis("Orders (bikes/month)"))
 
@@ -191,8 +191,8 @@ def _plan_table(solution: dict) -> pd.DataFrame:
                        ("Stock at the end of the month", "stock")):
         for f in F:
             rows[label, f] = {t: solution[key][f, t] for t in months}
-    for label, key in (("Stock at the end of the month", "warehouse stock"), ("Served", "served"),
-                       ("Orders owed at the end of the month", "owed")):
+    for label, key in (("Stock at the end of the month", "warehouse stock"), ("Deliveries", "served"),
+                       ("Backorders at the end of the month", "owed")):
         rows[label, WAREHOUSE] = {t: solution[key][t] for t in months}
     return pd.DataFrame(rows).T.rename_axis(["Bikes", "Site"])
 
@@ -200,8 +200,8 @@ def _plan_table(solution: dict) -> pd.DataFrame:
 @_light
 def _figure(solution: dict, demand: dict, capacity: dict = K) -> None:
     """Left: bikes assembled by each plant, with the capacity of the three plants,
-    the orders and the bikes served. Right: stock at the plants and at the warehouse
-    at the end of each month, and the orders owed."""
+    the orders and the deliveries. Right: stock at the plants and at the warehouse
+    at the end of each month, and the backorders."""
     months = solution["months"]
     fig, (left, right) = plt.subplots(1, 2, figsize=(11, 3.8))
     x = range(len(months))
@@ -213,11 +213,11 @@ def _figure(solution: dict, demand: dict, capacity: dict = K) -> None:
     left.plot(x, [sum(capacity[f][t] for f in F) for t in months], color="0.4", ls="--", marker="_",
               label="capacity of the three plants")
     left.plot(x, [demand[t] for t in months], color="black", marker="o", label="orders")
-    left.plot(x, [solution["served"][t] for t in months], color=SHORT, marker="s", ls=":", label="served")
+    left.plot(x, [solution["served"][t] for t in months], color=SHORT, marker="s", ls=":", label="deliveries")
     left.set_xticks(list(x), months)
     left.set_ylabel("Bikes/month")
     left.set_ylim(0, max(760, max(demand[t] for t in months) * 1.1))
-    left.set_title("Bikes assembled, orders and bikes served", fontsize=10)
+    left.set_title("Bikes assembled, orders and deliveries", fontsize=10)
     left.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, frameon=False)
     left.spines[["top", "right"]].set_visible(False)
 
@@ -234,11 +234,11 @@ def _figure(solution: dict, demand: dict, capacity: dict = K) -> None:
     top = max(b + v for b, v in zip(bottom, values))
     owed = [solution["owed"][t] for t in months]
     right.bar([i + width / 2 for i in x], owed, color="none", edgecolor=SHORT, hatch="///", width=width,
-              label="orders owed")
+              label="backorders")
     right.set_xticks(list(x), months)
     right.set_ylabel("Bikes at the end of the month")
     right.set_ylim(0, max(300, top * 1.15, max(owed) * 1.15))
-    right.set_title("Stock and orders owed", fontsize=10)
+    right.set_title("Stock and backorders", fontsize=10)
     right.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, frameon=False)
     right.spines[["top", "right"]].set_visible(False)
     plt.show()
@@ -256,10 +256,11 @@ def _report(data: dict, heading: str) -> dict | None:
     _display(_plan_table(solution))
     if not only_plan(**data):
         print(SEVERAL)
-    print("Shadow price of the orders of each month (€/bike): what one more order that month costs.")
+    print("Shadow price of the backorder balance of each month (€/bike): what one more order that "
+          "month costs.")
     _display(pd.DataFrame({t: {"Shadow price (€/bike)": solution["orders price"][t]} for t in months}))
-    print("Shadow price of each storage capacity (€/bike): what one more bike of storage saves "
-          "(negative: a saving).")
+    print("Shadow price of each storage capacity (€/bike): the change in cost with one more bike of "
+          "storage capacity (negative: a saving).")
     table = {t: {f: solution["storage price"][f, t] for f in F} for t in months}
     for t in months:
         table[t][WAREHOUSE] = solution["warehouse storage price"][t]
@@ -277,13 +278,13 @@ def warehouse_plan() -> dict | None:
     return _report({}, FORECAST)
 
 
-def orders_at_the_end_test(limit_orders_at_the_end: bool = True) -> dict | None:
-    """The plan with forecast 3, with or without the limit on the orders owed at the end of June."""
-    if limit_orders_at_the_end:
-        return _report({}, f"{FORECAST}, no order owed at the end of June")
-    solution = _report({"owed_end": None}, f"{FORECAST}, without a limit on the orders owed at the end")
+def backorders_at_the_end_test(limit_backorders_at_the_end: bool = True) -> dict | None:
+    """The plan with forecast 3, with or without the limit on the backorders at the end of June."""
+    if limit_backorders_at_the_end:
+        return _report({}, f"{FORECAST}, no backorders at the end of June")
+    solution = _report({"owed_end": None}, f"{FORECAST}, without the limit on the backorders at the end")
     if solution is not None:
-        print(f"Orders owed at the end of June: {solution['owed'][solution['months'][-1]]:,.0f}.")
+        print(f"Backorders at the end of June: {solution['owed'][solution['months'][-1]]:,.0f} bikes.")
     return solution
 
 
@@ -291,15 +292,15 @@ def plant_storage_test(storage_plant_1: float = 40) -> dict | None:
     """The plan with the storage capacities of the three plants moved together:
     plant 2 holds 10 bikes less than plant 1, and plant 3 holds 20 less."""
     storage = {"Plant 1": storage_plant_1, "Plant 2": storage_plant_1 - 10, "Plant 3": storage_plant_1 - 20}
-    print("Storage capacity at the plants (bikes): "
+    print("Storage capacity of the plants (bikes): "
           + ", ".join(f"{f.lower()} {v:g}" for f, v in storage.items()) + ".")
     return _report({"plant_storage": storage}, FORECAST)
 
 
-def late_cost_test(late_cost: float = 60) -> dict | None:
-    """The plan with forecast 2 and the cost of serving one bike one month late changed."""
-    print(f"Cost of serving one bike one month late: {late_cost:g} €/(bike·month).")
-    return _report({"demand": FORECASTS["Forecast 2"], "late_cost": late_cost}, "Forecast 2")
+def backorder_cost_test(backorder_cost: float = 60) -> dict | None:
+    """The plan with forecast 2 and the backorder cost changed."""
+    print(f"Backorder cost: {backorder_cost:g} €/(bike·month).")
+    return _report({"demand": FORECASTS["Forecast 2"], "late_cost": backorder_cost}, "Forecast 2")
 
 
 def warehouse_storage_test(warehouse_storage: float = 150) -> dict | None:
