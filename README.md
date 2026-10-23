@@ -35,3 +35,12 @@ uv run jupyter lab
 The code needs Python 3.10 or later, and the tests are run on 3.10 and 3.12. Asking for 3.12 keeps your environment on a version that is checked; uv downloads it if it is not on your computer. Plain `uv sync` also works, but it picks the newest version installed, which may be one the tests have never run on.
 
 In PyCharm, open the repository folder and, after running `uv sync`, add the interpreter of type *uv* pointing at the `.venv` folder of the repository.
+
+## License
+
+© 2026 Juan José Ramos.
+
+- **Code** (Python files, and the code cells of the notebooks): [MIT License](LICENSE).
+- **Everything else** (case documents, PDFs, figures, the text of the notebooks and the data prepared by the author): [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE-CC-BY-4.0.txt). You may use, share and adapt it, also for commercial purposes, as long as you credit the author, link to the license and say if you made changes.
+
+Data taken from other sources keep their own license, which the README of each case gives: for example, the airline data of `security_filters` come from OpenFlights, under the Open Database License.
