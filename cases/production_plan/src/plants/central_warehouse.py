@@ -26,7 +26,7 @@ import pulp
 from .data import (F, FORECAST_3, FORECASTS, K, K_h, K_h_w, T, b_0, b_max, c, c_b, c_h, c_h_w, h_0,
                    h_end, h_w_0, h_w_end)
 from .model import TOL, _constraints, _optimal
-from .show import COLOURS, SHORT, _display, _euros, _light
+from .show import COLOURS, SHORT, _display, _euros, _european_axes, _light, _number
 
 FORECAST = "Forecast 3"                   # M2 is solved with forecast 3
 DEMAND = FORECAST_3
@@ -241,6 +241,7 @@ def _figure(solution: dict, demand: dict, capacity: dict = K) -> None:
     right.set_title("Stock and backorders", fontsize=10)
     right.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, frameon=False)
     right.spines[["top", "right"]].set_visible(False)
+    _european_axes(fig)
     plt.show()
 
 
@@ -284,7 +285,7 @@ def backorders_at_the_end_test(limit_backorders_at_the_end: bool = True) -> dict
         return _report({}, f"{FORECAST}, no backorders at the end of June")
     solution = _report({"owed_end": None}, f"{FORECAST}, without the limit on the backorders at the end")
     if solution is not None:
-        print(f"Backorders at the end of June: {solution['owed'][solution['months'][-1]]:,.0f} bikes.")
+        print(f"Backorders at the end of June: {_number(solution['owed'][solution['months'][-1]])} bikes.")
     return solution
 
 
@@ -293,17 +294,17 @@ def plant_storage_test(storage_plant_1: float = 40) -> dict | None:
     plant 2 holds 10 bikes less than plant 1, and plant 3 holds 20 less."""
     storage = {"Plant 1": storage_plant_1, "Plant 2": storage_plant_1 - 10, "Plant 3": storage_plant_1 - 20}
     print("Storage capacity of the plants (bikes): "
-          + ", ".join(f"{f.lower()} {v:g}" for f, v in storage.items()) + ".")
+          + "; ".join(f"{f.lower()} {_number(v)}" for f, v in storage.items()) + ".")
     return _report({"plant_storage": storage}, FORECAST)
 
 
 def backorder_cost_test(backorder_cost: float = 60) -> dict | None:
     """The plan with forecast 2 and the backorder cost changed."""
-    print(f"Backorder cost: {backorder_cost:g} €/(bike·month).")
+    print(f"Backorder cost: {_number(backorder_cost)} €/(bike·month).")
     return _report({"demand": FORECASTS["Forecast 2"], "late_cost": backorder_cost}, "Forecast 2")
 
 
 def warehouse_storage_test(warehouse_storage: float = 150) -> dict | None:
     """The plan with forecast 3 and the storage capacity of the warehouse changed."""
-    print(f"Storage capacity of the warehouse: {warehouse_storage:g} bikes.")
+    print(f"Storage capacity of the warehouse: {_number(warehouse_storage)} bikes.")
     return _report({"warehouse_storage": warehouse_storage}, FORECAST)

@@ -123,6 +123,11 @@ def solve_model(months, initial, final):
 # Printing
 # ---------------------------------------------------------------------------
 
+def eu(x, decimals=2):
+    """A number in European format: point for thousands, comma for decimals."""
+    return f"{x:,.{decimals}f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+
+
 def title(text):
     print()
     print(text)
@@ -130,7 +135,7 @@ def title(text):
 
 
 def by_month(name, values):
-    print(f"{name:<34}" + "".join(f"{v:>9.2f}" for v in values))
+    print(f"{name:<34}" + "".join(f"{eu(v):>9}" for v in values))
 
 
 def print_plan(months, assembled, shipped, stock):
@@ -168,19 +173,19 @@ if __name__ == "__main__":
     by_month("Capacity of the three plants", [sum(K[f][t] for f in F) for t in T])
     short = {t: d[t] - K["Plant 1"][t] - K["Plant 2"][t] for t in T
              if d[t] > K["Plant 1"][t] + K["Plant 2"][t]}
-    print("Demand above the capacity of plants 1 and 2: " + ", ".join(f"{t} {v} bikes" for t, v in short.items()))
+    print("Demand above the capacity of plants 1 and 2: " + "; ".join(f"{t} {eu(v, 0)} bikes" for t, v in short.items()))
 
     # §6.1 Plan with forecast 2 and the required ending stock
     title("§6.1 Optimal plan with the required ending stock")
     cost, assembled, shipped, stock, price_target = solve_model(T, h_0, h_end)
     print("Table 4. Optimal plan (bikes)")
     print_plan(T, assembled, shipped, stock)
-    print(f"Cost: {cost:.2f} EUR")
+    print(f"Cost: {eu(cost)} EUR")
 
     # §6.2 Without the required ending stock
     title("§6.2 Optimal plan without the required ending stock")
     cost_free, assembled_free, shipped_free, stock_free, price_free = solve_model(T, h_0, None)
-    print(f"Cost: {cost_free:.2f} EUR")
+    print(f"Cost: {eu(cost_free)} EUR")
     print()
     print("Table 5. Shadow prices of the demand (EUR/bike)")
     print(f"{'':<34}" + "".join(f"{t:>9}" for t in T))
@@ -190,9 +195,9 @@ if __name__ == "__main__":
     print("Table 6. June with and without the required ending stock (bikes)")
     print(f"{'':<34}{'with':>9}{'without':>9}")
     for f in F:
-        print(f"{'Assembled, ' + f.lower():<34}{assembled[f, 'Jun']:>9.2f}{assembled_free[f, 'Jun']:>9.2f}")
+        print(f"{'Assembled, ' + f.lower():<34}{eu(assembled[f, 'Jun']):>9}{eu(assembled_free[f, 'Jun']):>9}")
     for f in F:
-        print(f"{'Stock at the end, ' + f.lower():<34}{stock[f, 'Jun']:>9.2f}{stock_free[f, 'Jun']:>9.2f}")
+        print(f"{'Stock at the end, ' + f.lower():<34}{eu(stock[f, 'Jun']):>9}{eu(stock_free[f, 'Jun']):>9}")
     same = [t for t in T if t != "Jun"
             and all(assembled[f, t] == assembled_free[f, t] and shipped[f, t] == shipped_free[f, t]
                     and stock[f, t] == stock_free[f, t] for f in F)]
@@ -204,11 +209,11 @@ if __name__ == "__main__":
     cost_first, assembled_first, shipped_first, stock_first, _ = solve_model(first, h_0, h_end)
     print("Table 7. Optimal plan from January to March, with the required ending stock (bikes)")
     print_plan(first, assembled_first, shipped_first, stock_first)
-    print(f"Cost: {cost_first:.2f} EUR")
+    print(f"Cost: {eu(cost_first)} EUR")
     left = {f: stock_first[f, "Mar"] for f in F}
     print()
-    print("Stock at the end of March: " + ", ".join(f"{f} {left[f]:.2f}" for f in F))
+    print("Stock at the end of March: " + "; ".join(f"{f} {eu(left[f])}" for f in F))
     solution = solve_model(later, left, h_end)
     print(f"The plan from April to June has a solution: {'yes' if solution else 'no'}")
-    print(f"April: demand {d['Apr']}, capacity {sum(K[f]['Apr'] for f in F)},"
-          f" stock at the start {sum(left.values()):.2f}")
+    print(f"April: demand {eu(d['Apr'], 0)}; capacity {eu(sum(K[f]['Apr'] for f in F), 0)};"
+          f" stock at the start {eu(sum(left.values()))}")

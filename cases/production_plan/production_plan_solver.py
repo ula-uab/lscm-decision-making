@@ -154,6 +154,11 @@ def validity_range(plants, months, demand, capacity, kind, key, limit=1e6):
 # Printing
 # ---------------------------------------------------------------------------
 
+def eu(x, decimals=2):
+    """A number in European format: point for thousands, comma for decimals."""
+    return f"{x:,.{decimals}f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+
+
 def title(text):
     print()
     print(text)
@@ -161,7 +166,7 @@ def title(text):
 
 
 def by_month(name, values):
-    print(f"{name:<34}" + "".join(f"{v:>9.2f}" for v in values))
+    print(f"{name:<34}" + "".join(f"{eu(v):>9}" for v in values))
 
 
 # ---------------------------------------------------------------------------
@@ -188,11 +193,11 @@ if __name__ == "__main__":
     print("Table 3. Vertices of the feasible region")
     print(f"{'p1 (bikes)':>12}{'p2 (bikes)':>12}{'Cost (EUR)':>14}")
     for p1, p2 in sorted([(k1, d1 - k1), (k1, k2), (d1 - k2, k2)]):
-        print(f"{p1:>12.2f}{p2:>12.2f}{c['Plant 1'] * p1 + c['Plant 2'] * p2:>14.2f}")
+        print(f"{eu(p1):>12}{eu(p2):>12}{eu(c['Plant 1'] * p1 + c['Plant 2'] * p2):>14}")
 
     cost, plan, demand_price, capacity_price, _ = solve_model(plants, months, demand, capacity)
-    print(f"Optimum: p1 = {plan['Plant 1', 'Jan']:.2f}, p2 = {plan['Plant 2', 'Jan']:.2f},"
-          f" cost {cost:.2f} EUR")
+    print(f"Optimum: p1 = {eu(plan['Plant 1', 'Jan'])}; p2 = {eu(plan['Plant 2', 'Jan'])};"
+          f" cost {eu(cost)} EUR")
     print()
     print("Table 4. Shadow prices and the ranges in which they hold")
     print(f"{'Constraint':<22}{'Right-hand side':>17}{'Shadow price (EUR/bike)':>25}{'Holds from':>12}{'to':>8}")
@@ -201,10 +206,10 @@ if __name__ == "__main__":
             ("Capacity of plant 2", "capacity", ("Plant 2", "Jan"), k2, capacity_price["Plant 2", "Jan"]),
             ("Demand", "demand", "Jan", d1, demand_price["Jan"])):
         low, high = validity_range(plants, months, demand, capacity, kind, key)
-        low_text = "-" if low is None else f"{low:.2f}"
-        high_text = "no limit" if high is None else f"{high:.2f}"
-        print(f"{name:<22}{rhs:>17.2f}{price:>25.2f}{low_text:>12}{high_text:>10}")
-    print(f"Spare capacity of plant 2: {k2 - plan['Plant 2', 'Jan']:.2f} bikes")
+        low_text = "-" if low is None else eu(low)
+        high_text = "no limit" if high is None else eu(high)
+        print(f"{name:<22}{eu(rhs):>17}{eu(price):>25}{low_text:>12}{high_text:>10}")
+    print(f"Spare capacity of plant 2: {eu(k2 - plan['Plant 2', 'Jan'])} bikes")
 
     # §4 Full case, forecast 1
     title("§4 Full case, forecast 1")
@@ -213,7 +218,7 @@ if __name__ == "__main__":
     print(f"{'':<34}" + "".join(f"{t:>9}" for t in T))
     for f in F:
         by_month(f, [plan[f, t] for t in T])
-    print(f"Cost: {cost:.2f} EUR")
+    print(f"Cost: {eu(cost)} EUR")
     print()
     print("Table 6. Shadow prices and reduced costs (EUR/bike)")
     print(f"{'':<34}" + "".join(f"{t:>9}" for t in T))
@@ -231,9 +236,9 @@ if __name__ == "__main__":
     print()
     print("Table 7. Capacity and demand, month by month and cumulative (bikes)")
     print(f"{'':<22}" + "".join(f"{t:>8}" for t in T))
-    print(f"{'Demand':<22}" + "".join(f"{demand[t]:>8}" for t in T))
-    print(f"{'Capacity':<22}" + "".join(f"{total[t]:>8}" for t in T))
-    print(f"{'Spare capacity':<22}" + "".join(f"{total[t] - demand[t]:>8}" for t in T))
+    print(f"{'Demand':<22}" + "".join(f"{eu(demand[t], 0):>8}" for t in T))
+    print(f"{'Capacity':<22}" + "".join(f"{eu(total[t], 0):>8}" for t in T))
+    print(f"{'Spare capacity':<22}" + "".join(f"{eu(total[t] - demand[t], 0):>8}" for t in T))
     cum_d = cum_k = 0
     row_d, row_k = [], []
     for t in T:
@@ -241,13 +246,13 @@ if __name__ == "__main__":
         cum_k += total[t]
         row_d.append(cum_d)
         row_k.append(cum_k)
-    print(f"{'Cumulative demand':<22}" + "".join(f"{v:>8}" for v in row_d))
-    print(f"{'Cumulative capacity':<22}" + "".join(f"{v:>8}" for v in row_k))
+    print(f"{'Cumulative demand':<22}" + "".join(f"{eu(v, 0):>8}" for v in row_d))
+    print(f"{'Cumulative capacity':<22}" + "".join(f"{eu(v, 0):>8}" for v in row_k))
     short = {t: demand[t] - total[t] for t in T if demand[t] > total[t]}
-    print("Capacity short: " + ", ".join(f"{t} {v} bikes" for t, v in short.items()))
+    print("Capacity short: " + "; ".join(f"{t} {eu(v, 0)} bikes" for t, v in short.items()))
     free = [t for t in T[:T.index(next(iter(short)))]]
     print(f"Spare capacity before {next(iter(short))}: "
-          + ", ".join(f"{t} {total[t] - demand[t]}" for t in free)
-          + f" ({sum(total[t] - demand[t] for t in free)} in all)")
+          + "; ".join(f"{t} {eu(total[t] - demand[t], 0)}" for t in free)
+          + f" ({eu(sum(total[t] - demand[t] for t in free), 0)} in all)")
     never_below = all(k >= dd for k, dd in zip(row_k, row_d))
     print(f"Cumulative capacity never below cumulative demand: {'yes' if never_below else 'no'}")

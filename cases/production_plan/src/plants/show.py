@@ -7,9 +7,11 @@ one line of code.
 from __future__ import annotations
 
 import functools
+import numbers
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib import ticker
 
 from . import model as m
 from .data import FORECASTS, K, REDUCED_F, T, F, c
@@ -29,7 +31,38 @@ def _light(func):
     return wrapper
 
 
+def _number(x: float, decimals: int | None = None) -> str:
+    """A number in European format: point for thousands and comma for decimals
+    (1.235,25). Without ``decimals``, a whole number has none and any other number
+    has up to two."""
+    trim = decimals is None
+    if trim:
+        decimals = 0 if abs(x - round(x)) < 1e-9 else 2
+    text = f"{x:,.{decimals}f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+    if trim and decimals:
+        text = text.rstrip("0").rstrip(",")
+    return "0" if text in ("-0", "−0") else text
+
+
+def _european_axes(fig) -> None:
+    """Numbers of the axes of a figure in European format; axes with their own
+    labels (months) keep them."""
+    for ax in fig.axes:
+        for axis in (ax.xaxis, ax.yaxis):
+            if isinstance(axis.get_major_formatter(), ticker.ScalarFormatter):
+                axis.set_major_formatter(ticker.FuncFormatter(lambda v, _: _number(v)))
+
+
+def _european(table: pd.DataFrame) -> pd.DataFrame:
+    """The numbers of a table written in European format."""
+    def write(v):
+        return _number(v) if isinstance(v, numbers.Number) and not isinstance(v, bool) else v
+    return table.map(write) if hasattr(table, "map") else table.applymap(write)
+
+
 def _display(obj) -> None:
+    if isinstance(obj, pd.DataFrame):
+        obj = _european(obj)
     try:
         from IPython.display import display
         display(obj)
@@ -38,7 +71,7 @@ def _display(obj) -> None:
 
 
 def _euros(x: float) -> str:
-    return f"{x:,.0f} €"
+    return f"{_number(x, 0)} €"
 
 
 def _forecast(name: str) -> dict:
@@ -64,8 +97,8 @@ def show_data() -> None:
 # ---------------------------------------------------------------------------
 
 def _range_text(low, high) -> str:
-    low_text = "no lower limit" if low is None else f"{low:g}"
-    high_text = "no upper limit" if high is None else f"{high:g}"
+    low_text = "no lower limit" if low is None else _number(low)
+    high_text = "no upper limit" if high is None else _number(high)
     return f"{low_text} to {high_text}"
 
 
@@ -78,9 +111,9 @@ def feasible_region(k1: float = 250, demand: float = 380) -> None:
     fig, ax = plt.subplots(figsize=(6.4, 5.2))
     top = max(k1, k2, demand) * 1.15 + 20
     # Constraint lines
-    ax.plot([k1, k1], [0, top], color=COLOURS["Plant 1"], lw=1.5, label=f"capacity of plant 1: p1 ≤ {k1:g}")
-    ax.plot([0, top], [k2, k2], color=COLOURS["Plant 2"], lw=1.5, label=f"capacity of plant 2: p2 ≤ {k2:g}")
-    ax.plot([0, demand], [demand, 0], color="black", lw=1.5, label=f"demand: p1 + p2 ≥ {demand:g}")
+    ax.plot([k1, k1], [0, top], color=COLOURS["Plant 1"], lw=1.5, label=f"capacity of plant 1: p1 ≤ {_number(k1)}")
+    ax.plot([0, top], [k2, k2], color=COLOURS["Plant 2"], lw=1.5, label=f"capacity of plant 2: p2 ≤ {_number(k2)}")
+    ax.plot([0, demand], [demand, 0], color="black", lw=1.5, label=f"demand: p1 + p2 ≥ {_number(demand)}")
     ax.set_xlim(0, top)
     ax.set_ylim(0, top)
     ax.set_xlabel("p1: bikes assembled in plant 1 (bikes/month)")
@@ -88,9 +121,10 @@ def feasible_region(k1: float = 250, demand: float = 380) -> None:
     ax.spines[["top", "right"]].set_visible(False)
     if not corners:
         ax.legend(fontsize=8, loc="upper right")
+        _european_axes(fig)
         plt.show()
-        print(f"No plan: the two plants can assemble at most {k1 + k2:g} bikes, "
-              f"and the demand is {demand:g}. The feasible region is empty.")
+        print(f"No plan: the two plants can assemble at most {_number(k1 + k2)} bikes, "
+              f"and the demand is {_number(demand)}. The feasible region is empty.")
         return
     # Feasible region, its vertices and lines of equal cost through each vertex
     centre = (sum(x for x, _ in corners) / len(corners), sum(y for _, y in corners) / len(corners))
@@ -106,15 +140,16 @@ def feasible_region(k1: float = 250, demand: float = 380) -> None:
         ax.plot(xs, ys, color="0.6", ls=":", lw=1)
         is_best = abs(v[0] - best[0]) < 1e-6 and abs(v[1] - best[1]) < 1e-6
         ax.scatter(*v, s=90 if is_best else 40, color=BEST if is_best else "black", zorder=3)
-        ax.annotate(f"({v[0]:g}, {v[1]:g})\n{_euros(z)}", v, xytext=(8, 4), textcoords="offset points",
+        ax.annotate(f"({_number(v[0])}, {_number(v[1])})\n{_euros(z)}", v, xytext=(8, 4), textcoords="offset points",
                     fontsize=8, weight="bold" if is_best else "normal")
     ax.plot([], [], color="0.6", ls=":", label="equal cost: 310 p1 + 340 p2 = constant")
     ax.legend(fontsize=8, loc="upper right")
+    _european_axes(fig)
     plt.show()
 
     _display(pd.DataFrame([{"p1 (bikes)": v[0], "p2 (bikes)": v[1], "Cost (€)": m.reduced_cost_of(v)}
                            for v in corners]).rename_axis("Vertex"))
-    print(f"Optimum: p1 = {best[0]:g}, p2 = {best[1]:g}, cost {_euros(solution['cost'])}.")
+    print(f"Optimum: p1 = {_number(best[0])}; p2 = {_number(best[1])}; cost {_euros(solution['cost'])}.")
     print()
     capacity = {f: dict(K[f]) for f in REDUCED_F}
     capacity["Plant 1"]["Jan"] = k1
@@ -147,8 +182,8 @@ def production_plan(forecast: str = "Forecast 1") -> dict | None:
     if solution is None:
         short = m.shortfall(demand)
         print(f"{forecast}: the model has no solution. The total capacity is "
-              f"{m.monthly_capacity()['Jan']} bikes/month and the demand is above it in "
-              + ", ".join(f"{t} (by {v} bikes)" for t, v in short.items()) + ".")
+              f"{_number(m.monthly_capacity()['Jan'])} bikes/month and the demand is above it in "
+              + "; ".join(f"{t} (by {_number(v)} bikes)" for t, v in short.items()) + ".")
         print("The next cell compares capacity and demand month by month.")
         return None
     print(f"{forecast}: optimal plan, cost {_euros(solution['cost'])}.")
@@ -182,7 +217,7 @@ def capacity_and_demand(forecast: str = "Forecast 2") -> None:
     short = m.shortfall(demand)
     for i, t in enumerate(T):
         if t in short:
-            left.annotate(f"{short[t]} short", (i, demand[t]), xytext=(0, 8), textcoords="offset points",
+            left.annotate(f"{_number(short[t])} short", (i, demand[t]), xytext=(0, 8), textcoords="offset points",
                           ha="center", color=SHORT, weight="bold", fontsize=8)
             left.scatter([i], [demand[t]], s=120, facecolor="none", edgecolor=SHORT, lw=2, zorder=3)
     left.set_xticks(list(x), T)
@@ -199,6 +234,7 @@ def capacity_and_demand(forecast: str = "Forecast 2") -> None:
     right.set_title("Cumulative capacity and demand", fontsize=10)
     right.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
     right.spines[["top", "right"]].set_visible(False)
+    _european_axes(fig)
     plt.show()
 
     _display(pd.DataFrame(rows).set_index("month").rename_axis("Month")
@@ -207,7 +243,7 @@ def capacity_and_demand(forecast: str = "Forecast 2") -> None:
                               "cumulative capacity": "Cumulative capacity"}).T)
     if short:
         never = all(r["cumulative capacity"] >= r["cumulative demand"] for r in rows)
-        print("Capacity falls short in " + ", ".join(f"{t} ({v} bikes)" for t, v in short.items()) + ".")
+        print("Capacity falls short in " + "; ".join(f"{t} ({_number(v)} bikes)" for t, v in short.items()) + ".")
         if never:
             print("The cumulative capacity is never below the cumulative demand: a plan that keeps "
                   "bikes in stock from one month to the next would exist. The model has no such plan "

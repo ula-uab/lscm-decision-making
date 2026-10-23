@@ -19,14 +19,19 @@ def load():
 
 def row(name, values, width=40):
     """A row of the script output: the name, then one value per month."""
-    return f"{name:<{width}}" + "".join(f"{v:>9.2f}" for v in values)
+    return f"{name:<{width}}" + "".join(f"{eu(v):>9}" for v in values)
+
+
+def eu(x):
+    """A number as the script writes it: European format, two decimals."""
+    return f"{x:,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
 
 
 def test_script_prints_the_tables():
     out = subprocess.run([sys.executable, SCRIPT], cwd=CASE, capture_output=True, text=True,
                          check=True).stdout
     for text in ("M1 (stock at the plants only) has a solution: no",
-                 "Cost: 928480.00 EUR",
+                 "Cost: 928.480,00 EUR",
                  row("Backorders at the end of the month", [0, 60, 0, 0, 0, 0]),
                  row("Deliveries of the warehouse", [380, 840, 480, 440, 430, 230]),
                  row("Backorder balance", [390, 450, 390, 340, 340, 340]),

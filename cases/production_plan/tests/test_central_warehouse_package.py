@@ -22,8 +22,8 @@ def rows(solution, key):
 def test_m1_has_no_solution_with_forecast_3():
     assert ps.solve(demand=FORECAST_3) is None
     assert cw.m1_has_no_solution().startswith(
-        "Unmet demand in Feb: from Jan to Feb the demand is 1,280 bikes, and the plants can assemble "
-        "1,200 and held 30 in stock at the start, 50 bikes fewer than the demand.")
+        "Unmet demand in Feb: from Jan to Feb the demand is 1.280 bikes, and the plants can assemble "
+        "1.200 and held 30 in stock at the start, 50 bikes fewer than the demand.")
 
 
 def test_forecast_3_is_not_in_the_forecasts_of_m0():

@@ -20,13 +20,13 @@ def load():
 def test_script_prints_the_tables():
     out = subprocess.run([sys.executable, SCRIPT], cwd=CASE, capture_output=True, text=True,
                          check=True).stdout
-    for text in ("Optimum: p1 = 250.00, p2 = 130.00, cost 121700.00 EUR",
-                 "Capacity of plant 1              250.00                   -30.00      180.00    380.00",
-                 "Demand                           380.00                   340.00      250.00    450.00",
-                 "Cost: 713800.00 EUR",
+    for text in ("Optimum: p1 = 250,00; p2 = 130,00; cost 121.700,00 EUR",
+                 "Capacity of plant 1              250,00                   -30,00      180,00    380,00",
+                 "Demand                           380,00                   340,00      250,00    450,00",
+                 "Cost: 713.800,00 EUR",
                  "The model has a solution: no",
-                 "Capacity short: Apr 50 bikes, May 20 bikes",
-                 "Jan 220, Feb 270, Mar 180 (670 in all)"):
+                 "Capacity short: Apr 50 bikes; May 20 bikes",
+                 "Jan 220; Feb 270; Mar 180 (670 in all)"):
         assert text in out
 
 

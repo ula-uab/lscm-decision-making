@@ -94,7 +94,7 @@ Assumption 3 of M0, «the demand of a month is assembled in that month», no lon
 
 ### 6.1 Optimal plan with the required ending stock
 
-Table 4 gives the optimal plan with forecast 2 and the required ending stock. It is the only optimal plan, and it costs 858,460 €.
+Table 4 gives the optimal plan with forecast 2 and the required ending stock. It is the only optimal plan, and it costs 858.460 €.
 
 Table 4. Optimal plan with forecast 2 and the required ending stock (bikes)
 
@@ -129,7 +129,7 @@ From January to May plants 1 and 2 have no spare capacity. One more bike of dema
 
 ### 6.2 Optimal plan without the required ending stock
 
-Without the required ending stock, the optimal plan costs 848,700 €, and it is the only optimal plan. From January to May it equals the plan of Table 4. Table 6 compares June.
+Without the required ending stock, the optimal plan costs 848.700 €, and it is the only optimal plan. From January to May it equals the plan of Table 4. Table 6 compares June.
 
 Table 6. June with and without the required ending stock (bikes)
 
@@ -142,13 +142,13 @@ Table 6. June with and without the required ending stock (bikes)
 | Stock at the end of June, plant 2 | 10 | 0 |
 | Stock at the end of June, plant 3 | 0 | 0 |
 
-Without the required ending stock, the plants ship the 30 bikes they held at the end of December and end June with no stock for July. The 9,760 € between the two costs is what assembling those 30 bikes again in June costs: 20 bikes at plant 1 and 10 at plant 2, plus one month of holding. The shadow price of the demand of June falls to 310 € (Table 5), because plant 1 has 20 bikes of spare capacity in June.
+Without the required ending stock, the plants ship the 30 bikes they held at the end of December and end June with no stock for July. The 9.760 € between the two costs is what assembling those 30 bikes again in June costs: 20 bikes at plant 1 and 10 at plant 2, plus one month of holding. The shadow price of the demand of June falls to 310 € (Table 5), because plant 1 has 20 bikes of spare capacity in June.
 
 The empty stock at the end of June is an effect of the end of the horizon. The model does not represent the months after June, and in it a bike in stock at the end of June has only a cost. The required ending stock gives those bikes a value that the model cannot compute by itself.
 
 ### 6.3 Planning horizon from January to March
 
-The plan can also be made in two parts: first a plan from January to March, with the required ending stock at the end of March (20, 10 and 0 bikes); then, from the stock it leaves, a plan from April to June with the required ending stock at the end of June. Table 7 gives the first plan. It is the only optimal plan, and it costs 361,860 €.
+The plan can also be made in two parts: first a plan from January to March, with the required ending stock at the end of March (20; 10 and 0 bikes); then, from the stock it leaves, a plan from April to June with the required ending stock at the end of June. Table 7 gives the first plan. It is the only optimal plan, and it costs 361.860 €.
 
 Table 7. Optimal plan from January to March, with the required ending stock (bikes)
 
@@ -164,7 +164,7 @@ Table 7. Optimal plan from January to March, with the required ending stock (bik
 | Stock at the end of the month, plant 2 | 0 | 0 | 10 |
 | Stock at the end of the month, plant 3 | 0 | 0 | 0 |
 
-The demand of April and May is outside the horizon of the first plan. The plants end March with the required 30 bikes and no seasonal stock, because in a plan that ends in March a bike held at the end of March has only a cost. The plan from April to June, from those 30 bikes and with the same required ending stock at the end of June, has no solution: in April the demand is 650 bikes, and the plants can assemble 600 and hold 30, 20 bikes fewer. Plant 2 had spare capacity in January and February that the first plan did not use.
+The demand of April and May is outside the horizon of the first plan. The plants end March with the required 30 bikes and no seasonal stock, because in a plan that ends in March a bike held at the end of March has only a cost. The plan from April to June, from those 30 bikes and with the same required ending stock at the end of June, has no solution: in April the demand is 650 bikes, and the plants can assemble 600 and hold 30: 20 bikes fewer. Plant 2 had spare capacity in January and February that the first plan did not use.
 
 The plan of §6.1 meets the same demand with the same plants because its horizon includes the peak. A master plan needs a horizon that covers at least one seasonal cycle; otherwise the capacity of the earlier periods cannot be used to meet a peak of demand (Albrecht et al., 2015, §8.1.1, pp. 158–159). In their example, with four quarters and the peak in the last one, a horizon of two quarters has the same problem.
 
@@ -174,11 +174,11 @@ The notebook (§7) solves M1 again with one datum changed. These are the results
 
 The first test moves the three holding costs together, with plant 2 at 1 €/(bike·month) above plant 1 and plant 3 at 2 above plant 1. Up to 12 €/(bike·month) at plant 1, the optimal plan is that of Table 4. From 13, plant 2 assembles 170 bikes in January instead of 200, and plant 3 assembles 150 in May. From 17, plant 2 assembles 100 bikes in January, plant 3 also assembles 70 in April, and the seasonal stock at the end of March falls to 150 bikes. From 26, plant 2 also assembles 120 bikes in February instead of 200, plant 3 assembles 150 bikes in April, and the seasonal stock at the end of March is 70 bikes. With 25 €/(bike·month) several plans have the same cost.
 
-The second test changes the demand of one month. With more demand in April, plant 3 assembles more and earlier: with 700 bikes, it assembles 20 bikes in April and 150 in May; with 900, it also assembles in March; with 1,280, it assembles at its capacity from January to May, and the seasonal stock at plant 1 reaches 700 bikes at the end of March. Above 1,280 bikes in April M1 has no solution: the demand from January to May exceeds the capacity of those months plus the 30 bikes held at the end of December. Meeting it needs a component that M1 does not represent, such as backorders or more capacity.
+The second test changes the demand of one month. With more demand in April, plant 3 assembles more and earlier: with 700 bikes, it assembles 20 bikes in April and 150 in May; with 900, it also assembles in March; with 1.280, it assembles at its capacity from January to May, and the seasonal stock at plant 1 reaches 700 bikes at the end of March. Above 1.280 bikes in April M1 has no solution: the demand from January to May exceeds the capacity of those months plus the 30 bikes held at the end of December. Meeting it needs a component that M1 does not represent, such as backorders or more capacity.
 
 The third test changes the last month of the first plan of §6.3. With March, the plan from April to June has no solution (§6.3). With April, plant 1 holds seasonal stock for April in the first plan, and the plan from May to June has a solution, with plant 3 assembling 140 bikes in May. With May, the horizon of the first plan includes both months of the peak. With June, the test gives the plan of §6.1.
 
-The fourth test changes the required ending stock of one plant. With 100 bikes at plant 1 instead of 20, plant 2 assembles 90 bikes in June instead of 10, and the plan costs 886,060 €: 345 € for each extra bike, the assembly cost at plant 2 and one month of holding at plant 1. With 200 bikes, plant 2 assembles 190 bikes in June. With 300 bikes, plant 2 is at its capacity in June, and plant 3 assembles in April, May and June.
+The fourth test changes the required ending stock of one plant. With 100 bikes at plant 1 instead of 20, plant 2 assembles 90 bikes in June instead of 10, and the plan costs 886.060 €: 345 € for each extra bike, the assembly cost at plant 2 and one month of holding at plant 1. With 200 bikes, plant 2 assembles 190 bikes in June. With 300 bikes, plant 2 is at its capacity in June, and plant 3 assembles in April, May and June.
 
 ## 7. Script and notebook
 

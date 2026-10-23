@@ -53,7 +53,7 @@ The objective is the assembly cost of the plan, in euros: the bikes assembled in
 
 **Assumptions.**
 
-1. Fractional quantities are allowed: a plan of 130.5 bikes is a valid plan. With these data the optimal plans are whole numbers.
+1. Fractional quantities are allowed: a plan of 130,5 bikes is a valid plan. With these data the optimal plans are whole numbers.
 2. The cost of a plant is proportional to the bikes it assembles: no fixed cost of using a plant.
 3. The demand of a month is assembled in that month: there is no stock carried from one month to the next and no order is served late.
 
@@ -79,11 +79,11 @@ Table 3. Vertices of the feasible region
 
 | Vertex | $p_1$ (bikes) | $p_2$ (bikes) | Lines that meet there | Cost (€) |
 |---|---|---|---|---|
-| 1 | 250 | 130 | capacity of plant 1, demand | 121,700 |
-| 2 | 250 | 200 | capacity of plant 1, capacity of plant 2 | 145,500 |
-| 3 | 180 | 200 | demand, capacity of plant 2 | 123,800 |
+| 1 | 250 | 130 | capacity of plant 1, demand | 121.700 |
+| 2 | 250 | 200 | capacity of plant 1, capacity of plant 2 | 145.500 |
+| 3 | 180 | 200 | demand, capacity of plant 2 | 123.800 |
 
-**Optimum at a vertex.** The points of equal cost $310\, p_1 + 340\, p_2 = z$ lie on a line, and lowering $z$ moves the line parallel to itself towards the origin. The optimum is the last point of the feasible region that the line touches, and for a linear model with an optimum that point can always be taken at a vertex. Here it is vertex 1, $(250, 130)$, at 121,700 €, the only optimal point: plant 1 works at its capacity and plant 2 assembles the rest of the demand.
+**Optimum at a vertex.** The points of equal cost $310\, p_1 + 340\, p_2 = z$ lie on a line, and lowering $z$ moves the line parallel to itself towards the origin. The optimum is the last point of the feasible region that the line touches, and for a linear model with an optimum that point can always be taken at a vertex. Here it is vertex 1, $(250, 130)$, at 121.700 €, the only optimal point: plant 1 works at its capacity and plant 2 assembles the rest of the demand.
 
 **Shadow price.** The shadow price of a constraint is the change in the optimal cost when the right-hand side of the constraint grows by one bike, with everything else unchanged. Table 4 gives the shadow price of the three constraints and the range of the right-hand side in which it holds.
 
@@ -99,7 +99,7 @@ Table 4. Shadow prices of the reduced version
 - **Capacity of plant 2: 0 €/bike.** Plant 2 assembles 130 bikes and has 70 to spare. One more bike of capacity changes nothing.
 - **Demand: 340 €/bike.** One more bike of demand is assembled in plant 2, the plant that is not at its capacity, at 340 €. The value holds while plant 2 can absorb the change: from a demand of 250 (plant 2 assembles nothing) to 450 (plant 2 at its capacity of 200).
 
-**How the ranges are found.** The model is solved again with the right-hand side changed, one bike at a time, upwards and downwards. The shadow price holds while the optimal cost changes by exactly the shadow price for each bike, that is, while the new cost equals 121,700 € plus the shadow price times the change. The range ends at the last value where this still holds; past it the cost changes at a different rate, or the model has no solution.
+**How the ranges are found.** The model is solved again with the right-hand side changed, one bike at a time, upwards and downwards. The shadow price holds while the optimal cost changes by exactly the shadow price for each bike, that is, while the new cost equals 121.700 € plus the shadow price times the change. The range ends at the last value where this still holds; past it the cost changes at a different rate, or the model has no solution.
 
 **Reduced cost.** The reduced cost of a variable is how much its cost per bike would have to fall before it enters the optimal plan with a positive value. In the reduced version both variables are positive, so both reduced costs are zero.
 
@@ -116,7 +116,7 @@ Table 5. Optimal plan with forecast 1 (bikes/month)
 | Plant 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Total | 380 | 330 | 420 | 440 | 430 | 230 |
 
-The cost of the plan is 713,800 €: 1,480 bikes from plant 1 at 310 € and 750 bikes from plant 2 at 340 €. Plant 3 is not used.
+The cost of the plan is 713.800 €: 1.480 bikes from plant 1 at 310 € and 750 bikes from plant 2 at 340 €. Plant 3 is not used.
 
 Table 6. Shadow prices of the demand and reduced costs, forecast 1 (€/bike)
 
@@ -144,10 +144,10 @@ Table 7. Capacity and demand with forecast 2 (bikes)
 | Demand | 380 | 330 | 420 | 650 | 620 | 230 |
 | Capacity of the three plants | 600 | 600 | 600 | 600 | 600 | 600 |
 | Spare capacity | 220 | 270 | 180 | −50 | −20 | 370 |
-| Cumulative demand | 380 | 710 | 1,130 | 1,780 | 2,400 | 2,630 |
-| Cumulative capacity | 600 | 1,200 | 1,800 | 2,400 | 3,000 | 3,600 |
+| Cumulative demand | 380 | 710 | 1.130 | 1.780 | 2.400 | 2.630 |
+| Cumulative capacity | 600 | 1.200 | 1.800 | 2.400 | 3.000 | 3.600 |
 
-From January to March the plants have 220, 270 and 180 bikes of spare capacity, 670 in all, and the shortage of April and May is 70 bikes. The cumulative capacity is never below the cumulative demand. A plan that assembles bikes in advance and keeps them in stock from one month to the next would therefore exist: for example, 70 bikes assembled in the first three months and kept until April and May.
+From January to March the plants have 220; 270 and 180 bikes of spare capacity, 670 in all, and the shortage of April and May is 70 bikes. The cumulative capacity is never below the cumulative demand. A plan that assembles bikes in advance and keeps them in stock from one month to the next would therefore exist: for example, 70 bikes assembled in the first three months and kept until April and May.
 
 The model has no solution because it leaves stock out (assumption 3 of §2), not because the plants cannot serve the demand. It also leaves out other ways of covering the shortage, such as serving orders late or adding capacity with overtime or subcontracting. "The model has no solution" means that the model is incomplete for this demand; it does not mean that no plan exists. Which of these components the model should represent is decided by those who know the system: whether bikes can be stored, at what cost, whether customers accept late deliveries, whether the plants can work overtime.
 

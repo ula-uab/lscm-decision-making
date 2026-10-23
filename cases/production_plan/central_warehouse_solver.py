@@ -161,6 +161,11 @@ def solve_model(m1=False):
 # Printing
 # ---------------------------------------------------------------------------
 
+def eu(x, decimals=2):
+    """A number in European format: point for thousands, comma for decimals."""
+    return f"{x:,.{decimals}f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+
+
 def title(text):
     print()
     print(text)
@@ -168,7 +173,7 @@ def title(text):
 
 
 def by_month(name, values):
-    print(f"{name:<40}" + "".join(f"{v:>9.2f}" for v in values))
+    print(f"{name:<40}" + "".join(f"{eu(v):>9}" for v in values))
 
 
 def header():
@@ -196,9 +201,9 @@ if __name__ == "__main__":
         print(f"{f:<10}{c[f]:>6}{K[f]['Jan']:>6}{c_h[f]:>6}{K_h[f]:>6}{h_0[f]:>6}{h_end[f]:>7}")
     print()
     print("Table 2. Central warehouse and backorders")
-    print(f"c_h_w = {c_h_w} EUR/(bike*month), K_h_w = {K_h_w} bikes, h_w_0 = {h_w_0} bikes,"
+    print(f"c_h_w = {c_h_w} EUR/(bike*month); K_h_w = {K_h_w} bikes; h_w_0 = {h_w_0} bikes;"
           f" h_w_end = {h_w_end} bikes")
-    print(f"c_b = {c_b} EUR/(bike*month), b_0 = {b_0} bikes, b_max = {b_max} bikes")
+    print(f"c_b = {c_b} EUR/(bike*month); b_0 = {b_0} bikes; b_max = {b_max} bikes")
     print()
     print("Table 3. Forecast 3 and the capacity of the plants (bikes)")
     header()
@@ -227,7 +232,7 @@ if __name__ == "__main__":
     by_month("Stock at the warehouse", [v["h_w"][t] for t in T])
     by_month("Deliveries of the warehouse", [v["s"][t] for t in T])
     by_month("Backorders at the end of the month", [v["b"][t] for t in T])
-    print(f"Cost: {cost:.2f} EUR")
+    print(f"Cost: {eu(cost)} EUR")
     print()
     print("Table 6. Shadow prices of the backorder balance (EUR/bike)")
     header()
