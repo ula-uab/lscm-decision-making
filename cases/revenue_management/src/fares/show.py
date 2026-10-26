@@ -12,10 +12,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from . import model as m
-from .data import AIRCRAFT, FARES, INCLUDES, OFFER_TRIP, SEATS, TRIPS, USES, C, D, L, P, a, r
+from .data import (AIRCRAFT, CHANGE_COST, CHANGE_DEMAND, CHANGE_PRODUCT, FARES, INCLUDES,
+                   OFFER_TRIP, SEATS, TRIPS, USES, C, D, L, P, a, r)
 
-COLOURS = {"rule": "tab:orange", "model": "tab:blue"}
 ESTIMATE = "tab:red"
+
+# The nine fares of the trips by name, as the notebook writes them in its drop-down list
+LABELS = {f"{trip} {fare}": (trip, fare) for trip, fare in P}
 
 
 def _light(func):
@@ -65,6 +68,22 @@ def _range_text(low, high) -> str:
     return f"{low_text} to {high_text}"
 
 
+def _product(product) -> tuple:
+    """The fare of a trip as a pair (trip, fare), from the pair itself or from its name
+    in the drop-down list of the notebook."""
+    if isinstance(product, str):
+        if product not in LABELS:
+            raise ValueError(f"The fare of the trip must be one of {', '.join(LABELS)}.")
+        return LABELS[product]
+    return tuple(product)
+
+
+def _changed_table(changed: dict, before: str, after: str) -> None:
+    """The fares of the trips whose tickets change between two plans."""
+    _display(pd.DataFrame([{"Trip": p[0], "Fare": p[1], before: _num(old), after: _num(new)}
+                           for p, (old, new) in changed.items()]).set_index(["Trip", "Fare"]))
+
+
 # ---------------------------------------------------------------------------
 # §1 Data
 # ---------------------------------------------------------------------------
@@ -84,53 +103,14 @@ def show_data() -> None:
 
 
 # ---------------------------------------------------------------------------
-# §2 The rule «highest fare first»
+# §2 Model and optimal plan
 # ---------------------------------------------------------------------------
 
-def rule() -> dict:
-    """Table 3: the plan of the rule, its revenue and the seats it uses on each flight."""
-    result = m.highest_fare_first()
-    print("Order of the rule, from the highest price to the lowest:")
-    print("  " + "; ".join(f"{trip} {fare} {r[trip, fare]} €" for trip, fare in result["order"]))
-    print(f"Revenue of the rule: {_euros(result['revenue'])}. Seats used: {_seats_text(result['seats'])}.")
-    _display(_grid({p: f"{_num(result['plan'][p])} of {D[p]}" for p in P}, "Tickets on sale (of the demand)"))
-    return result
-
-
-# ---------------------------------------------------------------------------
-# §4 Optimal plan, against the rule
-# ---------------------------------------------------------------------------
-
-@_light
 def optimal_plan() -> dict:
-    """Table 4: the optimal plan next to the plan of the rule, and the difference fare
-    by fare and trip by trip; Table 5: binding constraints and slack."""
+    """Table 3: the optimal plan; Table 4: binding constraints and slack."""
     solution = m.solve()
-    rule_ = m.highest_fare_first()
-    gap = solution["revenue"] - rule_["revenue"]
     print(f"Optimal plan: revenue {_euros(solution['revenue'])}. Seats used: {_seats_text(solution['seats'])}.")
-    print(f"Rule «highest fare first»: {_euros(rule_['revenue'])}. "
-          f"The rule loses {_euros(gap)}, {gap / solution['revenue'] * 100:.1f} % of the optimal revenue.")
-    rows = []
-    for p in P:
-        diff = rule_["plan"][p] - solution["plan"][p]
-        rows.append({"Trip": p[0], "Fare": p[1], "Rule (tickets)": _num(rule_["plan"][p]),
-                     "Model (tickets)": _num(solution["plan"][p]), "Rule − model (tickets)": _signed(diff),
-                     "Rule − model (€)": _signed(r[p] * diff)})
-    _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
-
-    fig, ax = plt.subplots(figsize=(9, 3.6))
-    xs = range(len(P))
-    ax.bar([x - 0.2 for x in xs], [rule_["plan"][p] for p in P], width=0.4, color=COLOURS["rule"],
-           label="rule «highest fare first»")
-    ax.bar([x + 0.2 for x in xs], [solution["plan"][p] for p in P], width=0.4, color=COLOURS["model"],
-           label="optimal plan of the model")
-    ax.set_xticks(list(xs), [f"{trip}\n{fare.replace('Economy ', '')}" for trip, fare in P], fontsize=8)
-    ax.set_ylabel("Tickets on sale")
-    ax.legend(fontsize=8, frameon=False)
-    ax.spines[["top", "right"]].set_visible(False)
-    plt.show()
-
+    _display(_grid({p: _num(solution["plan"][p]) for p in P}, "Tickets on sale"))
     rows = []
     for l in L:
         rows.append({"Constraint": f"Seats of {l}", "Used by the plan": f"{_num(solution['seats'][l])} seats",
@@ -147,14 +127,15 @@ def optimal_plan() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# §5 Bid prices
+# §3 Bid prices
 # ---------------------------------------------------------------------------
 
 def bid_prices(flight: str = "RIX → HEL") -> None:
-    """Table 6: the bid price of each flight, and the chosen one checked by solving
-    again with one seat more and one seat less; Table 7: the fares of the trips whose
-    tickets change with that seat; Table 8: the bid price of the ticket of each fare of
-    each trip against its price, and the shadow price of its demand."""
+    """Table 5: the bid price of each flight, and the chosen one checked by solving
+    again with one seat more and one seat less; Table 6: the fares of the trips whose
+    tickets change with that seat; Table 7: the bid price of the ticket of each fare of
+    each trip against its price, and the shadow price of its demand; Table 8: the seats
+    of the aircraft for which the bid price of each flight holds."""
     if flight not in L:
         raise ValueError(f"The flight must be one of {', '.join(L)}.")
     solution = m.solve()
@@ -182,10 +163,15 @@ def bid_prices(flight: str = "RIX → HEL") -> None:
                      "Price − bid price (€/ticket)": _num(r[p] - product_bid),
                      "Shadow price of the demand (€/ticket)": _num(solution["demand price"][p])})
     _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
+    print("Seats of the aircraft for which the bid price of each flight holds:")
+    _display(pd.DataFrame([{"Flight": l, "Seats of the aircraft": _num(C[l]),
+                            "Bid price (€/seat)": _num(bid[l]),
+                            "Range of the seats": _range_text(*m.validity_range("seats", l))} for l in L])
+             .set_index("Flight"))
 
 
 # ---------------------------------------------------------------------------
-# §7 Offer of a tour operator
+# §4 Offer of a tour operator
 # ---------------------------------------------------------------------------
 
 @_light
@@ -204,12 +190,9 @@ def tour_operator_offer(seats: int = 10, price: float = 120) -> dict | None:
     print(f"Solving again with the {seats} seats in the plan: {_signed(result['change'])} €.")
     print("Bid prices with the offer in the plan: "
           + "; ".join(f"{l} {_num(result['new']['bid price'][l])} €/seat" for l in L) + ".")
-    changed = {p: (result["base"]["plan"][p], result["new"]["plan"][p]) for p in P
-               if abs(result["base"]["plan"][p] - result["new"]["plan"][p]) > m.TOL}
+    changed = m.changed_tickets(result["base"]["plan"], result["new"]["plan"])
     if changed:
-        _display(pd.DataFrame([{"Trip": p[0], "Fare": p[1], "Without the offer (tickets)": _num(old),
-                                "With the offer (tickets)": _num(new)} for p, (old, new) in changed.items()])
-                 .set_index(["Trip", "Fare"]))
+        _changed_table(changed, "Without the offer (tickets)", "With the offer (tickets)")
 
     counts = list(range(0, seats + 1))
     changes = [0.0] + [m.offer(k, price)["change"] for k in counts[1:]]
@@ -227,35 +210,40 @@ def tour_operator_offer(seats: int = 10, price: float = 120) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# §8 Another aircraft
+# §5 Change in the forecast demand of a fare
 # ---------------------------------------------------------------------------
 
-def other_aircraft(flight: str = "RIX → HEL", seats: float = 180, cost_change: float = 1200) -> dict:
-    """Another aircraft on a flight: new plan and revenue, change found by solving again
-    against the estimate with the bid price, inside or outside its range, and the net
-    result after the change in operating cost."""
-    if flight not in L:
-        raise ValueError(f"The flight must be one of {', '.join(L)}.")
-    result = m.other_aircraft(flight, seats, cost_change)
-    base, new = result["base"], result["new"]
+def demand_change(product=CHANGE_PRODUCT, new_demand: float = CHANGE_DEMAND,
+                  cost: float = CHANGE_COST) -> dict:
+    """Table 10: the shadow price of the demand of each fare of each trip and the range
+    of the demand for which it holds; then, for the chosen fare of the chosen trip and a
+    new forecast demand: the estimate with the shadow price against the change found by
+    solving again, the bid prices with the new demand, Table 11 with the fares of the
+    trips whose tickets change, and the net result after the cost of the change."""
+    p = _product(product)
+    _display(pd.DataFrame([{"Trip": q[0], "Fare": q[1], "Forecast demand (tickets)": _num(D[q]),
+                            "Shadow price of the demand (€/ticket)": _num(price),
+                            "Range of the demand (tickets)": _range_text(*m.validity_range("demand", q))}
+                           for q, price in m.solve()["demand price"].items()]).set_index(["Trip", "Fare"]))
+    result = m.demand_change(p, new_demand, cost)
     low, high = result["range"]
     where = "inside" if result["inside"] else "outside"
-    print(f"{flight} with {_num(seats)} seats instead of {_num(C[flight])}: "
-          f"revenue {_euros(new['revenue'])} instead of {_euros(base['revenue'])}.")
-    rows = []
-    for p in P:
-        if abs(base["plan"][p] - new["plan"][p]) > m.TOL:
-            rows.append({"Trip": p[0], "Fare": p[1], f"{_num(C[flight])} seats (tickets)": _num(base["plan"][p]),
-                         f"{_num(seats)} seats (tickets)": _num(new["plan"][p])})
-    if rows:
+    print(f"{p[0]} {p[1]}: forecast demand {_num(D[p])} tickets, shadow price of its demand "
+          f"{_num(result['shadow price'])} €/ticket, which holds for a demand of "
+          f"{_range_text(low, high)} tickets.")
+    print(f"With {_num(new_demand)} tickets of forecast demand ({_signed(new_demand - D[p])} tickets): "
+          f"revenue {_euros(result['new']['revenue'])} instead of {_euros(result['base']['revenue'])}.")
+    print(f"Estimate with the shadow price: {_num(result['shadow price'])} €/ticket × "
+          f"({_num(new_demand)} − {_num(D[p])}) tickets = {_signed(result['estimate'])} €. "
+          f"Solving again: {_signed(result['change'])} €.")
+    print(f"{_num(new_demand)} tickets is {where} the range of the shadow price.")
+    print("Bid prices with the new demand: "
+          + "; ".join(f"{l} {_num(result['new']['bid price'][l])} €/seat" for l in L) + ".")
+    if result["changed"]:
         print("Fares of the trips whose tickets change:")
-        _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
-    bid = base["bid price"][flight]
-    print(f"Change in revenue, solving again: {_signed(result['change'])} €.")
-    print(f"Estimate with the bid price: {_num(bid)} €/seat × ({_num(seats)} − {_num(C[flight])}) seats "
-          f"= {_signed(result['estimate'])} €.")
-    print(f"{_num(seats)} seats is {where} the range of the bid price of {flight} ({_range_text(low, high)} seats).")
-    print(f"Change in operating cost: {_signed(cost_change)} €. Net result: {_signed(result['change'])} − "
-          f"({_signed(cost_change)}) = {_signed(result['net'])} €; with the estimate it would be "
+        _changed_table(result["changed"], f"{_num(D[p])} tickets of demand",
+                       f"{_num(new_demand)} tickets of demand")
+    print(f"Cost of the change: {_euros(cost)}. Net result: {_signed(result['change'])} − "
+          f"({_signed(cost)}) = {_signed(result['net'])} €; with the estimate it would be "
           f"{_signed(result['net estimate'])} €.")
     return result

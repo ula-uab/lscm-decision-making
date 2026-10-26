@@ -42,12 +42,15 @@ def a(p, l) -> float:
     return SEATS[fare] if l in USES[trip] else 0
 
 
-# Offer of a tour operator, §7: seats of this trip on top of the forecast demand,
+# Offer of a tour operator, §4: seats of this trip on top of the forecast demand,
 # at each of these prices (EUR/seat)
 OFFER_TRIP = "BCN–HEL"
 OFFER_SEATS = 10
 OFFER_PRICES = [100, 120]
 
-# Other aircraft for RIX → HEL, §8: seats of the aircraft and operating cost per flight
-# against the 140-seat aircraft (EUR; negative: a saving)
-OTHER_AIRCRAFT = {"RIX → HEL": [(180, 1200), (120, -800)]}
+# Change in the forecast demand of a fare, §5: a marketing campaign would raise the
+# forecast demand of this fare of this trip to CHANGE_DEMAND tickets (from 40), and it
+# costs CHANGE_COST euros
+CHANGE_PRODUCT = ("RIX–HEL", "Economy FLEX")
+CHANGE_DEMAND = 50
+CHANGE_COST = 600

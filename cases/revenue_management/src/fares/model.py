@@ -1,6 +1,7 @@
-"""The rule «highest fare first»; the network model of §3, written with PuLP and
-solved with HiGHS; the bid prices of the flights and of the tickets, their
-ranges, an offer of a tour operator and another aircraft.
+"""The network model of the two flights, written with PuLP and solved with HiGHS;
+the bid prices of the flights and of the tickets, the shadow prices of the forecast
+demand, the range in which each of them holds, an offer of a tour operator and a
+change in the forecast demand of a fare.
 
 The seats of the aircraft are given as a dict capacity[l] (seats) and the demand
 as a dict demand[p] (tickets), with p = (trip, fare). The demand of each fare of
@@ -12,7 +13,7 @@ from __future__ import annotations
 
 import pulp
 
-from .data import FARES, OFFER_TRIP, TRIPS, USES, C, D, L, P, a, r
+from .data import OFFER_TRIP, USES, C, D, L, P, a, r
 
 TOL = 1e-6
 
@@ -36,6 +37,12 @@ def _label(text: str) -> str:
 
 def _clean(v: float) -> float:
     return 0.0 if abs(v) < TOL else v                 # no "-0.0" in tables
+
+
+def _with(values: dict, key, value) -> dict:
+    """A copy of a dict with one entry changed. The key of a demand is a pair
+    (trip, fare), which dict(values, **{key: value}) does not accept."""
+    return {**values, key: value}
 
 
 def _build(capacity: dict, demand: dict, offer: tuple | None):
@@ -111,44 +118,13 @@ def plan_bounds(capacity: dict = C, demand: dict = D) -> dict:
     return bounds
 
 
-def revenue_of(plan: dict) -> float:
-    """Revenue of a plan (EUR)."""
-    return sum(r[p] * plan[p] for p in P)
-
-
-def seats_of(plan: dict) -> dict:
-    """Seats a plan uses on each flight."""
-    return {l: sum(a(p, l) * plan[p] for p in P) for l in L}
+def changed_tickets(base: dict, new: dict) -> dict:
+    """Fares of the trips whose tickets change between two plans: {p: (before, after)}."""
+    return {p: (base[p], new[p]) for p in P if abs(base[p] - new[p]) > TOL}
 
 
 # ---------------------------------------------------------------------------
-# The rule «highest fare first» (§2): no solver
-# ---------------------------------------------------------------------------
-
-def highest_fare_first(capacity: dict = C, demand: dict = D) -> dict:
-    """Put the tickets on sale in decreasing order of price, each fare of each trip up
-    to its demand or until a flight of its trip is full. Returns the plan (tickets), the order followed, the
-    revenue (EUR) and the seats used on each flight."""
-    order = sorted(P, key=lambda p: -r[p])          # the nine prices are all different
-    left = dict(capacity)
-    plan = {}
-    for p in order:
-        flights = [l for l in L if a(p, l) > 0]
-        plan[p] = min([demand[p]] + [left[l] / a(p, l) for l in flights])
-        for l in flights:
-            left[l] -= a(p, l) * plan[p]
-    plan = {p: _clean(plan[p]) for p in P}
-    return {"plan": plan, "order": order, "revenue": revenue_of(plan), "seats": seats_of(plan)}
-
-
-def difference(plan: dict, other: dict) -> dict:
-    """Tickets and revenue (EUR) of plan minus those of other, fare by fare and trip by
-    trip, where they differ."""
-    return {p: (plan[p] - other[p], r[p] * (plan[p] - other[p])) for p in P if abs(plan[p] - other[p]) > TOL}
-
-
-# ---------------------------------------------------------------------------
-# Bid prices (§5)
+# Bid prices
 # ---------------------------------------------------------------------------
 
 def product_bid_price(p, bid: dict) -> float:
@@ -166,7 +142,7 @@ def change_capacity(flight: str, delta: float, capacity: dict = C, demand: dict 
     """Change in the optimal revenue when the seats of the aircraft of a flight change by
     delta seats."""
     base = solve(capacity, demand)
-    new = solve(dict(capacity, **{flight: capacity[flight] + delta}), demand)
+    new = solve(_with(capacity, flight, capacity[flight] + delta), demand)
     return new["revenue"] - base["revenue"]
 
 
@@ -176,7 +152,7 @@ def seat_change(flight: str, capacity: dict = C, demand: dict = D) -> list[dict]
     tickets with one seat less, in the optimal plan and with one seat more, and the
     change in revenue each one brings with one seat more (EUR). The changes with one
     seat more add up to the bid price of the flight."""
-    plans = [solve(dict(capacity, **{flight: capacity[flight] + delta}), demand)["plan"] for delta in (-1, 0, 1)]
+    plans = [solve(_with(capacity, flight, capacity[flight] + delta), demand)["plan"] for delta in (-1, 0, 1)]
     less, base, more = plans
     rows = [{"product": p, "less": less[p], "plan": base[p], "more": more[p], "change": r[p] * (more[p] - base[p])}
             for p in P if abs(less[p] - base[p]) > TOL or abs(more[p] - base[p]) > TOL]
@@ -184,23 +160,41 @@ def seat_change(flight: str, capacity: dict = C, demand: dict = D) -> list[dict]
     return sorted(rows, key=lambda row: -row["change"])
 
 
-def validity_range(flight: str, capacity: dict = C, demand: dict = D,
-                   limit: float = 1e6) -> tuple[float | None, float | None]:
-    """The seats of the aircraft of a flight for which its bid price holds: the model is
-    re-solved with the seats changed, and the bid price holds while the revenue changes by
-    exactly the bid price for each seat. None: no limit.
+# ---------------------------------------------------------------------------
+# The range in which a shadow price holds
+# ---------------------------------------------------------------------------
 
-    The revenue is a concave piecewise linear function of the seats, so the values
-    that pass form an interval. Its ends are found by doubling the step and then
+def validity_range(side: str, key, capacity: dict = C, demand: dict = D,
+                   limit: float = 1e6) -> tuple[float | None, float | None]:
+    """The values of a right-hand side for which its shadow price holds: the model is
+    re-solved with that right-hand side changed, and the shadow price holds while the
+    revenue changes by exactly the shadow price for each unit. None: no limit.
+
+    side = "seats": key is a flight, the right-hand side its seats (seats) and the
+    shadow price its bid price. side = "demand": key is a fare of a trip, p = (trip,
+    fare), the right-hand side its forecast demand (tickets) and the shadow price the
+    shadow price of that demand.
+
+    The revenue is a concave piecewise linear function of each right-hand side, so the
+    values that pass form an interval. Its ends are found by doubling the step and then
     halving it; an end between two whole numbers is found by halving further, to a
     millionth."""
     base = solve(capacity, demand)
-    start, price = capacity[flight], base["bid price"][flight]
+    if side == "seats":
+        start, price = capacity[key], base["bid price"][key]
+        def resolve(value):
+            return solve(_with(capacity, key, value), demand)
+    elif side == "demand":
+        start, price = demand[key], base["demand price"][key]
+        def resolve(value):
+            return solve(capacity, _with(demand, key, value))
+    else:
+        raise ValueError('The side must be "seats" or "demand".')
 
     def holds(value: float) -> bool:
         if value < 0:
             return False
-        new = solve(dict(capacity, **{flight: value}), demand)
+        new = resolve(value)
         return new is not None and abs(new["revenue"] - (base["revenue"] + price * (value - start))) < TOL
 
     ends = []
@@ -228,7 +222,7 @@ def _inside(value: float, low, high) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Offer of a tour operator (§7) and another aircraft (§8)
+# Offer of a tour operator and change in the forecast demand of a fare
 # ---------------------------------------------------------------------------
 
 def offer(seats: float, price: float, capacity: dict = C, demand: dict = D) -> dict | None:
@@ -245,18 +239,23 @@ def offer(seats: float, price: float, capacity: dict = C, demand: dict = D) -> d
             "change": new["revenue"] - base["revenue"], "estimate": seats * (price - bid)}
 
 
-def other_aircraft(flight: str, seats: float, cost_change: float = 0, capacity: dict = C,
-                   demand: dict = D) -> dict:
-    """Another aircraft on a flight, with seats seats and an operating cost cost_change
-    EUR higher (negative: lower). The change in revenue found by solving again, the
-    estimate with the bid price, whether seats is inside its range, and the net
-    result: change in revenue minus change in cost."""
+def demand_change(product, new_demand: float, cost: float = 0, capacity: dict = C,
+                  demand: dict = D) -> dict:
+    """A change in the forecast demand of one fare of one trip, p = (trip, fare), to
+    new_demand tickets, at a cost of cost EUR (a marketing campaign, for example): the
+    shadow price of that demand in the optimal plan (EUR/ticket), the range of the
+    demand for which it holds (tickets), whether new_demand is inside the range, the
+    estimate with the shadow price, the change in revenue found by solving again, the
+    bid prices of the flights with the new demand, the fares of the trips whose tickets
+    change and the net result, with the estimate and solving again."""
     base = solve(capacity, demand)
-    new = solve(dict(capacity, **{flight: seats}), demand)
-    low, high = validity_range(flight, capacity, demand)
+    new = solve(capacity, _with(demand, product, new_demand))
+    price = base["demand price"][product]
+    low, high = validity_range("demand", product, capacity, demand)
+    estimate = price * (new_demand - demand[product])
     change = new["revenue"] - base["revenue"]
-    estimate = base["bid price"][flight] * (seats - capacity[flight])
-    return {"flight": flight, "seats": seats, "base": base, "new": new, "change": change,
-            "estimate": estimate, "range": (low, high), "inside": _inside(seats, low, high),
-            "cost change": cost_change, "net": change - cost_change, "net estimate": estimate - cost_change}
-
+    return {"product": product, "demand": new_demand, "base": base, "new": new,
+            "shadow price": price, "estimate": estimate, "change": change,
+            "range": (low, high), "inside": _inside(new_demand, low, high),
+            "changed": changed_tickets(base["plan"], new["plan"]),
+            "cost": cost, "net": change - cost, "net estimate": estimate - cost}
