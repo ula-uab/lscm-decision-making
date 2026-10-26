@@ -32,6 +32,7 @@ If every forecast ticket were sold, BCN → RIX would need 353 seats and RIX →
 1. The forecast demand of each fare of each trip is taken as exact: every ticket put on sale up to that demand is sold, nobody cancels and every passenger shows up.
 2. A passenger who finds no ticket left of the fare and trip they want does not buy any other ticket.
 3. The number of tickets put on sale may be a fraction.
+4. The cost of operating a flight does not depend on how many tickets are sold, so the plan changes only the revenue.
 
 ## 2. Linear model of the two flights and its optimal plan
 
