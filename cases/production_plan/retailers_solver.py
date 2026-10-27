@@ -53,8 +53,8 @@ PLACES = {"Plant 1": "Vitoria-Gasteiz", "Plant 2": "Pamplona", "Plant 3": "Caste
 c = {"Plant 1": 310, "Plant 2": 340, "Plant 3": 390}
 K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plant 3": 150}.items()}
 
-# Holding cost c_h[i] (EUR/(bike*month)), storage capacity K_h[i] (bikes), stock
-# at the end of December h_0[i] and required ending stock h_end[i] (bikes) of
+# Holding cost c_h[i] (EUR/(bike*month)), storage capacity K_h[i] (bikes), initial
+# stock h_0[i] and required final stock h_end[i] (bikes) of
 # every node. Plants and central warehouse: as in M2. Rail terminal: no stock
 c_h = {"Plant 1": 5, "Plant 2": 6, "Plant 3": 7, CENTRAL: 8, TERMINAL: 0,
        "Regional warehouse 1": 9, "Regional warehouse 2": 10,
@@ -186,8 +186,8 @@ def solve_model(nodes, arcs, share, retailers=True):
             model += (h[i, t] <= K_h[i], f"storage_{key(i)}_{t}")
             if i in K_n:
                 model += (arriving <= K_n[i], f"node_capacity_{key(i)}_{t}")
-        # Required ending stock
-        model += (h[i, T[-1]] >= h_end[i], f"ending_stock_{key(i)}")
+        # Required final stock
+        model += (h[i, T[-1]] >= h_end[i], f"final_stock_{key(i)}")
 
     for i in share:
         for k, t in enumerate(T):

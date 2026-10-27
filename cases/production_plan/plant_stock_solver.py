@@ -2,8 +2,8 @@
 #
 # This script reproduces every table of plant_stock.md (same folder): the data
 # of the plants and forecast 2 (Tables 1 and 2); the plan with forecast 2 and
-# the required ending stock, with the shadow prices of the demand (Tables 4
-# and 5); the plan without the required ending stock (Tables 5 and 6); and a plan from January to
+# the required final stock, with the shadow prices of the demand (Tables 4
+# and 5); the plan without the required final stock (Tables 5 and 6); and a plan from January to
 # March followed by a plan from April to June, which has no solution (Table 7).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
@@ -46,9 +46,9 @@ K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plan
 # Demand d[t] of forecast 2 (bikes/month), Table 2 of production_plan.md
 d = dict(zip(T, [380, 330, 420, 650, 620, 230]))
 
-# New in M1: holding cost c_h[f] (EUR/(bike*month)), stock at the end of
-# December h_0[f] (bikes) and required ending stock
-# h_end[f] (bikes), equal to the stock at the end of December
+# New in M1: holding cost c_h[f] (EUR/(bike*month)), initial stock h_0[f]
+# (bikes), at the end of December, and required final stock h_end[f] (bikes),
+# equal to the initial stock
 c_h = {"Plant 1": 5, "Plant 2": 6, "Plant 3": 7}
 h_0 = {"Plant 1": 20, "Plant 2": 10, "Plant 3": 0}
 h_end = dict(h_0)
@@ -60,7 +60,7 @@ h_end = dict(h_0)
 
 def solve_model(months, initial, final):
     """Solve the model over the months given, starting from the stock initial[f].
-    final=None: no required ending stock. Returns (cost, assembled, shipped, stock,
+    final=None: no required final stock. Returns (cost, assembled, shipped, stock,
     shadow prices of the demand), or None if the model has no solution."""
     model = pulp.LpProblem("plant_stock", pulp.LpMinimize)
 
@@ -88,7 +88,7 @@ def solve_model(months, initial, final):
             model += (x[f, t] <= before + p[f, t], f"shipment_limit_{name(f, t)}")
             # Capacity
             model += (p[f, t] <= K[f][t], f"capacity_{name(f, t)}")
-        # Required ending stock, only in the runs that require it
+        # Required final stock, only in the runs that require it
         if final is not None:
             model += (h[f, months[-1]] >= final[f], f"final_stock_{f.replace(' ', '')}")
 
@@ -175,24 +175,24 @@ if __name__ == "__main__":
              if d[t] > K["Plant 1"][t] + K["Plant 2"][t]}
     print("Demand above the capacity of plants 1 and 2: " + "; ".join(f"{t} {eu(v, 0)} bikes" for t, v in short.items()))
 
-    # §6.1 Plan with forecast 2 and the required ending stock
-    title("§6.1 Optimal plan with the required ending stock")
+    # §6.1 Plan with forecast 2 and the required final stock
+    title("§6.1 Optimal plan with the required final stock")
     cost, assembled, shipped, stock, price_target = solve_model(T, h_0, h_end)
     print("Table 4. Optimal plan (bikes)")
     print_plan(T, assembled, shipped, stock)
     print(f"Cost: {eu(cost)} EUR")
 
-    # §6.2 Without the required ending stock
-    title("§6.2 Optimal plan without the required ending stock")
+    # §6.2 Without the required final stock
+    title("§6.2 Optimal plan without the required final stock")
     cost_free, assembled_free, shipped_free, stock_free, price_free = solve_model(T, h_0, None)
     print(f"Cost: {eu(cost_free)} EUR")
     print()
     print("Table 5. Shadow prices of the demand (EUR/bike)")
     print(f"{'':<34}" + "".join(f"{t:>9}" for t in T))
-    by_month("With the required ending stock", [price_target[t] for t in T])
-    by_month("Without the required ending stock", [price_free[t] for t in T])
+    by_month("With the required final stock", [price_target[t] for t in T])
+    by_month("Without the required final stock", [price_free[t] for t in T])
     print()
-    print("Table 6. June with and without the required ending stock (bikes)")
+    print("Table 6. June with and without the required final stock (bikes)")
     print(f"{'':<34}{'with':>9}{'without':>9}")
     for f in F:
         print(f"{'Assembled, ' + f.lower():<34}{eu(assembled[f, 'Jun']):>9}{eu(assembled_free[f, 'Jun']):>9}")
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     title("§6.3 Planning horizon from January to March")
     first, later = T[:3], T[3:]
     cost_first, assembled_first, shipped_first, stock_first, _ = solve_model(first, h_0, h_end)
-    print("Table 7. Optimal plan from January to March, with the required ending stock (bikes)")
+    print("Table 7. Optimal plan from January to March, with the required final stock (bikes)")
     print_plan(first, assembled_first, shipped_first, stock_first)
     print(f"Cost: {eu(cost_first)} EUR")
     left = {f: stock_first[f, "Mar"] for f in F}

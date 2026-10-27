@@ -5,13 +5,13 @@ with HiGHS, and what the notebook plant_stock.ipynb shows.
 The notebook calls one function per step:
 
 1. ``show_data``: the plants with their costs, capacities and stocks, and forecast 2;
-2. ``stock_plan``: the plan with forecast 2, with or without the required ending stock;
-3. ``holding_cost_test``, ``demand_test``, ``horizon_test`` and ``ending_stock_test``:
+2. ``stock_plan``: the plan with forecast 2, with or without the required final stock;
+3. ``holding_cost_test``, ``demand_test``, ``horizon_test`` and ``final_stock_test``:
    the plan when one datum changes.
 
 A capacity is given as capacity[f][t] (bikes/month), a demand as demand[t]
 (bikes/month), and holding costs and stocks as dicts by plant. ``final=None``
-solves the model without the required ending stock.
+solves the model without the required final stock.
 """
 
 from __future__ import annotations
@@ -114,7 +114,7 @@ def why_no_plan(demand: dict = DEMAND, months=T, initial: dict = h_0, final: dic
                 capacity: dict = K, plants=F) -> str:
     """Why M1 has no solution: the first month in which the demand since the start
     of the horizon is above the capacity since the start plus the initial stock,
-    or, if there is none, the required ending stock that cannot be reached."""
+    or, if there is none, the required final stock that cannot be reached."""
     stock = sum(initial[f] for f in plants)
     demand_so_far = capacity_so_far = 0
     for t in months:
@@ -128,11 +128,11 @@ def why_no_plan(demand: dict = DEMAND, months=T, initial: dict = h_0, final: dic
     if final is not None:
         required = sum(final[f] for f in plants)
         if demand_so_far + required > capacity_so_far + stock:
-            return (f"The demand can be met, but not with a required ending stock of {_number(required)} bikes "
+            return (f"The demand can be met, but not with a required final stock of {_number(required)} bikes "
                     f"at the end of {months[-1]}: the plants can supply "
                     f"{_number(demand_so_far + required - capacity_so_far - stock)} bikes fewer than the demand "
-                    f"plus the required ending stock.")
-    return "The demand and the required ending stock of each plant cannot be met together."
+                    f"plus the required final stock.")
+    return "The demand and the required final stock of each plant cannot be met together."
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +144,8 @@ def show_data() -> None:
     _display(pd.DataFrame({f: {"Unit assembly cost (€/bike)": c[f],
                                "Capacity (bikes/month, every month)": K[f]["Jan"],
                                "Holding cost (€/(bike·month))": c_h[f],
-                               "Stock at the end of December (bikes)": h_0[f],
-                               "Required ending stock (bikes)": h_end[f]} for f in F})
+                               "Initial stock (bikes)": h_0[f],
+                               "Required final stock (bikes)": h_end[f]} for f in F})
              .T.rename_axis("Plant"))
     _display(pd.DataFrame({FORECAST: DEMAND}).T.rename_axis("Demand (bikes/month)"))
 
@@ -218,10 +218,10 @@ def _report(solution: dict | None, demand: dict, initial: dict, heading: str,
     _figure(solution, demand, initial)
 
 
-def stock_plan(with_required_ending_stock: bool = True) -> dict | None:
-    """The plan with forecast 2, with or without the required ending stock."""
-    final = h_end if with_required_ending_stock else None
-    heading = f"{FORECAST}, {'with' if with_required_ending_stock else 'without'} the required ending stock"
+def stock_plan(with_required_final_stock: bool = True) -> dict | None:
+    """The plan with forecast 2, with or without the required final stock."""
+    final = h_end if with_required_final_stock else None
+    heading = f"{FORECAST}, {'with' if with_required_final_stock else 'without'} the required final stock"
     solution, unique = _solve(final=final)
     _report(solution, DEMAND, h_0, heading, unique)
     return solution
@@ -239,7 +239,7 @@ def holding_cost_test(holding_plant_1: float = 5) -> dict | None:
         plant_3 = {t: solution["assembly"]["Plant 3", t] for t in T if solution["assembly"]["Plant 3", t] > TOL}
         print(f"Seasonal stock at the end of March: {_number(march)} bikes. Bikes assembled at plant 3: "
               + ("; ".join(f"{_number(v)} in {t}" for t, v in plant_3.items()) if plant_3 else "none") + ".")
-    _report(solution, DEMAND, h_0, f"{FORECAST}, with the required ending stock", unique)
+    _report(solution, DEMAND, h_0, f"{FORECAST}, with the required final stock", unique)
     return solution
 
 
@@ -251,7 +251,7 @@ def demand_test(month: str = "Apr", demand: float = 650) -> dict | None:
     changed = dict(DEMAND, **{month: demand})
     print("Demand (bikes/month): " + "; ".join(f"{t} {_number(changed[t])}" for t in T) + ".")
     solution, unique = _solve(demand=changed)
-    _report(solution, changed, h_0, f"Demand of {month} {_number(demand)}, with the required ending stock",
+    _report(solution, changed, h_0, f"Demand of {month} {_number(demand)}, with the required final stock",
             unique)
     if solution is None:
         print(why_no_plan(demand=changed))
@@ -259,7 +259,7 @@ def demand_test(month: str = "Apr", demand: float = 650) -> dict | None:
 
 
 def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
-    """A plan from January to the last month, with the required ending stock at the
+    """A plan from January to the last month, with the required final stock at the
     end of that month; then, from the stock it leaves, a plan for the months left until June."""
     if last_month not in T:
         raise ValueError(f"The last month must be one of {', '.join(T)}.")
@@ -284,16 +284,16 @@ def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
     return first, later
 
 
-def ending_stock_test(plant: str = "Plant 1", required_ending_stock: float = 20) -> dict | None:
-    """The plan with the required ending stock of one plant changed; the other plants
+def final_stock_test(plant: str = "Plant 1", required_final_stock: float = 20) -> dict | None:
+    """The plan with the required final stock of one plant changed; the other plants
     keep theirs."""
     if plant not in F:
         raise ValueError(f"The plant must be one of {', '.join(F)}.")
-    final = dict(h_end, **{plant: required_ending_stock})
-    print("Required ending stock (bikes): "
+    final = dict(h_end, **{plant: required_final_stock})
+    print("Required final stock (bikes): "
           + "; ".join(f"{f.lower()} {_number(v)}" for f, v in final.items()) + ".")
     solution, unique = _solve(final=final)
-    _report(solution, DEMAND, h_0, f"{FORECAST}, with that required ending stock", unique)
+    _report(solution, DEMAND, h_0, f"{FORECAST}, with that required final stock", unique)
     if solution is None:
         print(why_no_plan(final=final))
     return solution

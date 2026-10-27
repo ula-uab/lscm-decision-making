@@ -105,7 +105,7 @@ def build(demand: dict = DEMAND, months=T, arc_list: list = ARCS, share: dict = 
             if i in node_capacity:
                 model += (arriving <= node_capacity[i], f"node_capacity_{_key(i)}_{t}")
         if final is not None:
-            model += (h[i, months[-1]] >= final[i], f"ending_stock_{_key(i)}")
+            model += (h[i, months[-1]] >= final[i], f"final_stock_{_key(i)}")
     for i in demand_nodes:
         for k, t in enumerate(months):
             before = backorders_initial if k == 0 else b[i, months[k - 1]]
@@ -184,8 +184,8 @@ def show_data() -> None:
                             "Transport cost (€/bike)": arc["cost"], "Arc capacity (bikes/month)": arc["capacity"]}
                            for a, arc in enumerate(ARCS)]).set_index("Arc"))
     _display(pd.DataFrame({i: {"Holding cost (€/(bike·month))": c_h_node[i], "Storage capacity (bikes)": K_h_node[i],
-                               "Stock at the end of December (bikes)": h_node_0[i],
-                               "Required ending stock (bikes)": h_node_end[i],
+                               "Initial stock (bikes)": h_node_0[i],
+                               "Required final stock (bikes)": h_node_end[i],
                                "Node capacity (bikes/month)": K_n.get(i, "—")} for i in NODES}).T.rename_axis("Node"))
     orders = {i: {t: SHARE[i] * DEMAND[t] for t in T} for i in LOCAL}
     orders[FORECAST] = DEMAND

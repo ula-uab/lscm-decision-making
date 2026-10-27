@@ -4,7 +4,7 @@ This document is the fifth version, M4, of the production plan of an electric bi
 
 ## 1. Infeasibility of M3 under forecast 5
 
-Forecast 5 gives the orders of the six retailers together: 250; 500; 450; 900; 900 and 550 bikes from January to June. With these orders at the local warehouses, split as in M3, M3 has no solution. From April to June 2.350 bikes are ordered, and the plants can assemble 1.800 in those three months; the plants also have to end June with their required ending stock, 30 bikes. At the end of March 580 bikes have to be in stock as seasonal stock, and the whole network can hold 440. In M3 every order is delivered by the end of June, so the orders that cannot be delivered make the model infeasible.
+Forecast 5 gives the orders of the six retailers together: 250; 500; 450; 900; 900 and 550 bikes from January to June. With these orders at the local warehouses, split as in M3, M3 has no solution. From April to June 2.350 bikes are ordered, and the plants can assemble 1.800 in those three months; the plants also have to end June with their required final stock, 30 bikes. At the end of March 580 bikes have to be in stock as seasonal stock, and the whole network can hold 440. In M3 every order is delivered by the end of June, so the orders that cannot be delivered make the model infeasible.
 
 The customers are not obliged to wait. A retailer that does not receive its bikes can wait for them or buy them from a competitor. M3 does not represent that choice: every order that is not delivered in its month is backordered, and has to be delivered by the end of June.
 
@@ -18,7 +18,7 @@ Each lost sale adds to the cost of the plan the lost-sale cost: the price that t
 
 ## 3. Retailer data, forecast 5 and notation
 
-The rest of the network keeps all the data of M3 (Tables 1 to 3 of `distribution_network.md`). Table 1 gives the retailers and their places: the point that Nominatim, the search engine of OpenStreetMap, gives for each city. The retailers hold no stock: their storage capacity, their stock at the end of December and their required ending stock are 0.
+The rest of the network keeps all the data of M3 (Tables 1 to 3 of `distribution_network.md`). Table 1 gives the retailers and their places: the point that Nominatim, the search engine of OpenStreetMap, gives for each city. The retailers hold no stock: their storage capacity, their initial stock and their required final stock are 0.
 
 Table 1. Retailers
 
@@ -83,8 +83,8 @@ Table 4. Notation
 | $K_{ft}$ | Assembly capacity of plant $f$ in month $t$ | — | bikes/month | M0 |
 | $d_{rt}$ | Orders of retailer $r$ in month $t$ | — | bikes/month | M3 |
 | $c^h_i$ | Cost of holding one bike in stock for one month at node $i$ | holding cost | €/(bike·month) | M1 |
-| $h_{i0}$ | Stock at node $i$ at the end of December | — | bikes | M1 |
-| $h^{\text{end}}_i$ | Stock that node $i$ must hold at the end of the horizon | required ending stock | bikes | M1 |
+| $h_{i0}$ | Initial stock at node $i$, at the end of December | — | bikes | M1 |
+| $h^{\text{end}}_i$ | Stock that node $i$ must hold at the end of the horizon | required final stock | bikes | M1 |
 | $K^h_i$ | Number of bikes that node $i$ can hold | storage capacity | bikes | M2 |
 | $c^b_r$ | Cost of one bike backordered for one month at retailer $r$ | backorder cost | €/(bike·month) | M2 |
 | $b_{r0}$ | Backorders of retailer $r$ at the end of December | backorders | bikes | M2 |
@@ -116,7 +116,7 @@ $$
 & \sum_{a \in A^{\text{in}}_i} x_{at} \le K^n_i && \forall i \text{ with a node capacity},\ t \in T && \text{(node capacity)} \\
 & h_{it} \le K^h_i && \forall i \in V,\ t \in T && \text{(storage capacity)} \\
 & p_{ft} \le K_{ft} && \forall f \in F,\ t \in T && \text{(assembly capacity)} \\
-& b_{r\tau} = 0 \quad \forall r \in R, \qquad h_{i\tau} \ge h^{\text{end}}_i \quad \forall i \in V && && \text{(backorders and required ending stock at the end)} \\
+& b_{r\tau} = 0 \quad \forall r \in R, \qquad h_{i\tau} \ge h^{\text{end}}_i \quad \forall i \in V && && \text{(backorders and required final stock at the end)} \\
 & p_{ft},\ h_{it},\ x_{at},\ s_{rt},\ b_{rt},\ l_{rt} \ge 0
 \end{aligned}
 $$
@@ -131,7 +131,7 @@ with $h_{i0}$ given and $b_{r0} = 0$. The objective adds to the cost of M3 the l
 - **Node capacity.** Regional warehouse 2 receives at most 280 bikes a month. With these data it is never full, and the plan without it is the same.
 - **Storage capacity.** No node holds more than its storage capacity. Without the storage capacities of the regional and local warehouses, plant 3 assembles from January, the network holds more seasonal stock, there are no lost sales, and the plan costs 1.253.280,15 €.
 - **Assembly capacity.** No plant assembles more than its capacity. Without it, there are no lost sales, plants 1 and 2 assemble up to the arc capacity of their arcs to the central warehouse, and the plan costs 1.206.895,79 €.
-- **Backorders and required ending stock at the end.** No retailer has backorders at the end of June, and each node ends June with at least its required ending stock. Without the limit on the backorders, the plants almost stop assembling in June, and 1.129 orders are backordered at the end of June, at 60 € each instead of 700 €; the plan costs 996.054,76 €. Without the required ending stock, the 30 bikes of the plants are delivered in June, the lost sales fall to 110, and the plan costs 1.273.440,04 €.
+- **Backorders and required final stock at the end.** No retailer has backorders at the end of June, and each node ends June with at least its required final stock. Without the limit on the backorders, the plants almost stop assembling in June, and 1.129 orders are backordered at the end of June, at 60 € each instead of 700 €; the plan costs 996.054,76 €. Without the required final stock, the 30 bikes of the plants are delivered in June, the lost sales fall to 110, and the plan costs 1.273.440,04 €.
 - **Non-negativity.** No quantity is negative. A negative lost sale would mean delivering more bikes than a retailer ordered.
 
 ## 5. Assumptions of M4

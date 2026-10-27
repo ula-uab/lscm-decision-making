@@ -33,8 +33,8 @@ def test_script_prints_the_tables():
     for text in ("Demand above the capacity of plants 1 and 2: Apr 200 bikes; May 170 bikes",
                  "Cost: 858.460,00 EUR",
                  "Cost: 848.700,00 EUR",
-                 row("With the required ending stock", [370, 375, 380, 385, 390, 340]),
-                 row("Without the required ending stock", [370, 375, 380, 385, 390, 310]),
+                 row("With the required final stock", [370, 375, 380, 385, 390, 340]),
+                 row("Without the required final stock", [370, 375, 380, 385, 390, 310]),
                  "Months with the same plan: Jan, Feb, Mar, Apr, May",
                  "Cost: 361.860,00 EUR",
                  "The plan from April to June has a solution: no"):

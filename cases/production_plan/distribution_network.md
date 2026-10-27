@@ -4,7 +4,7 @@ This document is the fourth version, M3, of the production plan of an electric b
 
 ## 1. Infeasibility of M2 under forecast 4
 
-Forecast 4 gives the orders of the four local warehouses together: 240; 440; 400; 800; 840 and 500 bikes from January to June. With it, M2 has no solution. From April to June 2.140 bikes are ordered, and the plants can assemble 1.800 in those three months, so 340 bikes have to be assembled before April; the plants also have to end June with their required ending stock, 30 bikes. At the end of March 370 bikes have to be in stock as seasonal stock, and the plants and the central warehouse have a storage capacity of 240 bikes. Backorders do not change this count: every order has to be delivered by the end of June.
+Forecast 4 gives the orders of the four local warehouses together: 240; 440; 400; 800; 840 and 500 bikes from January to June. With it, M2 has no solution. From April to June 2.140 bikes are ordered, and the plants can assemble 1.800 in those three months, so 340 bikes have to be assembled before April; the plants also have to end June with their required final stock, 30 bikes. At the end of March 370 bikes have to be in stock as seasonal stock, and the plants and the central warehouse have a storage capacity of 240 bikes. Backorders do not change this count: every order has to be delivered by the end of June.
 
 The system can still meet those orders. The regional and local warehouses of the company can hold seasonal stock too. The problem is not in the system but in the model: M2 does not represent the warehouses below the central warehouse.
 
@@ -60,11 +60,11 @@ Table 2. List of arcs
 
 Regional warehouse 2 is reached by three routes from the plants. By rail through the rail terminal, arcs 6 and 7 cost 2,30 €/bike from the central warehouse. By road from the central warehouse, arc 8 costs 3,30 €/bike. Directly from plant 3, arc 4 costs 4,27 €/bike, against 3,23 + 2,30 = 5,53 €/bike through the central warehouse.
 
-Table 3 gives the data of each node. The plants and the central warehouse keep the data of M2. The holding costs of the regional and local warehouses are invented: higher than at the central warehouse, and different at each warehouse, so that there is only one optimal plan. The storage capacities of the regional and local warehouses are invented too. Each node ends the horizon with the stock it had at the end of December.
+Table 3 gives the data of each node. The plants and the central warehouse keep the data of M2. The holding costs of the regional and local warehouses are invented: higher than at the central warehouse, and different at each warehouse, so that there is only one optimal plan. The storage capacities of the regional and local warehouses are invented too. Each node ends the horizon with its initial stock.
 
 Table 3. Data of the nodes
 
-| Node | Holding cost $c^h_i$ (€/(bike·month)) | Storage capacity $K^h_i$ (bikes) | Stock at the end of December $h_{i0}$ (bikes) | Required ending stock $h^{\text{end}}_i$ (bikes) | Node capacity $K^n_i$ (bikes/month) |
+| Node | Holding cost $c^h_i$ (€/(bike·month)) | Storage capacity $K^h_i$ (bikes) | Initial stock $h_{i0}$ (bikes) | Required final stock $h^{\text{end}}_i$ (bikes) | Node capacity $K^n_i$ (bikes/month) |
 |---|---|---|---|---|---|
 | Plant 1 | 5 | 40 | 20 | 20 | — |
 | Plant 2 | 6 | 30 | 10 | 10 | — |
@@ -111,8 +111,8 @@ Table 5. Notation
 | $K_{ft}$ | Assembly capacity of plant $f$ in month $t$ | — | bikes/month | M0 |
 | $d_{it}$ | Orders that node $i$ receives in month $t$ | — | bikes/month | M3 |
 | $c^h_i$ | Cost of holding one bike in stock for one month at node $i$ | holding cost | €/(bike·month) | M1 |
-| $h_{i0}$ | Stock at node $i$ at the end of December | — | bikes | M1 |
-| $h^{\text{end}}_i$ | Stock that node $i$ must hold at the end of the horizon | required ending stock | bikes | M1 |
+| $h_{i0}$ | Initial stock at node $i$, at the end of December | — | bikes | M1 |
+| $h^{\text{end}}_i$ | Stock that node $i$ must hold at the end of the horizon | required final stock | bikes | M1 |
 | $K^h_i$ | Number of bikes that node $i$ can hold | storage capacity | bikes | M2 |
 | $c^b_i$ | Cost of one bike backordered for one month at node $i$ | backorder cost | €/(bike·month) | M2 |
 | $b_{i0}$; $\bar b_i$ | Backorders at node $i$ at the end of December; maximum backorders at the end of the horizon | backorders | bikes | M2 |
@@ -140,7 +140,7 @@ $$
 & \sum_{a \in A^{\text{in}}_i} x_{at} \le K^n_i && \forall i \text{ with a node capacity},\ t \in T && \text{(node capacity)} \\
 & h_{it} \le K^h_i && \forall i \in V,\ t \in T && \text{(storage capacity)} \\
 & p_{ft} \le K_{ft} && \forall f \in F,\ t \in T && \text{(assembly capacity)} \\
-& b_{i\tau} \le \bar b_i \quad \forall i \in V^d, \qquad h_{i\tau} \ge h^{\text{end}}_i \quad \forall i \in V && && \text{(backorders and required ending stock at the end)} \\
+& b_{i\tau} \le \bar b_i \quad \forall i \in V^d, \qquad h_{i\tau} \ge h^{\text{end}}_i \quad \forall i \in V && && \text{(backorders and required final stock at the end)} \\
 & p_{ft},\ h_{it},\ x_{at},\ s_{it},\ b_{it} \ge 0
 \end{aligned}
 $$
@@ -154,7 +154,7 @@ with $h_{i0}$ and $b_{i0}$ given. The objective is the cost of the plan, in euro
 - **Node capacity.** Regional warehouse 2 receives at most 280 bikes a month by its three routes. Without it, regional warehouse 2 receives 294 bikes in May, and the plan costs 1.111.994,39 € (§6.4).
 - **Storage capacity.** No node holds more than its storage capacity. Without the storage capacities of the regional and local warehouses, regional warehouse 1 holds 186 bikes of seasonal stock at the end of March, and the plan costs 1.111.698,07 €.
 - **Assembly capacity.** No plant assembles more than its capacity. Without it, the only limit on what plants 1 and 2 ship is the arc capacity of their arcs to the central warehouse, 300 bikes a month, and the plan costs 1.078.608,09 €.
-- **Backorders and required ending stock at the end.** No local warehouse has backorders at the end of June, and each node ends June with at least its required ending stock. Without the limit on the backorders, the local warehouses deliver only the orders of January, and 2.980 orders are backordered at the end of June; the plan costs 579.685,16 €, because an order backordered for five months costs 300 €, less than the 310 € of the cheapest bike. Without the required ending stock, the network ends June with no stock, and the plan costs 1.100.151,97 €.
+- **Backorders and required final stock at the end.** No local warehouse has backorders at the end of June, and each node ends June with at least its required final stock. Without the limit on the backorders, the local warehouses deliver only the orders of January, and 2.980 orders are backordered at the end of June; the plan costs 579.685,16 €, because an order backordered for five months costs 300 €, less than the 310 € of the cheapest bike. Without the required final stock, the network ends June with no stock, and the plan costs 1.100.151,97 €.
 - **Non-negativity.** No quantity is negative. A negative flow would mean carrying bikes against the direction of an arc.
 
 ## 5. Assumptions of M3

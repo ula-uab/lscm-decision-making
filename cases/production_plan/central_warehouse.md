@@ -16,11 +16,11 @@ Producing and shipping in earlier periods, and holding the bikes as seasonal sto
 
 ## 3. Data of the plants and the warehouse, forecast 3 and notation
 
-The plants keep the data of M0 and M1 and add their storage capacity (Table 1). The warehouse holds no stock at the end of December and has a required ending stock of 0, and there are no backorders at the end of December (Table 2). The backorder cost is higher than the holding cost at the warehouse, so that in the optimal plan only the demand that cannot be delivered on time is backordered.
+The plants keep the data of M0 and M1 and add their storage capacity (Table 1). The warehouse has no initial stock and a required final stock of 0, and there are no backorders at the end of December (Table 2). The backorder cost is higher than the holding cost at the warehouse, so that in the optimal plan only the demand that cannot be delivered on time is backordered.
 
 Table 1. Plants
 
-| Plant | Unit assembly cost $c_f$ (€/bike) | Capacity $K_{ft}$ (bikes/month, every month) | Holding cost $c^h_f$ (€/(bike·month)) | Storage capacity $K^h_f$ (bikes) | Stock at the end of December $h_{f0}$ (bikes) | Required ending stock $h^{\text{end}}_f$ (bikes) |
+| Plant | Unit assembly cost $c_f$ (€/bike) | Capacity $K_{ft}$ (bikes/month, every month) | Holding cost $c^h_f$ (€/(bike·month)) | Storage capacity $K^h_f$ (bikes) | Initial stock $h_{f0}$ (bikes) | Required final stock $h^{\text{end}}_f$ (bikes) |
 |---|---|---|---|---|---|---|
 | Plant 1 | 310 | 250 | 5 | 40 | 20 | 20 |
 | Plant 2 | 340 | 200 | 6 | 30 | 10 | 10 |
@@ -32,8 +32,8 @@ Table 2. Central warehouse and backorders
 |---|---|---|
 | Holding cost at the warehouse | $c^h_w$ | 8 €/(bike·month) |
 | Storage capacity of the warehouse | $K^h_w$ | 150 bikes |
-| Stock at the warehouse at the end of December | $h_{w0}$ | 0 bikes |
-| Required ending stock at the warehouse | $h^{\text{end}}_w$ | 0 bikes |
+| Initial stock at the warehouse | $h_{w0}$ | 0 bikes |
+| Required final stock at the warehouse | $h^{\text{end}}_w$ | 0 bikes |
 | Backorder cost: one bike backordered for one month | $c^b$ | 60 €/(bike·month) |
 | Backorders at the end of December | $b_0$ | 0 bikes |
 | Maximum backorders at the end of the horizon | $\bar b$ | 0 bikes |
@@ -65,8 +65,8 @@ Table 4. Notation
 | $K_{ft}$ | Assembly capacity of plant $f$ in month $t$ | bikes/month | M0 |
 | $d_t$ | Orders received in month $t$ | bikes/month | M0 |
 | $c^h_f$; $c^h_w$ | Holding cost at plant $f$; at the warehouse | €/(bike·month) | M1; M2 |
-| $h_{f0}$; $h_{w0}$ | Stock at plant $f$; at the warehouse, at the end of December | bikes | M1; M2 |
-| $h^{\text{end}}_f$; $h^{\text{end}}_w$ | Required ending stock at plant $f$; at the warehouse | bikes | M1; M2 |
+| $h_{f0}$; $h_{w0}$ | Initial stock at plant $f$; at the warehouse, at the end of December | bikes | M1; M2 |
+| $h^{\text{end}}_f$; $h^{\text{end}}_w$ | Required final stock at plant $f$; at the warehouse | bikes | M1; M2 |
 | $K^h_f$; $K^h_w$ | Storage capacity of plant $f$; of the warehouse | bikes | M2 |
 | $c^b$ | Backorder cost: one bike backordered for one month | €/(bike·month) | M2 |
 | $b_0$ | Backorders at the end of December | bikes | M2 |
@@ -91,7 +91,7 @@ $$
 & p_{ft} \le K_{ft},\quad h_{ft} \le K^h_f && \forall f \in F,\ t \in T && \text{(capacity; storage capacity of the plants)} \\
 & h_{wt} \le K^h_w && \forall t \in T && \text{(storage capacity of the warehouse)} \\
 & b_{\tau} \le \bar b && && \text{(backorders at the end)} \\
-& h_{f\tau} \ge h^{\text{end}}_f \quad \forall f \in F, \qquad h_{w\tau} \ge h^{\text{end}}_w && && \text{(required ending stock)} \\
+& h_{f\tau} \ge h^{\text{end}}_f \quad \forall f \in F, \qquad h_{w\tau} \ge h^{\text{end}}_w && && \text{(required final stock)} \\
 & p_{ft},\ x_{ft},\ h_{ft},\ h_{wt},\ s_t,\ b_t \ge 0 && \forall f \in F,\ t \in T
 \end{aligned}
 $$
@@ -108,7 +108,7 @@ with $h_{f0}$, $h_{w0}$ and $b_0$ given. The objective is the cost of the plan, 
 - **Storage capacity of the plants.** No plant holds more bikes than its storage capacity. Without this constraint, plant 1, where holding is cheapest, would hold all the seasonal stock, and the warehouse would hold none.
 - **Storage capacity of the warehouse.** The warehouse holds no more bikes than its storage capacity. Without this constraint, the warehouse would hold 160 bikes at the end of January instead of 150, and the backorders of February would fall to 50, the unmet demand that the plants cannot supply in any way (Table 3; §6.2).
 - **Backorders at the end.** No order may be backordered at the end of June. Without this constraint, the optimal plan would leave orders undelivered at the end of the horizon (§6.2). Each month a bike is backordered costs 60 €: an order of February that is never delivered costs 5 × 60 = 300 € until the end of June, less than the 310 € that the cheapest bike costs to assemble.
-- **Required ending stock.** Each plant and the warehouse end the horizon with at least their required ending stock. Without this constraint, the plants would end June with no stock.
+- **Required final stock.** Each plant and the warehouse end the horizon with at least their required final stock. Without this constraint, the plants would end June with no stock.
 - **Non-negativity.** No quantity is negative. In particular, negative backorders would mean delivering an order before it is received.
 
 ## 5. Assumptions of M2
@@ -143,7 +143,7 @@ Table 5. Optimal plan with forecast 3 (bikes)
 | Deliveries of the warehouse | 380 | 840 | 480 | 440 | 430 | 230 |
 | Backorders at the end of the month | 0 | 60 | 0 | 0 | 0 | 0 |
 
-In January the three plants assemble 590 bikes, 210 more than the orders of January. With the 30 bikes held at the end of December, 240 bikes of seasonal stock remain at the end of January. The plants hold up to their storage capacity, 40; 30 and 20 bikes, because holding is cheaper there, and the warehouse holds the other 150, its storage capacity. In February the plants assemble at their capacity, 600 bikes, and the warehouse delivers them together with the 240 bikes of seasonal stock: 840 bikes. The other 60 orders of February are backordered. In March the warehouse delivers the 420 orders of March and the 60 backorders: 480 bikes, of which plant 3 assembles 30. From April to June plants 1 and 2 assemble the orders of each month, and in June they also assemble their required ending stock.
+In January the three plants assemble 590 bikes, 210 more than the orders of January. With the 30 bikes held at the end of December, 240 bikes of seasonal stock remain at the end of January. The plants hold up to their storage capacity, 40; 30 and 20 bikes, because holding is cheaper there, and the warehouse holds the other 150, its storage capacity. In February the plants assemble at their capacity, 600 bikes, and the warehouse delivers them together with the 240 bikes of seasonal stock: 840 bikes. The other 60 orders of February are backordered. In March the warehouse delivers the 420 orders of March and the 60 backorders: 480 bikes, of which plant 3 assembles 30. From April to June plants 1 and 2 assemble the orders of each month, and in June they also assemble their required final stock.
 
 The 60 backorders of February come from the storage capacity: the plants and the warehouse are full at the end of January. A bike assembled at plant 3 in March and backordered for one month costs 390 + 60 = 450 €. Assembled at plant 3 in January and held one month at the warehouse, it would cost 390 + 8 = 398 €, but the warehouse has no room for it. With more storage capacity at the warehouse, the plants would assemble more in January, and fewer orders would be backordered (§6.2).
 
@@ -174,7 +174,7 @@ The four storage capacities are binding at the end of January and in no other mo
 
 The notebook (§7) solves M2 again with one datum changed. These are the results for some values of each datum; the other data are those of §6.1.
 
-Without the limit on the backorders at the end, plants 1 and 2 assemble 350 bikes in January and 30 in June, the required ending stock, and no plant assembles in the other months. At the end of June 2.420 orders are backordered, and the plan costs 636.660 €, less than the plan of §6.1. An order of February or later that is never delivered stays backordered five months or fewer until the end of June, and costs at most 5 × 60 = 300 €, less than the 310 € of the cheapest bike; an order of January would stay backordered six months (360 €), and the warehouse delivers the orders of January. The model does not represent the months after June. The backorders at the end of June are an effect of the end of the horizon, which the limit corrects.
+Without the limit on the backorders at the end, plants 1 and 2 assemble 350 bikes in January and 30 in June, the required final stock, and no plant assembles in the other months. At the end of June 2.420 orders are backordered, and the plan costs 636.660 €, less than the plan of §6.1. An order of February or later that is never delivered stays backordered five months or fewer until the end of June, and costs at most 5 × 60 = 300 €, less than the 310 € of the cheapest bike; an order of January would stay backordered six months (360 €), and the warehouse delivers the orders of January. The model does not represent the months after June. The backorders at the end of June are an effect of the end of the horizon, which the limit corrects.
 
 With more storage capacity at the plants, the warehouse holds less seasonal stock; with less, more orders of February are backordered.
 

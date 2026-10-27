@@ -13,7 +13,7 @@ The notebook calls one function per step:
 
 A capacity is given as capacity[f][t] (bikes/month), a demand as demand[t]
 (bikes/month), and holding costs, storage capacities and stocks of the plants as
-dicts by plant. ``final=None`` solves the model without the required ending stock,
+dicts by plant. ``final=None`` solves the model without the required final stock,
 and ``owed_end=None`` without the limit on the backorders at the end of the horizon.
 """
 
@@ -170,13 +170,13 @@ def show_data() -> None:
                                "Capacity (bikes/month, every month)": K[f]["Jan"],
                                "Holding cost (€/(bike·month))": c_h[f],
                                "Storage capacity (bikes)": K_h[f],
-                               "Stock at the end of December (bikes)": h_0[f],
-                               "Required ending stock (bikes)": h_end[f]} for f in F})
+                               "Initial stock (bikes)": h_0[f],
+                               "Required final stock (bikes)": h_end[f]} for f in F})
              .T.rename_axis("Plant"))
     _display(pd.DataFrame({WAREHOUSE: {"Holding cost (€/(bike·month))": c_h_w,
                                        "Storage capacity (bikes)": K_h_w,
-                                       "Stock at the end of December (bikes)": h_w_0,
-                                       "Required ending stock (bikes)": h_w_end,
+                                       "Initial stock (bikes)": h_w_0,
+                                       "Required final stock (bikes)": h_w_end,
                                        "Backorder cost (€/(bike·month))": c_b,
                                        "Backorders at the end of December (bikes)": b_0,
                                        "Maximum backorders at the end of the horizon (bikes)": b_max}})

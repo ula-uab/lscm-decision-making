@@ -93,7 +93,7 @@ def build(order: dict | None = None, months=T, arc_list: list = ARCS_M4, backord
             if i in node_capacity:
                 model += (arriving <= node_capacity[i], f"node_capacity_{_key(i)}_{t}")
         if final is not None:
-            model += (h[i, months[-1]] >= final[i], f"ending_stock_{_key(i)}")
+            model += (h[i, months[-1]] >= final[i], f"final_stock_{_key(i)}")
     for r in retailers:
         for k, t in enumerate(months):
             before = backorders_initial if k == 0 else b[r, months[k - 1]]

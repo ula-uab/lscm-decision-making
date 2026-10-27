@@ -44,16 +44,15 @@ T = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]        # months
 c = {"Plant 1": 310, "Plant 2": 340, "Plant 3": 390}
 K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plant 3": 150}.items()}
 
-# From plant_stock.md (M1): holding cost c_h[f] (EUR/(bike*month)), stock at
-# the end of December h_0[f] and required ending stock h_end[f]
-# (bikes)
+# From plant_stock.md (M1): holding cost c_h[f] (EUR/(bike*month)), initial
+# stock h_0[f] and required final stock h_end[f] (bikes)
 c_h = {"Plant 1": 5, "Plant 2": 6, "Plant 3": 7}
 h_0 = {"Plant 1": 20, "Plant 2": 10, "Plant 3": 0}
 h_end = dict(h_0)
 
 # New in M2: storage capacity of the plants K_h[f] (bikes); holding cost
 # c_h_w (EUR/(bike*month)) and storage capacity K_h_w (bikes) of the warehouse,
-# its stock at the end of December h_w_0 and required ending stock h_w_end
+# its initial stock h_w_0 and required final stock h_w_end
 # (bikes); backorder cost c_b (EUR/(bike*month)), backorders at the end of
 # December b_0 and maximum backorders at the end of the horizon b_max (bikes)
 K_h = {"Plant 1": 40, "Plant 2": 30, "Plant 3": 20}
@@ -126,7 +125,7 @@ def solve_model(m1=False):
         model += (h_w[t] <= (0 if m1 else K_h_w), f"warehouse_storage_{t}")
         if m1:
             model += (b[t] <= 0, f"no_backorders_{t}")
-    # No backorders at the end of the horizon; required ending stock at the
+    # No backorders at the end of the horizon; required final stock at the
     # warehouse
     model += (b[T[-1]] <= b_max, "backorders_at_the_end")
     model += (h_w[T[-1]] >= h_w_end, "final_stock_warehouse")
@@ -218,7 +217,7 @@ if __name__ == "__main__":
         rows_k.append(cum_k)
     by_month("Cumulative orders", rows_d)
     by_month("Cumulative capacity", rows_k)
-    print(f"Stock at the plants at the end of December: {sum(h_0.values())} bikes")
+    print(f"Initial stock at the plants: {sum(h_0.values())} bikes")
     print(f"M1 (stock at the plants only) has a solution: {'yes' if solve_model(m1=True) else 'no'}")
 
     # §6.1 Plan of M2 with forecast 3

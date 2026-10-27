@@ -33,7 +33,7 @@ REDUCED_T = ["Jan"]
 # the stock is held has one answer
 c_h = {"Plant 1": 5, "Plant 2": 6, "Plant 3": 7}
 
-# Stock h_0[f] at the end of December (bikes)
+# Initial stock h_0[f], at the end of December (bikes)
 h_0 = {"Plant 1": 20, "Plant 2": 10, "Plant 3": 0}
 
 # Stock h_end[f] that each plant must hold at the end of the horizon (bikes): the
@@ -49,7 +49,7 @@ h_end = dict(h_0)
 K_h = {"Plant 1": 40, "Plant 2": 30, "Plant 3": 20}
 
 # The central warehouse: holding cost c_h_w (EUR/(bike·month)), storage capacity
-# K_h_w (bikes), stock at the end of December h_w_0 and required at the end of the
+# K_h_w (bikes), initial stock h_w_0 and required at the end of the
 # horizon h_w_end (bikes)
 c_h_w = 8
 K_h_w = 150
@@ -128,8 +128,8 @@ def arcs(rates: dict = TRANSPORT_RATE, network: list = NETWORK) -> list[dict]:
 
 ARCS = arcs()
 
-# Holding cost (EUR/(bike·month)), storage capacity (bikes), stock at the end of
-# December and required ending stock (bikes) of every node: the plants and the
+# Holding cost (EUR/(bike·month)), storage capacity (bikes), initial stock
+# and required final stock (bikes) of every node: the plants and the
 # central warehouse keep the data of M2; the rail terminal holds no stock
 c_h_node = {**c_h, CENTRAL: c_h_w, RAIL_TERMINAL: 0, "Regional warehouse 1": 9, "Regional warehouse 2": 10,
             "Local warehouse 1": 11, "Local warehouse 2": 12, "Local warehouse 3": 13, "Local warehouse 4": 14}
