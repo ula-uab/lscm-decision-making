@@ -13,11 +13,13 @@ Each later version of the model has a module of its own, with its model and what
 its notebook shows: ``plant_stock`` (M1, stock at the plants),
 ``central_warehouse`` (M2, central warehouse and backorders),
 ``distribution_network`` (M3, distribution network) and ``retailers`` (M4,
-retailers, backorder shares and lost sales).
+retailers, backorder shares and lost sales). ``capacity_options`` (M4B) is a
+version of its own, built on M4: a demand growth and a price by month, overtime,
+rented storage and a plant open or closed.
 """
 
-from . import central_warehouse, data, distribution_network, model, plant_stock, retailers
+from . import capacity_options, central_warehouse, data, distribution_network, model, plant_stock, retailers
 from .show import capacity_and_demand, feasible_region, production_plan, show_data
 
-__all__ = ["capacity_and_demand", "central_warehouse", "data", "distribution_network", "feasible_region", "model",
-           "plant_stock", "production_plan", "retailers", "show_data"]
+__all__ = ["capacity_and_demand", "capacity_options", "central_warehouse", "data", "distribution_network",
+           "feasible_region", "model", "plant_stock", "production_plan", "retailers", "show_data"]

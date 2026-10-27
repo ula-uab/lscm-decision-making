@@ -199,3 +199,40 @@ BACKORDER_SHARE = dict(zip(RETAILERS, [0.9, 0.7, 0.5, 0.8, 0.6, 0.4]))
 # Lost-sale cost c_l[r] (EUR/bike): the price that the retailer pays for a bike,
 # invented. Backorder cost: c_b of M2, with no backorders at the end of December
 c_l = {r: 700 for r in RETAILERS}
+
+# ---------------------------------------------------------------------------
+# M4B · Capacity options, Tables 1 and 2 of capacity_options.md. A version of
+# its own, built on M4: it keeps every datum of M0 to M4 and adds the base
+# forecast, the price of each month, overtime, rented storage and the fixed
+# cost of a plant
+# ---------------------------------------------------------------------------
+
+# Base forecast D[t] (bikes/month): the orders of the six retailers together,
+# invented. It has the shape of forecast 5 at about 78 % of its level, so that
+# the plants have spare capacity. Each retailer orders the share SHARE_M4 of it
+BASE_FORECAST = dict(zip(T, [200, 400, 350, 700, 700, 450]))
+
+# Price pi[t] of a bike in month t (EUR/bike): the 700 EUR that every retailer
+# pays for a bike in M4, the same every month. A price promotion lowers the
+# price of the months in which it applies by its discount, and the lost-sale
+# cost of a month is its price
+PRICE = {t: 700 for t in T}
+
+# Maximum overtime o_max[f] (bikes/month): 10 % of the capacity of plants 1
+# and 2; plant 3 works no overtime
+o_max = {"Plant 1": 25, "Plant 2": 20, "Plant 3": 0}
+
+# Extra cost c_o of a bike assembled in overtime (EUR/bike), on top of the unit
+# assembly cost of its plant
+c_o = 100
+
+# Rented storage next to the central warehouse: the bikes u_max that can be
+# rented (bikes) and the cost c_u of holding one of them for one month
+# (EUR/(bike*month)), on top of the holding cost of the central warehouse
+u_max = 200
+c_u = 12
+
+# Fixed cost c_F[f] of keeping plant f open for one month (EUR/month): staff,
+# lease and maintenance, which do not depend on the bikes assembled. Plants 1
+# and 2 are always open, and their fixed cost is not a decision
+c_F = {"Plant 1": 0, "Plant 2": 0, "Plant 3": 20000}
