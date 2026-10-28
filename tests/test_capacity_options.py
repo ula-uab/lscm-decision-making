@@ -26,11 +26,20 @@ def test_script_prints_the_tables():
                  "Cost: 949.331,78 EUR; margin: 1.010.668,22 EUR; lost sales: 0 bikes",
                  "Capacity utilization: Plant 1 100,0 %; Plant 2 99,2 %; Plant 3 12,2 %",
                  "1.519.074,14",                       # cost under a growth of 40 % (Table 6)
-                 "rented in March 110 bikes",          # growth of 25 % with rented storage
+                 "rented storage at the end of March 110 bikes",   # growth of 25 % with rented storage
                  "1.011.205,85",                       # margin of the promotion of January to March
                  "995.397,36",                         # margin of the promotion with a discount of 7,5 %
                  "952.378,68",                         # plant 3 closed with both capacity options
-                 "plant 3 open; cost 1.293.474,12 EUR"):
+                 "plant 3 open; cost 1.293.474,12 EUR",
+                 # growths found in steps of one percentage point (§5.2 and §5.3)
+                 "every order is delivered up to a growth of 17 %; with 18 %, lost sales 1,2 bikes",
+                 "Jan, Feb, Mar, discount 15,0 %: every order is delivered up to a growth of 71 %",
+                 "Jan, Feb, Mar, discount 5,0 %: the margin first reaches the margin under the base forecast with a growth of 13 %",
+                 "966.732,36 EUR with 17 %; highest margin 988.725,30 EUR, with a growth of 35 %",
+                 "the margin under the base forecast with that rented storage, at a growth of 33 %",
+                 # what closing plant 3 adds to the rest of the cost (§5.4)
+                 "raises the rest of the cost by 115.368,20 EUR, 345,41 EUR on average for each of the 334,0 more lost sales",
+                 "raises the rest of the cost by 132.376,06 EUR, 339,43 EUR on average for each of the 390,0 more lost sales"):
         assert text in out
 
 

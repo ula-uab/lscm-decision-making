@@ -270,7 +270,7 @@ def show_data() -> None:
     options = {f"Overtime limit at {f.lower()}": f"{_number(o_max[f])} bikes/month" for f in F}
     options["Overtime cost (over the unit assembly cost)"] = f"{_number(c_o)} €/bike"
     options["Rented storage limit, next to central warehouse"] = f"{_number(u_max)} bikes"
-    options["Rented storage cost"] = f"{_number(c_u)} €/(bike·month)"
+    options["Rented storage cost (over warehouse holding cost)"] = f"{_number(c_u)} €/(bike·month)"
     options["Fixed cost of plant 3 open"] = f"{_number(c_F[PLANT_3])} €/month"
     print("Capacity options and fixed cost of plant 3")
     _display(pd.DataFrame({"Value": options}))
@@ -323,7 +323,7 @@ def _plant_tables(solution: dict) -> None:
         stock[name] = dict(row)
         if name == "Central warehouse":
             stock["Central warehouse, in rented storage"] = {t: solution["rented"][t] for t in months}
-    print("Seasonal stock at the end of the month (bikes); the row «in rented storage» is part of the central "
+    print("Stock at the end of the month at each stage (bikes); the row «in rented storage» is part of the central "
           "warehouse and of the total")
     _display(pd.DataFrame(stock).T)
 
@@ -426,12 +426,12 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
           f"of plant 3; margin {_number(solution['margin'], 2)} €; "
           f"lost sales {_number(sum(solution['lost sales'].values()))} bikes.")
     again = " (decided again for the base forecast)" if plant_3 == VARIABLE else ""
-    print(f"Margin without promotion, under the base forecast at {_number(PRICE[T[0]])} €/bike, with the same setting of plant 3{again}, "
+    print(f"Margin under the base forecast (demand growth 0, no promotion), with the same setting of plant 3{again}, "
           f"the same fixed cost and the same capacity options, to compare with the margin of the scenario: "
           f"{_number(base['margin'], 2)} €.")
-    if not only_plan(**data):
-        print(SEVERAL)
-    print("Capacity utilization in the six months (bikes assembled, overtime included, over the assembly capacity): "
+    print(SEVERAL if not only_plan(**data) else "No other plan has the same optimal cost: the tables below are those of the only optimal plan.")
+    print("Capacity utilization in the six months (bikes assembled, overtime included, as a share of the assembly "
+          "capacity of the six months): "
           + "; ".join(f"{f} {_number(100 * solution['capacity utilization'][f], 1)} %" for f in F) + ".")
     _price_and_orders(solution)
     _plant_tables(solution)

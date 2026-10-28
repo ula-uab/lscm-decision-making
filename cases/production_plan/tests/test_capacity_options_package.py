@@ -167,6 +167,14 @@ def test_plans_without_a_constraint():
     solution = co.solve(plant_3=co.CLOSED, overtime={f: 10 ** 5 for f in F})
     assert solution["cost"] == pytest.approx(952429.68)
     assert solution["overtime"]["Plant 1", "May"] == pytest.approx(50)
+    # more of the overtime at plant 1 than with the overtime limit, 75 bikes
+    assert sum(months(solution["overtime"], "Plant 1")) == pytest.approx(90)
+    # the limit of the rented storage is reached in the promotion of April and May with a discount of 10 %
+    data = {**co.promotion(["Apr", "May"], discount=0.10, growth=0.33), "rented": u_max}
+    solution = co.solve(**data)
+    assert solution["rented"]["Mar"] == pytest.approx(200)
+    assert solution["assembly"][PLANT_3, "Jan"] == 0
+    assert solution["lost sales"]["Retailer 1", "May"] + solution["backorders"]["Retailer 1", "May"] == pytest.approx(22)
     from plants.data import CENTRAL, K_h_node_m4
     solution = co.solve(plant_3=co.CLOSED, rented=u_max, storage={**K_h_node_m4, CENTRAL: 10 ** 5})
     assert solution["cost"] == pytest.approx(979863.68)
@@ -177,6 +185,57 @@ def test_plans_without_a_constraint():
     assert solution["cost"] == pytest.approx(1140899.99)
     assert solution["rented"]["Mar"] == pytest.approx(222)
     assert lost(solution) == 0
+
+
+def test_limits_of_the_growth_with_every_order_delivered():
+    # §5.2 and §5.3: up to 17 % in April and May, with or without a growth in the other months
+    for data in ({"growth": 0.18}, co.promotion(["Apr", "May"], discount=0.075, growth=0.18)):
+        solution = co.solve(**data)
+        assert lost(solution) == pytest.approx(1.2)
+        assert solution["lost sales"]["Retailer 1", "May"] == pytest.approx(1.2)
+        assert solution["backorders"]["Retailer 1", "May"] == pytest.approx(10.8)
+    assert lost(co.solve(growth=0.17)) == 0
+    # up to 71 % in January to March: with 72 %, 4 orders of May at Lleida are not delivered in May
+    for discount in (0.05, 0.075, 0.10, 0.15):
+        assert lost(co.solve(**co.promotion(["Jan", "Feb", "Mar"], discount=discount, growth=0.71))) == 0
+        solution = co.solve(**co.promotion(["Jan", "Feb", "Mar"], discount=discount, growth=0.72))
+        assert lost(solution) == pytest.approx(0.4)
+        assert solution["lost sales"]["Retailer 1", "May"] == pytest.approx(0.4)
+        assert solution["backorders"]["Retailer 1", "May"] == pytest.approx(3.6)
+    order = co.orders(growth={t: 0.72 if t in ("Jan", "Feb", "Mar") else 0 for t in T})
+    assert sum(order[r, t] for r in RETAILERS for t in T[:5]) == pytest.approx(3034)
+
+
+def test_growths_that_reach_the_margin_under_the_base_forecast():
+    reference = co.solve()["margin"]
+    margin = lambda months, discount, growth: co.solve(  # noqa: E731
+        **co.promotion(months, discount=discount, growth=growth))["margin"]
+    assert margin(["Jan", "Feb", "Mar"], 0.05, 0.13) >= reference > margin(["Jan", "Feb", "Mar"], 0.05, 0.12)
+    # A discount of 10 % in April and May reaches at most 988.725,30 EUR, with a growth of 35 %
+    margins = {g: margin(["Apr", "May"], 0.10, g / 100) for g in range(81)}
+    assert max(margins, key=margins.get) == 35
+    assert margins[35] == pytest.approx(988725.30)
+    assert margins[0] == pytest.approx(reference - 70 * 1400)
+    assert co.solve(rented=u_max)["margin"] == pytest.approx(1010712.32)
+
+
+def test_both_capacity_options_with_plant_3_closed():
+    solution = co.solve(plant_3=co.CLOSED, overtime=o_max, rented=u_max)
+    assert months(solution["overtime"], "Plant 1") == pytest.approx([0, 0, 20, 25, 25, 25])
+    assert months(solution["overtime"], "Plant 2") == pytest.approx([0, 0, 0, 0, 0, 5])
+    assert solution["assembly"]["Plant 2", "Jan"] == pytest.approx(200)
+    solution = co.solve(plant_3=co.CLOSED, overtime=o_max)
+    assert months(solution["overtime"], "Plant 1") == pytest.approx([0, 0, 0, 25, 25, 25])
+    assert months(solution["overtime"], "Plant 2") == pytest.approx([0, 0, 0, 10, 20, 5])
+
+
+@pytest.mark.parametrize("growth, rest, more", [(0.18, 115368.20, 334), (0.20, 132376.06, 390)])
+def test_what_closing_plant_3_adds_to_the_rest_of_the_cost(growth, rest, more):
+    data = {"growth": growth, "overtime": o_max, "rented": u_max, "fixed_cost": c_F}
+    closed, opened = co.solve(plant_3=co.CLOSED, **data), co.solve(plant_3=co.OPEN, **data)
+    assert closed["cost"] - (opened["cost"] - 6 * c_F[PLANT_3]) == pytest.approx(rest, abs=0.01)
+    assert lost(closed) - lost(opened) == pytest.approx(more)
+    assert lost(opened) == 0
 
 
 def test_a_closed_plant_assembles_nothing():

@@ -5,12 +5,13 @@
 # retailer and the price of each month (Table 1), the capacity options
 # (Table 2), the plan under the base forecast (Tables 4 and 5), the plans
 # under a demand growth (Table 6), the plans under a price promotion
-# (Table 7) and the plans with plant 3 closed (Table 8), with the plans in
-# which plant 3 open or closed is a binary variable.
+# (Table 7) and the plans with plant 3 closed (Table 8). It also prints the
+# results of the text that are in no table: the growths found in steps of
+# one percentage point, the highest margin with a discount of 10 % in April
+# and May, the margin under the base forecast with rented storage, and the
+# plans in which plant 3 open or closed is a binary variable.
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
-#
-# Running it is optional: it is support material, not part of the assessment.
 #
 # Requirements: Python 3.10 or later and two free libraries:
 #   - PuLP: writes the optimisation model;
@@ -277,6 +278,41 @@ def utilization(solution, plant):
     return total(solution, "p", plant) / sum(K[plant][t] for t in T)
 
 
+def solve_promotion(months, discount, growth, rented=0.0):
+    """Solve M4B under a price promotion: in the months given the price falls by the
+    discount and the orders grow by the growth; the other months keep the price and
+    the orders of the base forecast. Plant 3 is open and there is no overtime."""
+    price = {t: PRICE[t] * (1 - discount) if t in months else PRICE[t] for t in T}
+    rise = {t: growth if t in months else 0.0 for t in T}
+    return solve_model(growth=rise, price=price, rented=rented)
+
+
+def largest_growth_delivered(months, discount=0.0, top=150):
+    """The largest whole growth (%) of the orders of the months given with which every
+    order is delivered, raising it one percentage point at a time from 0, and the
+    plan with one point more, the first with lost sales."""
+    for growth in range(top + 1):
+        plan = solve_promotion(months, discount, growth / 100)
+        if total(plan, "l") > 1e-6:
+            return growth - 1, plan
+    return top, None
+
+
+def smallest_growth_reaching(months, discount, reference, rented=0.0, top=80):
+    """The smallest whole growth (%) of the orders of the months given with which the
+    margin reaches the reference, raising it one percentage point at a time from 0
+    up to ``top``, and its plan; if none reaches it, None, and the growth with the
+    highest margin with its plan."""
+    best = None
+    for growth in range(top + 1):
+        plan = solve_promotion(months, discount, growth / 100, rented)
+        if plan["margin"] >= reference:
+            return growth, plan
+        if best is None or plan["margin"] > best[1]["margin"]:
+            best = (growth, plan)
+    return None, best
+
+
 # ---------------------------------------------------------------------------
 # Printing
 # ---------------------------------------------------------------------------
@@ -331,7 +367,7 @@ if __name__ == "__main__":
         print(f"{'Overtime limit at ' + f.lower():<48}{eu(o_max[f], 0):>10} bikes/month")
     print(f"{'Overtime cost (over the unit assembly cost)':<48}{eu(c_o, 0):>10} EUR/bike")
     print(f"{'Rented storage limit (next to central warehouse)':<50}{eu(u_max, 0):>10} bikes")
-    print(f"{'Rented storage cost':<48}{eu(c_u, 0):>10} EUR/(bike*month)")
+    print(f"{'Rented storage cost (over warehouse holding cost)':<48}{eu(c_u, 0):>10} EUR/(bike*month)")
     print(f"{'Fixed cost of plant 3 open':<48}{eu(c_F[PLANT_3], 0):>10} EUR/month")
 
     # §5.1 Plan under the base forecast
@@ -345,11 +381,11 @@ if __name__ == "__main__":
     header()
     for f in F:
         by_month(f, [base["values"]["p"][f, t] for t in T], 0)
-    print("(capacity utilization: bikes assembled in the six months, overtime included, over the assembly")
-    print("capacity of the six months)")
+    print("(capacity utilization: bikes assembled in the six months, overtime included, as a share of the")
+    print("assembly capacity of the six months)")
     print("Capacity utilization: " + "; ".join(f"{f} {eu(100 * utilization(base, f), 1)} %" for f in F))
     print()
-    print("Table 5. Seasonal stock at the end of each month, by stage (bikes)")
+    print("Table 5. Stock at the end of each month, by stage (bikes)")
     header()
     for name, group in STAGES:
         by_month(name, [sum(base["values"]["h"][i, t] for i in group) for t in T], 0)
@@ -368,16 +404,24 @@ if __name__ == "__main__":
               f"{eu(plan['cost']):>18}{eu(plan['margin']):>18}"
               f"{eu(100 * utilization(plan, PLANT_3), 1) + ' %':>10}{eu(total(plan, 'l'), 1):>20}")
     rent = solve_model(growth=0.25, rented=u_max)
-    print(f"With a growth of 25 %, no overtime and up to {eu(u_max, 0)} bikes of rented storage, without the fixed cost of plant 3: cost {eu(rent['cost'])} EUR; "
+    print(f"With a growth of 25 %, plant 3 open, no overtime and up to {eu(u_max, 0)} bikes of rented storage, without the fixed cost of plant 3: cost {eu(rent['cost'])} EUR; "
           f"margin {eu(rent['margin'])} EUR; lost sales {eu(total(rent, 'l'), 0)} bikes; "
           f"capacity utilization of plant 3 {eu(100 * utilization(rent, PLANT_3), 1)} %; "
-          f"rented in March {eu(rent['values']['u']['Mar'], 0)} bikes (held in rented storage at the end of March)")
+          f"rented storage at the end of March {eu(rent['values']['u']['Mar'], 0)} bikes")
+    growth, first = largest_growth_delivered(T)
+    print(f"In steps of one percentage point, with the same growth in every month, plant 3 open and no capacity")
+    print(f"option: every order is delivered up to a growth of {growth} %; with {growth + 1} %, "
+          f"lost sales {eu(total(first, 'l'), 1)} bikes")
 
     # §5.3 Plans under a price promotion
     title("§5.3 Plans under a price promotion")
     print("Table 7. Plans under a price promotion, with plant 3 open and without overtime. Growth: of the")
     print("orders of the months of the promotion; rented storage: up to 200 bikes, or none; margin without")
-    print("the fixed cost of plant 3; Plant 3: its capacity utilization; lost sales: bikes in the six months")
+    print("the fixed cost of plant 3; Plant 3: its capacity utilization; lost sales: bikes in the six months.")
+    print("Each growth is the smallest whole percentage with which the margin reaches the margin under the")
+    print("base forecast, except 17 % with a discount of 7,5 %, the largest growth with which every order is")
+    print("delivered. With rented storage, the margin is compared with the margin under the base forecast with")
+    print("the same rented storage.")
     print(f"{'Months':>20}{'Discount':>10}{'Growth':>10}{'Rented storage':>16}{'Margin (EUR)':>18}"
           f"{'Plant 3':>10}{'Lost sales (bikes)':>20}")
     for months, discount, growth, rented in [(["Jan", "Feb", "Mar"], 0.15, 0.51, 0),
@@ -385,15 +429,41 @@ if __name__ == "__main__":
                                              (["Apr", "May"], 0.075, 0.17, 0),
                                              (["Apr", "May"], 0.075, 0.24, 0),
                                              (["Apr", "May"], 0.10, 0.33, u_max)]:
-        price = {t: PRICE[t] * (1 - discount) if t in months else PRICE[t] for t in T}
-        rise = {t: growth if t in months else 0.0 for t in T}
-        plan = solve_model(growth=rise, price=price, rented=rented)
+        plan = solve_promotion(months, discount, growth, rented)
         print(f"{', '.join(months):>20}{eu(100 * discount, 1) + ' %':>10}"
               f"{eu(100 * growth, 0) + ' %':>10}{('up to ' + eu(u_max, 0) if rented else 'no'):>16}"
               f"{eu(plan['margin']):>18}{eu(100 * utilization(plan, PLANT_3), 1) + ' %':>10}"
               f"{eu(total(plan, 'l'), 1):>20}")
-    print(f"Margin of the plan without promotion: {eu(base['margin'])} EUR; with up to {eu(u_max, 0)} bikes of "
-          f"rented storage: {eu(solve_model(rented=u_max)['margin'])} EUR")
+    rented_base = solve_model(rented=u_max)
+    print(f"Margin under the base forecast (no demand growth, no promotion): {eu(base['margin'])} EUR; with up to "
+          f"{eu(u_max, 0)} bikes of rented storage: {eu(rented_base['margin'])} EUR")
+    print()
+    print("Growths of the orders of the months of the promotion, raised one percentage point at a time from 0,")
+    print("with plant 3 open and without overtime or rented storage unless the line says otherwise:")
+    JAN_MAR, APR_MAY = ["Jan", "Feb", "Mar"], ["Apr", "May"]
+    for months in (JAN_MAR, APR_MAY):
+        for discount in (0.05, 0.075, 0.10, 0.15):
+            growth, _ = largest_growth_delivered(months, discount)
+            print(f"   {', '.join(months)}, discount {eu(100 * discount, 1)} %: every order is delivered up to a "
+                  f"growth of {growth} %")
+    for months in (JAN_MAR, APR_MAY):
+        for discount in (0.05, 0.075, 0.10, 0.15):
+            growth, plan = smallest_growth_reaching(months, discount, base["margin"])
+            text = f"   {', '.join(months)}, discount {eu(100 * discount, 1)} %: "
+            if growth is not None:
+                print(text + f"the margin first reaches the margin under the base forecast with a growth of {growth} %")
+            else:
+                highest, plan = plan
+                limit, _ = largest_growth_delivered(months, discount)
+                print(text + f"no growth from 0 to 80 %, the growths tried, reaches the margin under the base "
+                             f"forecast; {limit} % is the largest growth with every order delivered; margin "
+                             f"{eu(solve_promotion(months, discount, 0)['margin'])} EUR with a growth of 0 and "
+                             f"{eu(solve_promotion(months, discount, limit / 100)['margin'])} EUR with {limit} %; "
+                             f"highest margin {eu(plan['margin'])} EUR, with a growth of {highest} %")
+    growth, _ = smallest_growth_reaching(APR_MAY, 0.10, rented_base["margin"], rented=u_max)
+    print(f"   Apr, May, discount 10,0 %, up to {eu(u_max, 0)} bikes of rented storage: the margin first reaches "
+          f"{eu(rented_base['margin'])} EUR, the margin under the base forecast with that rented storage, at a growth "
+          f"of {growth} %")
 
     # §5.4 Plans with plant 3 closed
     title("§5.4 Plans with plant 3 closed")
@@ -412,8 +482,10 @@ if __name__ == "__main__":
     print()
     print(f"Plant 3 as a binary variable, with its fixed cost of {eu(c_F[PLANT_3], 0)} EUR/month and both capacity options,")
     print("under the base forecast raised by a demand growth, the same in every month. Each cost includes the")
-    print("fixed cost of plant 3 when plant 3 is open. For each growth, the first line is the optimal plan, with")
-    print("plant 3 as a binary variable, and the second the plan with plant 3 fixed in the other state:")
+    print("fixed cost of plant 3 when plant 3 is open. Each growth has three lines. The first is the optimal")
+    print("plan, with plant 3 as a binary variable. The second is the plan with plant 3 fixed in the other")
+    print("state. The third says what closing plant 3 saves and what it adds to the rest of the cost; the rest")
+    print("of the cost is the cost without the fixed cost of plant 3.")
     for growth in [0, 0.10, 0.15, 0.18, 0.20]:
         plan = solve_model(growth=growth, plant_3="variable", overtime=True, rented=u_max,
                            fixed_cost=c_F[PLANT_3])
@@ -425,3 +497,12 @@ if __name__ == "__main__":
         alt = solve_model(growth=growth, plant_3=other, overtime=True, rented=u_max, fixed_cost=c_F[PLANT_3])
         print(f"      with plant 3 {other} instead: cost {eu(alt['cost'])} EUR; lost sales {eu(total(alt, 'l'), 1)} bikes; "
               f"overtime {eu(total(alt, 'o'), 1)} bikes; rented storage in March {eu(alt['values']['u']['Mar'], 1)} bikes")
+        closed, opened = (alt, plan) if plan["plant 3 open"] else (plan, alt)
+        # from the costs rounded to the cent, as printed
+        rest = round(closed["cost"], 2) - (round(opened["cost"], 2) - len(T) * c_F[PLANT_3])
+        more = total(closed, "l") - total(opened, "l")
+        each = (f", {eu(rest / more)} EUR on average for each of the {eu(more, 1)} more lost sales, an average "
+                "that includes the other changes of the plan") if more > 1e-6 else ""
+        print(f"      closing plant 3 saves its fixed cost of {eu(len(T) * c_F[PLANT_3], 0)} EUR "
+              f"({eu(c_F[PLANT_3], 0)} EUR/month for six months) and raises the rest "
+              f"of the cost by {eu(rest)} EUR{each}")
