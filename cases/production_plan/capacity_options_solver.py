@@ -6,7 +6,7 @@
 # (Table 2), the plan under the base forecast (Tables 4 and 5), the plans
 # under a demand growth (Table 6), the plans under a price promotion
 # (Table 7) and the plans with plant 3 closed (Table 8), with the plans in
-# which the model decides whether plant 3 is open.
+# which plant 3 open or closed is a binary variable.
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -151,8 +151,8 @@ def orders(growth=0.0):
 def solve_model(growth=0.0, price=None, plant_3="open", overtime=False, rented=0.0, fixed_cost=0.0):
     """Solve M4B. ``growth`` is the demand growth, one number for every month or a
     growth by month, and ``price`` the price of each month (EUR/bike), 700 in every
-    month by default. ``plant_3`` is "open", "closed" or "model", which leaves the
-    decision to the model; ``overtime`` says whether plants 1 and 2 can work
+    month by default. ``plant_3`` is "open" or "closed", a datum, or "variable", a
+    binary variable; ``overtime`` says whether plants 1 and 2 can work
     overtime, ``rented`` how many bikes can be rented next to the central warehouse,
     and ``fixed_cost`` the fixed cost of plant 3 (EUR/month). Returns the cost and
     the margin of the plan (EUR), the values of each kind of variable, whether
@@ -181,11 +181,11 @@ def solve_model(growth=0.0, price=None, plant_3="open", overtime=False, rented=0
     b = {(r, t): model.add_variable(f"b_{key(r)}_{t}", lowBound=0) for r in RETAILERS for t in T}
     l = {(r, t): model.add_variable(f"l_{key(r)}_{t}", lowBound=0) for r in RETAILERS for t in T}
     # delta[f] = 1 if plant f is open from January to June: plants 1 and 2 always
-    # are; plant 3 is open, closed, or a binary variable of the model
+    # are; plant 3 is open, closed, or a binary variable
     delta = {f: 1 for f in F}
     if plant_3 == "closed":
         delta[PLANT_3] = 0
-    elif plant_3 == "model":
+    elif plant_3 == "variable":
         delta[PLANT_3] = model.add_variable(f"delta_{key(PLANT_3)}", cat="Binary")
 
     # Minimise the assembly, overtime, holding, rented storage, transport,
@@ -314,7 +314,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §2 Data
-    title("§2 Base forecast, orders of each retailer and price")
+    title("§2 Base forecast, orders, price, capacity options and fixed cost of plant 3")
     print("Table 1. Base forecast, orders of each retailer (bikes/month) and price (EUR/bike)")
     header()
     order = orders()
@@ -324,18 +324,20 @@ if __name__ == "__main__":
     by_month("Price", [PRICE[t] for t in T], 0)
     print(f"Orders in the six months: {eu(sum(order.values()), 0)} bikes; "
           f"capacity of the three plants: {eu(sum(K[f][t] for f in F for t in T), 0)} bikes")
+    print("(the capacity is the assembly capacity of the six months, without overtime)")
     print()
-    print("Table 2. Capacity options")
+    print("Table 2. Capacity options and fixed cost of plant 3")
     for f in F:
-        print(f"{'Overtime at ' + f.lower():<48}{eu(o_max[f], 0):>10} bikes/month")
-    print(f"{'Extra cost of a bike assembled in overtime':<48}{eu(c_o, 0):>10} EUR/bike")
-    print(f"{'Rented storage next to the central warehouse':<48}{eu(u_max, 0):>10} bikes")
-    print(f"{'Cost of the rented storage':<48}{eu(c_u, 0):>10} EUR/(bike*month)")
+        print(f"{'Overtime limit at ' + f.lower():<48}{eu(o_max[f], 0):>10} bikes/month")
+    print(f"{'Overtime cost (over the unit assembly cost)':<48}{eu(c_o, 0):>10} EUR/bike")
+    print(f"{'Rented storage limit (next to central warehouse)':<50}{eu(u_max, 0):>10} bikes")
+    print(f"{'Rented storage cost':<48}{eu(c_u, 0):>10} EUR/(bike*month)")
     print(f"{'Fixed cost of plant 3 open':<48}{eu(c_F[PLANT_3], 0):>10} EUR/month")
 
     # §5.1 Plan under the base forecast
     title("§5.1 Optimal plan under the base forecast")
     base = solve_model()
+    print("Plant 3 open, no capacity option; cost and margin without the fixed cost of plant 3")
     print(f"Cost: {eu(base['cost'])} EUR; margin: {eu(base['margin'])} EUR; "
           f"lost sales: {eu(total(base, 'l'), 0)} bikes")
     print()
@@ -343,6 +345,8 @@ if __name__ == "__main__":
     header()
     for f in F:
         by_month(f, [base["values"]["p"][f, t] for t in T], 0)
+    print("(capacity utilization: bikes assembled in the six months, overtime included, over the assembly")
+    print("capacity of the six months)")
     print("Capacity utilization: " + "; ".join(f"{f} {eu(100 * utilization(base, f), 1)} %" for f in F))
     print()
     print("Table 5. Seasonal stock at the end of each month, by stage (bikes)")
@@ -353,25 +357,29 @@ if __name__ == "__main__":
 
     # §5.2 Plans under a demand growth
     title("§5.2 Plans under a demand growth")
-    print("Table 6. Plans under a demand growth")
-    print(f"{'Growth':>8}{'Orders':>12}{'Cost (EUR)':>18}{'Margin (EUR)':>18}"
-          f"{'Plant 3':>10}{'Lost sales':>12}")
+    print("Table 6. Plans under a demand growth, the same in every month, with plant 3 open and no capacity")
+    print("option. Orders and lost sales: bikes in the six months. Cost and margin without the fixed cost of")
+    print("plant 3. Plant 3: its capacity utilization.")
+    print(f"{'Growth':>8}{'Orders (bikes)':>16}{'Cost (EUR)':>18}{'Margin (EUR)':>18}"
+          f"{'Plant 3':>10}{'Lost sales (bikes)':>20}")
     for growth in [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]:
         plan = solve_model(growth=growth)
-        print(f"{eu(100 * growth, 0) + ' %':>8}{eu(sum(plan['orders'].values()), 0):>12}"
+        print(f"{eu(100 * growth, 0) + ' %':>8}{eu(sum(plan['orders'].values()), 0):>16}"
               f"{eu(plan['cost']):>18}{eu(plan['margin']):>18}"
-              f"{eu(100 * utilization(plan, PLANT_3), 1) + ' %':>10}{eu(total(plan, 'l'), 1):>12}")
+              f"{eu(100 * utilization(plan, PLANT_3), 1) + ' %':>10}{eu(total(plan, 'l'), 1):>20}")
     rent = solve_model(growth=0.25, rented=u_max)
-    print(f"With a growth of 25 % and rented storage: cost {eu(rent['cost'])} EUR; "
-          f"margin {eu(rent['margin'])} EUR; lost sales {eu(total(rent, 'l'), 0)}; "
-          f"plant 3 {eu(100 * utilization(rent, PLANT_3), 1)} %; "
-          f"rented in March {eu(rent['values']['u']['Mar'], 0)} bikes")
+    print(f"With a growth of 25 %, no overtime and up to {eu(u_max, 0)} bikes of rented storage, without the fixed cost of plant 3: cost {eu(rent['cost'])} EUR; "
+          f"margin {eu(rent['margin'])} EUR; lost sales {eu(total(rent, 'l'), 0)} bikes; "
+          f"capacity utilization of plant 3 {eu(100 * utilization(rent, PLANT_3), 1)} %; "
+          f"rented in March {eu(rent['values']['u']['Mar'], 0)} bikes (held in rented storage at the end of March)")
 
     # §5.3 Plans under a price promotion
     title("§5.3 Plans under a price promotion")
-    print("Table 7. Plans under a price promotion")
-    print(f"{'Months':>20}{'Discount':>10}{'Growth':>10}{'Rented':>10}{'Margin (EUR)':>18}"
-          f"{'Plant 3':>10}{'Lost sales':>12}")
+    print("Table 7. Plans under a price promotion, with plant 3 open and without overtime. Growth: of the")
+    print("orders of the months of the promotion; rented storage: up to 200 bikes, or none; margin without")
+    print("the fixed cost of plant 3; Plant 3: its capacity utilization; lost sales: bikes in the six months")
+    print(f"{'Months':>20}{'Discount':>10}{'Growth':>10}{'Rented storage':>16}{'Margin (EUR)':>18}"
+          f"{'Plant 3':>10}{'Lost sales (bikes)':>20}")
     for months, discount, growth, rented in [(["Jan", "Feb", "Mar"], 0.15, 0.51, 0),
                                              (["Apr", "May"], 0.05, 0.14, 0),
                                              (["Apr", "May"], 0.075, 0.17, 0),
@@ -381,28 +389,39 @@ if __name__ == "__main__":
         rise = {t: growth if t in months else 0.0 for t in T}
         plan = solve_model(growth=rise, price=price, rented=rented)
         print(f"{', '.join(months):>20}{eu(100 * discount, 1) + ' %':>10}"
-              f"{eu(100 * growth, 0) + ' %':>10}{('yes' if rented else 'no'):>10}"
+              f"{eu(100 * growth, 0) + ' %':>10}{('up to ' + eu(u_max, 0) if rented else 'no'):>16}"
               f"{eu(plan['margin']):>18}{eu(100 * utilization(plan, PLANT_3), 1) + ' %':>10}"
-              f"{eu(total(plan, 'l'), 1):>12}")
-    print(f"Margin of the plan without promotion: {eu(base['margin'])} EUR")
+              f"{eu(total(plan, 'l'), 1):>20}")
+    print(f"Margin of the plan without promotion: {eu(base['margin'])} EUR; with up to {eu(u_max, 0)} bikes of "
+          f"rented storage: {eu(solve_model(rented=u_max)['margin'])} EUR")
 
     # §5.4 Plans with plant 3 closed
     title("§5.4 Plans with plant 3 closed")
-    print("Table 8. Plans with plant 3 closed, under the base forecast")
+    print("Table 8. Plans with plant 3 closed, and so without its fixed cost, under the base forecast.")
+    print("Lost sales and overtime: bikes in the six months. Rented storage in March: bikes in rented storage")
+    print("at the end of March.")
     print(f"{'Capacity options':>30}{'Cost (EUR)':>18}{'Margin (EUR)':>18}"
-          f"{'Lost sales':>12}{'Overtime':>10}{'Rented':>10}")
+          f"{'Lost sales':>12}{'Overtime':>10}{'Rented storage in March':>25}")
     for name, overtime, rented in [("None", False, 0), ("Overtime", True, 0),
                                    ("Rented storage", False, u_max),
                                    ("Overtime and rented storage", True, u_max)]:
         plan = solve_model(plant_3="closed", overtime=overtime, rented=rented)
         print(f"{name:>30}{eu(plan['cost']):>18}{eu(plan['margin']):>18}"
-              f"{eu(total(plan, 'l'), 0):>12}{eu(total(plan, 'o'), 0):>10}"
-              f"{eu(max(plan['values']['u'].values()), 0):>10}")
+              f"{eu(total(plan, 'l'), 1):>12}{eu(total(plan, 'o'), 1):>10}"
+              f"{eu(plan['values']['u']['Mar'], 1):>25}")
     print()
-    print("Plant 3 left to the model, with its fixed cost and both capacity options:")
+    print(f"Plant 3 as a binary variable, with its fixed cost of {eu(c_F[PLANT_3], 0)} EUR/month and both capacity options,")
+    print("under the base forecast raised by a demand growth, the same in every month. Each cost includes the")
+    print("fixed cost of plant 3 when plant 3 is open. For each growth, the first line is the optimal plan, with")
+    print("plant 3 as a binary variable, and the second the plan with plant 3 fixed in the other state:")
     for growth in [0, 0.10, 0.15, 0.18, 0.20]:
-        plan = solve_model(growth=growth, plant_3="model", overtime=True, rented=u_max,
+        plan = solve_model(growth=growth, plant_3="variable", overtime=True, rented=u_max,
                            fixed_cost=c_F[PLANT_3])
         print(f"   growth {eu(100 * growth, 0):>5} %: plant 3 "
-              f"{'open' if plan['plant 3 open'] else 'closed'}; cost {eu(plan['cost'])} EUR "
-              f"(the fixed cost included)")
+              f"{'open' if plan['plant 3 open'] else 'closed'}; cost {eu(plan['cost'])} EUR; "
+              f"lost sales {eu(total(plan, 'l'), 1)} bikes; overtime {eu(total(plan, 'o'), 1)} bikes; "
+              f"rented storage in March {eu(plan['values']['u']['Mar'], 1)} bikes")
+        other = "closed" if plan["plant 3 open"] else "open"
+        alt = solve_model(growth=growth, plant_3=other, overtime=True, rented=u_max, fixed_cost=c_F[PLANT_3])
+        print(f"      with plant 3 {other} instead: cost {eu(alt['cost'])} EUR; lost sales {eu(total(alt, 'l'), 1)} bikes; "
+              f"overtime {eu(total(alt, 'o'), 1)} bikes; rented storage in March {eu(alt['values']['u']['Mar'], 1)} bikes")

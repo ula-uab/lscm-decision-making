@@ -147,14 +147,14 @@ def test_the_lost_sales_without_plant_3_fall_on_granada_and_alicante():
     (0, 0, 952378.68), (0.10, 0, 1106506.49), (0.15, 0, 1205789.56), (0.18, 0, 1265709.11),
     (0.20, 1, 1293474.12)])
 def test_plant_3_left_to_the_model(growth, open_3, cost):
-    data = {"growth": growth, "plant_3": co.MODEL, "overtime": o_max, "rented": u_max, "fixed_cost": c_F}
+    data = {"growth": growth, "plant_3": co.VARIABLE, "overtime": o_max, "rented": u_max, "fixed_cost": c_F}
     solution = co.solve(**data)
     assert solution["open"][PLANT_3] == open_3
     assert solution["cost"] == pytest.approx(cost)
 
 
 def test_the_plan_with_plant_3_left_to_the_model_is_the_only_optimal_plan():
-    assert co.only_plan(plant_3=co.MODEL, overtime=o_max, rented=u_max, fixed_cost=c_F) is True
+    assert co.only_plan(plant_3=co.VARIABLE, overtime=o_max, rented=u_max, fixed_cost=c_F) is True
 
 
 def test_plans_without_a_constraint():

@@ -1,6 +1,6 @@
 """M4B · Capacity options (capacity_options.md): the model of retailers.md (M4)
-with a price that can change by month and three options of the plan, each one
-with its cost. M4 does not change: M4B is a version of its own, built on it.
+with a price that can change by month, two capacity options, each one with its
+cost, and plant 3 open or closed. M4 does not change: M4B is a version of its own, built on it.
 
 What M4B adds to M4:
 
@@ -11,8 +11,8 @@ What M4B adds to M4:
 3. overtime at a plant, which relaxes its assembly capacity;
 4. rented storage next to the central warehouse, which relaxes its storage
    capacity;
-5. plant 3 open or closed for the whole horizon, with its fixed cost; open,
-   closed or a decision of the model.
+5. plant 3 open or closed for the whole horizon, with its fixed cost: a datum,
+   open or closed, or a binary variable.
 
 The model reuses the list of arcs and the functions ``entering`` and ``leaving``
 of M3, the data of M4 and the check of a single optimal plan of M2. Written with
@@ -34,7 +34,7 @@ from .model import TOL, _optimal
 from .show import COLOURS, SHORT, _display, _european_axes, _light, _number
 
 PLANT_3 = "Plant 3"
-OPEN, CLOSED, MODEL = "open", "closed", "model"     # what plant 3 can be
+OPEN, CLOSED, VARIABLE = "open", "closed", "variable"     # plant 3: a datum, open or closed, or a binary variable
 STAGES = {"Plants": F, "Central warehouse": [CENTRAL], "Regional warehouses": REGIONAL,
           "Local warehouses": LOCAL}
 NO_OVERTIME = {f: 0 for f in F}
@@ -84,7 +84,7 @@ def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float
     each month, by (r, t); by default, its share of the base forecast with the
     demand growth given. ``price`` is the price of a bike, one number for every
     month or by month, and it is also the lost-sale cost of its month.
-    ``plant_3`` is "open", "closed" or "model", which leaves it to the model;
+    ``plant_3`` is "open" or "closed", a datum, or "variable", a binary variable;
     ``overtime`` gives the maximum overtime of each plant (bikes/month),
     ``rented`` the bikes that can be rented next to the central warehouse, and
     ``fixed_cost`` the fixed cost of each plant (EUR/month). Without them there
@@ -94,8 +94,8 @@ def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float
     Returns the model, a dict of its variables by kind ("p" by (f, t); "o" by
     (f, t); "x" by (a, t); "h" by (i, t); "u" by t; "s", "b", "l" by (r, t)) and
     the cost expression."""
-    if plant_3 not in (OPEN, CLOSED, MODEL):
-        raise ValueError(f'Plant 3 must be "{OPEN}", "{CLOSED}" or "{MODEL}".')
+    if plant_3 not in (OPEN, CLOSED, VARIABLE):
+        raise ValueError(f'Plant 3 must be "{OPEN}", "{CLOSED}" or "{VARIABLE}".')
     order = order or orders(demand=demand, growth=growth, months=months)
     price = _by_month(price, months)
     overtime = NO_OVERTIME if overtime is None else overtime
@@ -115,11 +115,11 @@ def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float
     l = {(r, t): model.add_variable(f"l_{_key(r)}_{t}", lowBound=0) for r in retailers for t in months}
     variables = {"p": p, "o": o, "x": x, "h": h, "u": u, "s": s, "b": b, "l": l}
     # delta[f] = 1 if plant f is open from January to June. Plants 1 and 2 are
-    # always open; plant 3 is open, closed, or a binary variable of the model
+    # always open; plant 3 is open, closed, or a binary variable
     delta = {f: 1 for f in plants}
     if plant_3 == CLOSED:
         delta[PLANT_3] = 0
-    elif plant_3 == MODEL:
+    elif plant_3 == VARIABLE:
         delta[PLANT_3] = model.add_variable(f"delta_{_key(PLANT_3)}", cat="Binary")
         variables["d"] = {PLANT_3: delta[PLANT_3]}
     # Minimise the assembly, overtime, holding, rented storage, transport,
@@ -183,9 +183,9 @@ def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float
 def only_plan(**data) -> bool | None:
     """True if the optimal plan of M4B with the data given (the arguments of
     ``build``) is the only one; False if several plans have the optimal cost; None
-    if the model has no solution. With plant 3 as a decision of the model, the
-    check is made with the plant fixed at the value of the optimal plan."""
-    if data.get("plant_3") == MODEL:
+    if the model has no solution. With plant 3 as a binary variable, the check is
+    made with the plant fixed at the value of the optimal plan."""
+    if data.get("plant_3") == VARIABLE:
         solution = solve(**data)
         if solution is None:
             return None
@@ -225,7 +225,7 @@ def solve(**data) -> dict | None:
     delta = {f: 1.0 for f in plants}
     if data.get("plant_3") == CLOSED:
         delta[PLANT_3] = 0.0
-    elif data.get("plant_3") == MODEL:
+    elif data.get("plant_3") == VARIABLE:
         delta[PLANT_3] = round(values["d"][PLANT_3])
     cost = pulp.value(model.objective)
     return {
@@ -258,19 +258,22 @@ def chosen_months(*flags: bool, months=T) -> list:
 
 def show_data() -> None:
     """Tables 1 and 2 of capacity_options.md: the base forecast with the orders of
-    each retailer and the price of each month, and the capacity options."""
+    each retailer and the price of each month, and the capacity options with the
+    fixed cost of plant 3."""
     order = orders()
     table = pd.DataFrame({f"{r} ({PLACES_M4[r][0]})": {t: order[r, t] for t in T} for r in RETAILERS}).T
     table.insert(0, "Share", [f"{_number(100 * SHARE_M4[r])} %" for r in RETAILERS])
     table.loc["Base forecast"] = ["100 %"] + [BASE_FORECAST[t] for t in T]
     table.loc["Price (€/bike)"] = [""] + [PRICE[t] for t in T]
-    _display(table.rename_axis("Orders (bikes/month)"))
-    options = {f"Overtime at {f.lower()}": f"{_number(o_max[f])} bikes/month" for f in F}
-    options["Extra cost of a bike assembled in overtime"] = f"{_number(c_o)} €/bike"
-    options["Rented storage next to the central warehouse"] = f"{_number(u_max)} bikes"
-    options["Cost of the rented storage"] = f"{_number(c_u)} €/(bike·month)"
+    print("Base forecast, share and orders of each retailer (bikes/month), and price (€/bike)")
+    _display(table)
+    options = {f"Overtime limit at {f.lower()}": f"{_number(o_max[f])} bikes/month" for f in F}
+    options["Overtime cost (over the unit assembly cost)"] = f"{_number(c_o)} €/bike"
+    options["Rented storage limit, next to central warehouse"] = f"{_number(u_max)} bikes"
+    options["Rented storage cost"] = f"{_number(c_u)} €/(bike·month)"
     options["Fixed cost of plant 3 open"] = f"{_number(c_F[PLANT_3])} €/month"
-    _display(pd.DataFrame({"Value": options}).rename_axis("Capacity option"))
+    print("Capacity options and fixed cost of plant 3")
+    _display(pd.DataFrame({"Value": options}))
 
 
 def _scenario(growth: float = 0.0, promotion_months=(), discount: float = 0.0,
@@ -298,27 +301,37 @@ def _price_and_orders(solution: dict) -> None:
     """The price of each month and the orders of the six retailers, under the
     scenario solved."""
     months, order = solution["months"], solution["orders"]
+    print("Price and orders of each month in the scenario")
     _display(pd.DataFrame({t: {"Price (€/bike)": solution["price"][t],
-                               "Orders (bikes/month)": sum(order[r, t] for r in RETAILERS)}
-                           for t in months}).rename_axis("Scenario"))
+                               "Orders of the six retailers (bikes/month)": sum(order[r, t] for r in RETAILERS)}
+                           for t in months}))
 
 
 def _plant_tables(solution: dict) -> None:
     """The bikes assembled at each plant, of them in overtime, and the seasonal stock
     at the end of each month by stage, with the rented storage."""
     months = solution["months"]
-    rows = {("Bikes assembled", f): {t: solution["assembly"][f, t] for t in months} for f in F}
-    rows.update({("Of them, in overtime", f): {t: solution["overtime"][f, t] for t in months}
-                 for f in F if any(solution["overtime"][f, t] for t in months)})
-    _display(pd.DataFrame(rows).T.rename_axis(["Bikes/month", "Plant"]))
-    stock = {name: dict(row) for name, row in solution["seasonal stock"].items()}
-    stock["Of the central warehouse, rented"] = {t: solution["rented"][t] for t in months}
-    _display(pd.DataFrame(stock).T.rename_axis("Seasonal stock (bikes)"))
+    rows = {}
+    for f in F:
+        rows[f] = {t: solution["assembly"][f, t] for t in months}
+        if o_max[f] > 0:
+            rows[f"{f}, in overtime"] = {t: solution["overtime"][f, t] for t in months}
+    print("Bikes assembled (bikes/month); each row «in overtime» is part of the row of its plant")
+    _display(pd.DataFrame(rows).T)
+    stock = {}
+    for name, row in solution["seasonal stock"].items():
+        stock[name] = dict(row)
+        if name == "Central warehouse":
+            stock["Central warehouse, in rented storage"] = {t: solution["rented"][t] for t in months}
+    print("Seasonal stock at the end of the month (bikes); the row «in rented storage» is part of the central "
+          "warehouse and of the total")
+    _display(pd.DataFrame(stock).T)
 
 
 def _lost_sales_table(solution: dict) -> None:
     """The lost sales of each retailer in each month, and in the horizon as a share
-    of its orders. Nothing if the plan delivers every order."""
+    of its orders, with its backorder share, and the backorders at the end of each
+    month. Nothing if the plan delivers every order."""
     months = solution["months"]
     losing = [r for r in RETAILERS if any(solution["lost sales"][r, t] > TOL for t in months)]
     if not losing:
@@ -327,7 +340,14 @@ def _lost_sales_table(solution: dict) -> None:
                           for r in losing}).T
     table.insert(0, "Share of its orders",
                  [f"{_number(100 * solution['lost sales share'][r], 1)} %" for r in losing])
-    _display(table.rename_axis("Lost sales (bikes)"))
+    table.insert(1, "Backorder share", [_number(BACKORDER_SHARE[r], 1) for r in losing])
+    print("Lost sales (bikes)")
+    _display(table)
+    waiting = [r for r in RETAILERS if any(solution["backorders"][r, t] > TOL for t in months)]
+    if waiting:
+        print("Backorders at the end of the month (bikes)")
+        _display(pd.DataFrame({f"{r} ({PLACES_M4[r][0]})": {t: solution["backorders"][r, t] for t in months}
+                               for r in waiting}).T)
 
 
 @_light
@@ -344,10 +364,10 @@ def _figure(solution: dict) -> None:
         places = [i + (k - 1) * width for i in range(len(months))]
         left.bar(places, values, width=width, color=COLOURS[f], label=f)
     left.axhline(100, color=SHORT, lw=1, ls="--")
-    left.annotate("capacity", (len(months) - 0.5, 100), xytext=(0, 3), textcoords="offset points",
+    left.annotate("assembly capacity; above it, overtime", (len(months) - 0.5, 100), xytext=(0, 3), textcoords="offset points",
                   fontsize=7, color=SHORT, ha="right")
     left.set_xticks(range(len(months)), months)
-    left.set_ylabel("Capacity utilization (%)")
+    left.set_ylabel("Capacity utilization (% of the assembly capacity)")
     left.set_ylim(0, 125)
     left.set_title("Capacity utilization of each plant in each month", fontsize=10)
     left.legend(fontsize=7, loc="upper left")
@@ -363,6 +383,9 @@ def _figure(solution: dict) -> None:
     right.set_xticks(range(len(months)), months)
     right.set_ylabel("Lost sales (bikes)")
     right.set_ylim(0, max(10, max(bottom) * 1.25))
+    if max(bottom) <= TOL:
+        right.text(0.5, 0.5, "no lost sales", transform=right.transAxes, ha="center", va="center",
+                   fontsize=9, color=SHORT)
     right.set_title("Lost sales of each retailer", fontsize=10)
     right.legend(fontsize=7, loc="upper left")
     right.spines[["top", "right"]].set_visible(False)
@@ -378,7 +401,7 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
     growth of every month, and ``promotion_months``, ``discount`` and
     ``promotion_growth`` are the months of a price promotion, its discount and the
     growth of the orders of those months. ``plant_3`` is "open", "closed" or
-    "model"; ``overtime`` and ``rented_storage`` say whether each option is
+    "variable"; ``overtime`` and ``rented_storage`` say whether each option is
     available, with its cost; ``fixed_cost`` is the fixed cost of plant 3
     (EUR/month).
 
@@ -392,16 +415,23 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
         print("The model has no solution with these values.")
         return None
     base = solve(**options)
-    print(f"Plan of the scenario: cost {_number(solution['cost'], 2)} €; "
-          f"margin {_number(solution['margin'], 2)} €; "
+    is_open = solution["open"][PLANT_3] == 1
+    state = {OPEN: "open", CLOSED: "closed"}.get(plant_3, f"a binary variable, {'open' if is_open else 'closed'} "
+                                                          "in the optimal plan")
+    fixed = len(T) * fixed_cost if is_open else 0
+    print(f"Plant 3: {state}, with a fixed cost of {_number(fixed_cost)} €/month (value of the form). "
+          f"Overtime: {'yes' if overtime else 'no'}. "
+          f"Rented storage: {'up to ' + _number(u_max) + ' bikes' if rented_storage else 'no'}.")
+    print(f"Plan of the scenario: cost {_number(solution['cost'], 2)} €, of which {_number(fixed)} € is the fixed cost "
+          f"of plant 3; margin {_number(solution['margin'], 2)} €; "
           f"lost sales {_number(sum(solution['lost sales'].values()))} bikes.")
-    print(f"Margin under the base forecast, at the price of {_number(PRICE[T[0]])} €/bike and with the same "
-          f"options: {_number(base['margin'], 2)} €.")
-    if solution["open"][PLANT_3] == 0:
-        print("Plant 3 is closed from January to June.")
+    again = " (decided again for the base forecast)" if plant_3 == VARIABLE else ""
+    print(f"Margin without promotion, under the base forecast at {_number(PRICE[T[0]])} €/bike, with the same setting of plant 3{again}, "
+          f"the same fixed cost and the same capacity options, to compare with the margin of the scenario: "
+          f"{_number(base['margin'], 2)} €.")
     if not only_plan(**data):
         print(SEVERAL)
-    print("Capacity utilization in the horizon: "
+    print("Capacity utilization in the six months (bikes assembled, overtime included, over the assembly capacity): "
           + "; ".join(f"{f} {_number(100 * solution['capacity utilization'][f], 1)} %" for f in F) + ".")
     _price_and_orders(solution)
     _plant_tables(solution)
