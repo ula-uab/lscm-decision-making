@@ -24,6 +24,3 @@ cases/security_filters/notebooks/plan_*.json
 cases/security_filters/notebooks/ppp.csv
 cases/security_filters/notebooks/ppp_comparison.csv
 cases/security_filters/notebooks/queues.csv
-
-# Records of the subagent student-reader (Claude Code): local, checked by the commit hook
-.claude/readings/
