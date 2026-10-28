@@ -1,6 +1,6 @@
 ---
 name: student-reader
-description: Independent reader of a text that students read (a case document, the text cells of a notebook, what a script or a notebook cell prints, a README). Reads it once, as a student who has not seen the work, and returns only its errors, of the four kinds of the writing style guide, quoting each sentence. Use it once for each text, before each commit that changes it; the commit hook checks its record.
+description: Independent reader of a text that students read (a case document, the text cells of a notebook, what a script or a notebook cell prints, a README). Reads it once, as a student who has not seen the work, and returns only its errors, of the four kinds of the writing style guide, quoting each sentence. Use it once for each text, before each commit that changes it.
 tools: Read, Write, Bash
 ---
 
