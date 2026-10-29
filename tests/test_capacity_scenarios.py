@@ -1,4 +1,4 @@
-"""Check that the script of M4B, demand growth, price promotions and capacity options, reproduces the numbers of
+"""Check that the script of M4B, Master Planning for Electric Bicycles: Optimization Model and Scenario Analysis, reproduces the numbers of
 capacity_scenarios.md, and that it agrees with the package."""
 
 import importlib.util
