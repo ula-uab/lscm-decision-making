@@ -1,4 +1,4 @@
-# Production plan with capacity options
+# Production plan with demand growth, price promotions and capacity options
 
 This document is M4B, a version of the production plan of an electric bicycle assembler built on M4, in [`retailers.md`](retailers.md). M0, in [`production_plan.md`](production_plan.md), is the linear model of the plants; M1, in [`plant_stock.md`](plant_stock.md), adds the stock at the plants; M2, in [`central_warehouse.md`](central_warehouse.md), a central warehouse and backorders; M3, in [`distribution_network.md`](distribution_network.md), a distribution network in Spain; and M4 six retailers at the end of the network, where part of the demand that a retailer does not receive in its month becomes lost sales. M4B keeps all of that and adds four components: a demand growth by month, a price by month, two capacity options, each with its cost, and plant 3 open or closed.
 

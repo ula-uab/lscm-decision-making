@@ -1,4 +1,4 @@
-"""M4B · Capacity options (capacity_scenarios.md): the model of retailers.md (M4)
+"""M4B · Demand growth, price promotions and capacity options (capacity_scenarios.md): the model of retailers.md (M4)
 with a price that can change by month, two capacity options, each one with its
 cost, and plant 3 open or closed. M4 does not change: M4B is a version of its own, built on it.
 

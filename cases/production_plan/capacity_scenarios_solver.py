@@ -1,4 +1,4 @@
-# Production plan with capacity options (M4B)
+# Production plan with demand growth, price promotions and capacity options (M4B)
 #
 # This script reproduces every table of capacity_scenarios.md (same folder)
 # except Table 3, the notation: the base forecast with the orders of each
