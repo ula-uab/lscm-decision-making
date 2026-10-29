@@ -10,7 +10,7 @@ matplotlib.use("Agg")
 
 from plants import capacity_scenarios as co  # noqa: E402
 from plants import retailers as rt  # noqa: E402
-from plants.data import (BASE_FORECAST, F, FORECAST_5, PRICE, RETAILERS, SHARE_M4, T, c_F, c_l, c_o,  # noqa: E402
+from plants.data import (BASELINE_FORECAST, F, FORECAST_5, PRICE, RETAILERS, SHARE_M4, T, c_F, c_l, c_o,  # noqa: E402
                          c_u, o_max, u_max)
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "capacity_scenarios.ipynb"
@@ -26,8 +26,8 @@ def lost(solution):
 
 
 def test_table1_and_2_data_of_m4b():
-    assert [BASE_FORECAST[t] for t in T] == [200, 400, 350, 700, 700, 450]
-    assert sum(BASE_FORECAST.values()) == 2800
+    assert [BASELINE_FORECAST[t] for t in T] == [200, 400, 350, 700, 700, 450]
+    assert sum(BASELINE_FORECAST.values()) == 2800
     assert all(PRICE[t] == 700 for t in T)
     order = co.orders()
     assert all(abs(o - round(o)) < 1e-9 for o in order.values())
@@ -49,7 +49,7 @@ def test_m4b_with_the_data_of_m4_is_m4():
     assert sum(m4b["overtime"].values()) == 0 and sum(m4b["rented"].values()) == 0
 
 
-def test_tables4_and_5_plan_under_the_base_forecast():
+def test_tables4_and_5_plan_under_the_baseline_forecast():
     solution = co.solve()
     assert solution["cost"] == pytest.approx(949331.78)
     assert solution["margin"] == pytest.approx(1010668.22)
@@ -206,7 +206,7 @@ def test_limits_of_the_growth_with_every_order_delivered():
     assert sum(order[r, t] for r in RETAILERS for t in T[:5]) == pytest.approx(3034)
 
 
-def test_growths_that_reach_the_margin_under_the_base_forecast():
+def test_growths_that_reach_the_margin_under_the_baseline_forecast():
     reference = co.solve()["margin"]
     margin = lambda months, discount, growth: co.solve(  # noqa: E731
         **co.promotion(months, discount=discount, growth=growth))["margin"]

@@ -5,7 +5,7 @@ cost, and plant 3 open or closed. M4 does not change: M4B is a version of its ow
 What M4B adds to M4:
 
 1. a demand growth by month: the orders of the retailers are their share of a
-   base forecast raised by the growth of their month;
+   baseline forecast raised by the growth of their month;
 2. a price by month, with the discount of a price promotion in the months in
    which it applies; the lost-sale cost of a month is its price;
 3. overtime at a plant, which relaxes its assembly capacity;
@@ -26,7 +26,7 @@ import pandas as pd
 import pulp
 
 from .central_warehouse import SEVERAL, only_optimal
-from .data import (ARCS_M4, BACKORDER_SHARE, BASE_FORECAST, CENTRAL, F, K, K_h_node_m4, K_n, LOCAL, NODES_M4,
+from .data import (ARCS_M4, BACKORDER_SHARE, BASELINE_FORECAST, CENTRAL, F, K, K_h_node_m4, K_n, LOCAL, NODES_M4,
                    PLACES_M4, PRICE, REGIONAL, RETAILERS, SHARE_M4, T, b_0, c, c_F, c_b, c_h_node_m4, c_o,
                    c_u, h_node_0_m4, h_node_end_m4, o_max, u_max)
 from .distribution_network import entering, leaving
@@ -50,7 +50,7 @@ def _by_month(value: float | dict, months=T) -> dict:
     return dict(value) if isinstance(value, dict) else {t: value for t in months}
 
 
-def orders(demand: dict = BASE_FORECAST, growth: float | dict = 0.0, share: dict = SHARE_M4, months=T) -> dict:
+def orders(demand: dict = BASELINE_FORECAST, growth: float | dict = 0.0, share: dict = SHARE_M4, months=T) -> dict:
     """The orders of each retailer in each month (bikes): its share of the base
     forecast of the month raised by the demand growth of that month. ``growth`` is
     one number for every month (0,10 for 10 %) or a growth by month."""
@@ -63,7 +63,7 @@ def promotion(months_of_the_promotion, discount: float = 0.0, growth: float = 0.
     """The price and the demand growth of each month under a price promotion, as the
     arguments ``price`` and ``growth`` of ``build`` and ``solve``: in the months of
     the promotion the price falls by the discount and the orders grow by ``growth``;
-    the other months keep the price and the orders of the base forecast."""
+    the other months keep the price and the orders of the baseline forecast."""
     chosen = {months_of_the_promotion} if isinstance(months_of_the_promotion, str) else set(months_of_the_promotion)
     if not chosen <= set(months):
         raise ValueError(f"The months of the promotion must be among {', '.join(months)}.")
@@ -71,7 +71,7 @@ def promotion(months_of_the_promotion, discount: float = 0.0, growth: float = 0.
             "growth": {t: growth if t in chosen else 0.0 for t in months}}
 
 
-def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float | dict = 0.0,
+def build(order: dict | None = None, demand: dict = BASELINE_FORECAST, growth: float | dict = 0.0,
           price: float | dict = PRICE, plant_3: str = OPEN, overtime: dict | None = None,
           overtime_cost: float = c_o, rented: float = 0.0, rented_cost: float = c_u,
           fixed_cost: dict | None = None,
@@ -81,7 +81,7 @@ def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float
           backorder_cost: float = c_b, backorders_initial: float = b_0, capacity: dict = K, nodes=NODES_M4,
           plants=F, retailers=RETAILERS, warehouse: str = CENTRAL):
     """The model of M4B, not solved. ``order`` gives the orders of each retailer in
-    each month, by (r, t); by default, its share of the base forecast with the
+    each month, by (r, t); by default, its share of the baseline forecast with the
     demand growth given. ``price`` is the price of a bike, one number for every
     month or by month, and it is also the lost-sale cost of its month.
     ``plant_3`` is "open" or "closed", a datum, or "variable", a binary variable;
@@ -218,7 +218,7 @@ def solve(**data) -> dict | None:
     retailers = data.get("retailers", RETAILERS)
     capacity = data.get("capacity", K)
     price = _by_month(data.get("price", PRICE), months)
-    order = data.get("order") or orders(demand=data.get("demand", BASE_FORECAST),
+    order = data.get("order") or orders(demand=data.get("demand", BASELINE_FORECAST),
                                         growth=data.get("growth", 0.0), months=months)
     clean = lambda v: 0.0 if abs(v) < TOL else v      # noqa: E731  (no "-0.0" in tables)
     values = {kind: {key: clean(v.value()) for key, v in var[kind].items()} for kind in var}
@@ -257,15 +257,15 @@ def chosen_months(*flags: bool, months=T) -> list:
 
 
 def show_data() -> None:
-    """Tables 1 and 2 of capacity_scenarios.md: the base forecast with the orders of
+    """Tables 1 and 2 of capacity_scenarios.md: the baseline forecast with the orders of
     each retailer and the price of each month, and the capacity options with the
     fixed cost of plant 3."""
     order = orders()
     table = pd.DataFrame({f"{r} ({PLACES_M4[r][0]})": {t: order[r, t] for t in T} for r in RETAILERS}).T
     table.insert(0, "Share", [f"{_number(100 * SHARE_M4[r])} %" for r in RETAILERS])
-    table.loc["Base forecast"] = ["100 %"] + [BASE_FORECAST[t] for t in T]
+    table.loc["Baseline forecast"] = ["100 %"] + [BASELINE_FORECAST[t] for t in T]
     table.loc["Price (€/bike)"] = [""] + [PRICE[t] for t in T]
-    print("Base forecast, share and orders of each retailer (bikes/month), and price (€/bike)")
+    print("Baseline forecast, share and orders of each retailer (bikes/month), and price (€/bike)")
     _display(table)
     options = {f"Overtime limit at {f.lower()}": f"{_number(o_max[f])} bikes/month" for f in F}
     options["Overtime cost (over the unit assembly cost)"] = f"{_number(c_o)} €/bike"
@@ -405,7 +405,7 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
     available, with its cost; ``fixed_cost`` is the fixed cost of plant 3
     (EUR/month).
 
-    Shows the cost and the margin of the plan, the margin under the base forecast
+    Shows the cost and the margin of the plan, the margin under the baseline forecast
     with the same options, the capacity utilization of each plant, the bikes
     assembled, the seasonal stock, the lost sales and the figure."""
     options = _options(plant_3, overtime, overtime_cost, rented_storage, rented_cost, fixed_cost)
@@ -425,8 +425,8 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
     print(f"Plan of the scenario: cost {_number(solution['cost'], 2)} €, of which {_number(fixed)} € is the fixed cost "
           f"of plant 3; margin {_number(solution['margin'], 2)} €; "
           f"lost sales {_number(sum(solution['lost sales'].values()))} bikes.")
-    again = " (decided again for the base forecast)" if plant_3 == VARIABLE else ""
-    print(f"Margin under the base forecast (demand growth 0, no promotion), with the same setting of plant 3{again}, "
+    again = " (decided again for the baseline forecast)" if plant_3 == VARIABLE else ""
+    print(f"Margin under the baseline forecast (demand growth 0, no promotion), with the same setting of plant 3{again}, "
           f"the same fixed cost and the same capacity options, to compare with the margin of the scenario: "
           f"{_number(base['margin'], 2)} €.")
     print(SEVERAL if not only_plan(**data) else "No other plan has the same optimal cost: the tables below are those of the only optimal plan.")

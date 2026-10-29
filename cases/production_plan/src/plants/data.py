@@ -207,10 +207,10 @@ c_l = {r: 700 for r in RETAILERS}
 # cost of a plant
 # ---------------------------------------------------------------------------
 
-# Base forecast D[t] (bikes/month): the orders of the six retailers together,
+# Baseline forecast D[t] (bikes/month): the orders of the six retailers together,
 # invented. It has the shape of forecast 5 at about 78 % of its level, so that
 # the plants have spare capacity. Each retailer orders the share SHARE_M4 of it
-BASE_FORECAST = dict(zip(T, [200, 400, 350, 700, 700, 450]))
+BASELINE_FORECAST = dict(zip(T, [200, 400, 350, 700, 700, 450]))
 
 # Price pi[t] of a bike in month t (EUR/bike): the 700 EUR that every retailer
 # pays for a bike in M4, the same every month. A price promotion lowers the

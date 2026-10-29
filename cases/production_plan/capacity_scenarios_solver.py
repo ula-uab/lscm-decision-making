@@ -1,14 +1,14 @@
 # Master Planning for Electric Bicycles: Optimization Model and Scenario Analysis (M4B)
 #
 # This script reproduces every table of capacity_scenarios.md (same folder)
-# except Table 3, the notation: the base forecast with the orders of each
+# except Table 3, the notation: the baseline forecast with the orders of each
 # retailer and the price of each month (Table 1), the capacity options
-# (Table 2), the plan under the base forecast (Tables 4 and 5), the plans
+# (Table 2), the plan under the baseline forecast (Tables 4 and 5), the plans
 # under a demand growth (Table 6), the plans under a price promotion
 # (Table 7) and the plans with plant 3 closed (Table 8). It also prints the
 # results of the text that are in no table: the growths found in steps of
 # one percentage point, the highest margin with a discount of 10 % in April
-# and May, the margin under the base forecast with rented storage, and the
+# and May, the margin under the baseline forecast with rented storage, and the
 # plans in which plant 3 open or closed is a binary variable.
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
@@ -120,7 +120,7 @@ SHARE = dict(zip(RETAILERS, [0.14, 0.22, 0.18, 0.16, 0.20, 0.10]))
 BETA = dict(zip(RETAILERS, [0.9, 0.7, 0.5, 0.8, 0.6, 0.4]))
 c_b, b_0 = 60, 0
 
-# New in M4B: the base forecast D[t] (bikes/month), the price of each month
+# New in M4B: the baseline forecast D[t] (bikes/month), the price of each month
 # (EUR/bike), the maximum overtime of each plant (bikes/month) with its extra
 # cost (EUR/bike), the rented storage next to the central warehouse (bikes) with
 # its cost (EUR/(bike*month)), and the fixed cost of each open plant (EUR/month)
@@ -281,7 +281,7 @@ def utilization(solution, plant):
 def solve_promotion(months, discount, growth, rented=0.0):
     """Solve M4B under a price promotion: in the months given the price falls by the
     discount and the orders grow by the growth; the other months keep the price and
-    the orders of the base forecast. Plant 3 is open and there is no overtime."""
+    the orders of the baseline forecast. Plant 3 is open and there is no overtime."""
     price = {t: PRICE[t] * (1 - discount) if t in months else PRICE[t] for t in T}
     rise = {t: growth if t in months else 0.0 for t in T}
     return solve_model(growth=rise, price=price, rented=rented)
@@ -350,13 +350,13 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §2 Data
-    title("§2 Base forecast, orders, price, capacity options and fixed cost of plant 3")
-    print("Table 1. Base forecast, orders of each retailer (bikes/month) and price (EUR/bike)")
+    title("§2 Baseline forecast, orders, price, capacity options and fixed cost of plant 3")
+    print("Table 1. Baseline forecast, orders of each retailer (bikes/month) and price (EUR/bike)")
     header()
     order = orders()
     for r in RETAILERS:
         by_month(f"{r} ({PLACES[r]}), share {eu(100 * SHARE[r], 0)} %", [order[r, t] for t in T], 0)
-    by_month("Base forecast", [D[t] for t in T], 0)
+    by_month("Baseline forecast", [D[t] for t in T], 0)
     by_month("Price", [PRICE[t] for t in T], 0)
     print(f"Orders in the six months: {eu(sum(order.values()), 0)} bikes; "
           f"capacity of the three plants: {eu(sum(K[f][t] for f in F for t in T), 0)} bikes")
@@ -370,8 +370,8 @@ if __name__ == "__main__":
     print(f"{'Rented storage cost (over warehouse holding cost)':<48}{eu(c_u, 0):>10} EUR/(bike*month)")
     print(f"{'Fixed cost of plant 3 open':<48}{eu(c_F[PLANT_3], 0):>10} EUR/month")
 
-    # §5.1 Plan under the base forecast
-    title("§5.1 Optimal plan under the base forecast")
+    # §5.1 Plan under the baseline forecast
+    title("§5.1 Optimal plan under the baseline forecast")
     base = solve_model()
     print("Plant 3 open, no capacity option; cost and margin without the fixed cost of plant 3")
     print(f"Cost: {eu(base['cost'])} EUR; margin: {eu(base['margin'])} EUR; "
@@ -419,8 +419,8 @@ if __name__ == "__main__":
     print("orders of the months of the promotion; rented storage: up to 200 bikes, or none; margin without")
     print("the fixed cost of plant 3; Plant 3: its capacity utilization; lost sales: bikes in the six months.")
     print("Each growth is the smallest whole percentage with which the margin reaches the margin under the")
-    print("base forecast, except 17 % with a discount of 7,5 %, the largest growth with which every order is")
-    print("delivered. With rented storage, the margin is compared with the margin under the base forecast with")
+    print("baseline forecast, except 17 % with a discount of 7,5 %, the largest growth with which every order is")
+    print("delivered. With rented storage, the margin is compared with the margin under the baseline forecast with")
     print("the same rented storage.")
     print(f"{'Months':>20}{'Discount':>10}{'Growth':>10}{'Rented storage':>16}{'Margin (EUR)':>18}"
           f"{'Plant 3':>10}{'Lost sales (bikes)':>20}")
@@ -435,7 +435,7 @@ if __name__ == "__main__":
               f"{eu(plan['margin']):>18}{eu(100 * utilization(plan, PLANT_3), 1) + ' %':>10}"
               f"{eu(total(plan, 'l'), 1):>20}")
     rented_base = solve_model(rented=u_max)
-    print(f"Margin under the base forecast (no demand growth, no promotion): {eu(base['margin'])} EUR; with up to "
+    print(f"Margin under the baseline forecast (no demand growth, no promotion): {eu(base['margin'])} EUR; with up to "
           f"{eu(u_max, 0)} bikes of rented storage: {eu(rented_base['margin'])} EUR")
     print()
     print("Growths of the orders of the months of the promotion, raised one percentage point at a time from 0,")
@@ -451,7 +451,7 @@ if __name__ == "__main__":
             growth, plan = smallest_growth_reaching(months, discount, base["margin"])
             text = f"   {', '.join(months)}, discount {eu(100 * discount, 1)} %: "
             if growth is not None:
-                print(text + f"the margin first reaches the margin under the base forecast with a growth of {growth} %")
+                print(text + f"the margin first reaches the margin under the baseline forecast with a growth of {growth} %")
             else:
                 highest, plan = plan
                 limit, _ = largest_growth_delivered(months, discount)
@@ -462,12 +462,12 @@ if __name__ == "__main__":
                              f"highest margin {eu(plan['margin'])} EUR, with a growth of {highest} %")
     growth, _ = smallest_growth_reaching(APR_MAY, 0.10, rented_base["margin"], rented=u_max)
     print(f"   Apr, May, discount 10,0 %, up to {eu(u_max, 0)} bikes of rented storage: the margin first reaches "
-          f"{eu(rented_base['margin'])} EUR, the margin under the base forecast with that rented storage, at a growth "
+          f"{eu(rented_base['margin'])} EUR, the margin under the baseline forecast with that rented storage, at a growth "
           f"of {growth} %")
 
     # §5.4 Plans with plant 3 closed
     title("§5.4 Plans with plant 3 closed")
-    print("Table 8. Plans with plant 3 closed, and so without its fixed cost, under the base forecast.")
+    print("Table 8. Plans with plant 3 closed, and so without its fixed cost, under the baseline forecast.")
     print("Lost sales and overtime: bikes in the six months. Rented storage in March: bikes in rented storage")
     print("at the end of March.")
     print(f"{'Capacity options':>30}{'Cost (EUR)':>18}{'Margin (EUR)':>18}"
@@ -481,7 +481,7 @@ if __name__ == "__main__":
               f"{eu(plan['values']['u']['Mar'], 1):>25}")
     print()
     print(f"Plant 3 as a binary variable, with its fixed cost of {eu(c_F[PLANT_3], 0)} EUR/month and both capacity options,")
-    print("under the base forecast raised by a demand growth, the same in every month. Each cost includes the")
+    print("under the baseline forecast raised by a demand growth, the same in every month. Each cost includes the")
     print("fixed cost of plant 3 when plant 3 is open. Each growth has three lines. The first is the optimal")
     print("plan, with plant 3 as a binary variable. The second is the plan with plant 3 fixed in the other")
     print("state. The third says what closing plant 3 saves and what it adds to the rest of the cost; the rest")

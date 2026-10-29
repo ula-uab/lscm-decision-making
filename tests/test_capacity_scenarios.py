@@ -34,9 +34,9 @@ def test_script_prints_the_tables():
                  # growths found in steps of one percentage point (§5.2 and §5.3)
                  "every order is delivered up to a growth of 17 %; with 18 %, lost sales 1,2 bikes",
                  "Jan, Feb, Mar, discount 15,0 %: every order is delivered up to a growth of 71 %",
-                 "Jan, Feb, Mar, discount 5,0 %: the margin first reaches the margin under the base forecast with a growth of 13 %",
+                 "Jan, Feb, Mar, discount 5,0 %: the margin first reaches the margin under the baseline forecast with a growth of 13 %",
                  "966.732,36 EUR with 17 %; highest margin 988.725,30 EUR, with a growth of 35 %",
-                 "the margin under the base forecast with that rented storage, at a growth of 33 %",
+                 "the margin under the baseline forecast with that rented storage, at a growth of 33 %",
                  # what closing plant 3 adds to the rest of the cost (§5.4)
                  "raises the rest of the cost by 115.368,20 EUR, 345,41 EUR on average for each of the 334,0 more lost sales",
                  "raises the rest of the cost by 132.376,06 EUR, 339,43 EUR on average for each of the 390,0 more lost sales"):
@@ -68,5 +68,5 @@ def test_script_agrees_with_the_package():
     assert plan["margin"] == pytest.approx(package["margin"]) == pytest.approx(1012357.71)
     # The script and the package read the same network and the same data of M4B
     assert [arc[5] for arc in script.ARCS] == [arc["cost"] for arc in co.ARCS_M4]
-    assert script.D == co.BASE_FORECAST and script.PRICE == co.PRICE
+    assert script.D == co.BASELINE_FORECAST and script.PRICE == co.PRICE
     assert (script.o_max, script.c_o, script.u_max, script.c_u) == (co.o_max, co.c_o, co.u_max, co.c_u)
