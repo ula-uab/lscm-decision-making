@@ -1,6 +1,6 @@
 # Production plan with capacity options (M4B)
 #
-# This script reproduces every table of capacity_options.md (same folder)
+# This script reproduces every table of capacity_scenarios.md (same folder)
 # except Table 3, the notation: the base forecast with the orders of each
 # retailer and the price of each month (Table 1), the capacity options
 # (Table 2), the plan under the base forecast (Tables 4 and 5), the plans
@@ -26,8 +26,8 @@
 #     python3 -c "import pulp, highspy; print('OK')"      (python on Windows)
 #
 # How to run it (from this folder):
-#     Windows:          python capacity_options_solver.py
-#     macOS and Linux:  python3 capacity_options_solver.py
+#     Windows:          python capacity_scenarios_solver.py
+#     macOS and Linux:  python3 capacity_scenarios_solver.py
 
 import sys
 
@@ -162,7 +162,7 @@ def solve_model(growth=0.0, price=None, plant_3="open", overtime=False, rented=0
     price = price or PRICE
     order = orders(growth)
     o_top = o_max if overtime else {f: 0 for f in F}
-    model = pulp.LpProblem("capacity_options", pulp.LpMinimize)
+    model = pulp.LpProblem("capacity_scenarios", pulp.LpMinimize)
 
     def key(node):
         return node.replace(" ", "")

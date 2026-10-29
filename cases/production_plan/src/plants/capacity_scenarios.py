@@ -1,4 +1,4 @@
-"""M4B · Capacity options (capacity_options.md): the model of retailers.md (M4)
+"""M4B · Capacity options (capacity_scenarios.md): the model of retailers.md (M4)
 with a price that can change by month, two capacity options, each one with its
 cost, and plant 3 open or closed. M4 does not change: M4B is a version of its own, built on it.
 
@@ -100,7 +100,7 @@ def build(order: dict | None = None, demand: dict = BASE_FORECAST, growth: float
     price = _by_month(price, months)
     overtime = NO_OVERTIME if overtime is None else overtime
     fixed_cost = NO_FIXED_COST if fixed_cost is None else fixed_cost
-    model = pulp.LpProblem("capacity_options", pulp.LpMinimize)
+    model = pulp.LpProblem("capacity_scenarios", pulp.LpMinimize)
     # p = bikes assembled, o = of them, assembled in overtime; x = bikes shipped
     # on each arc; h = stock at the end of the month, u = of it, in rented
     # storage; s = deliveries, b = backorders at the end of the month and
@@ -257,7 +257,7 @@ def chosen_months(*flags: bool, months=T) -> list:
 
 
 def show_data() -> None:
-    """Tables 1 and 2 of capacity_options.md: the base forecast with the orders of
+    """Tables 1 and 2 of capacity_scenarios.md: the base forecast with the orders of
     each retailer and the price of each month, and the capacity options with the
     fixed cost of plant 3."""
     order = orders()

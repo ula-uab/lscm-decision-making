@@ -1,5 +1,5 @@
 """Check that the script of M4B, capacity options, reproduces the numbers of
-capacity_options.md, and that it agrees with the package."""
+capacity_scenarios.md, and that it agrees with the package."""
 
 import importlib.util
 import subprocess
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 CASE = Path(__file__).resolve().parents[1] / "cases" / "production_plan"
-SCRIPT = "capacity_options_solver.py"
+SCRIPT = "capacity_scenarios_solver.py"
 
 
 def load():
@@ -44,7 +44,7 @@ def test_script_prints_the_tables():
 
 
 def test_script_agrees_with_the_package():
-    from plants import capacity_options as co
+    from plants import capacity_scenarios as co
     script = load()
     for data, options in (({}, {}),
                           ({"growth": 0.25, "rented": script.u_max},

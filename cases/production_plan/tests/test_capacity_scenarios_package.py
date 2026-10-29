@@ -1,4 +1,4 @@
-"""Check that the package reproduces the numbers of capacity_options.md (M4B),
+"""Check that the package reproduces the numbers of capacity_scenarios.md (M4B),
 that M4 is unchanged, and that the notebook of M4B runs from start to end."""
 
 from pathlib import Path
@@ -8,12 +8,12 @@ import pytest
 
 matplotlib.use("Agg")
 
-from plants import capacity_options as co  # noqa: E402
+from plants import capacity_scenarios as co  # noqa: E402
 from plants import retailers as rt  # noqa: E402
 from plants.data import (BASE_FORECAST, F, FORECAST_5, PRICE, RETAILERS, SHARE_M4, T, c_F, c_l, c_o,  # noqa: E402
                          c_u, o_max, u_max)
 
-NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "capacity_options.ipynb"
+NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "capacity_scenarios.ipynb"
 PLANT_3 = "Plant 3"
 
 

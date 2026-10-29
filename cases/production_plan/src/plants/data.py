@@ -201,7 +201,7 @@ BACKORDER_SHARE = dict(zip(RETAILERS, [0.9, 0.7, 0.5, 0.8, 0.6, 0.4]))
 c_l = {r: 700 for r in RETAILERS}
 
 # ---------------------------------------------------------------------------
-# M4B · Capacity options, Tables 1 and 2 of capacity_options.md. A version of
+# M4B · Capacity options, Tables 1 and 2 of capacity_scenarios.md. A version of
 # its own, built on M4: it keeps every datum of M0 to M4 and adds the base
 # forecast, the price of each month, overtime, rented storage and the fixed
 # cost of a plant
