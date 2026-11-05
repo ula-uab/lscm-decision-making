@@ -236,3 +236,71 @@ c_u = 12
 # lease and maintenance, which do not depend on the bikes assembled. Plants 1
 # and 2 are always open, and their fixed cost is not a decision
 c_F = {"Plant 1": 0, "Plant 2": 0, "Plant 3": 20000}
+
+# ---------------------------------------------------------------------------
+# Lot sizing at the plants, Tables 1 to 9 of lot_sizing.md. The weekly plan of
+# each plant, which details the master plan of M4: it keeps every datum of M4
+# and adds the bike models, the weekly orders of the retailers, the calendar of
+# the plants and their assembly lines. M4 is solved with the orders that the
+# retailers place, computed from these data, not with forecast 5
+# ---------------------------------------------------------------------------
+
+MODELS = ["City", "Trekking", "Mountain", "Cargo"]      # bike models
+
+# The horizon: 26 weeks from Monday to Sunday, the first starting on Monday
+# 1 January, and the days of each month. The calendar is invented and names no year
+WEEKS = list(range(1, 27))
+MONTH_DAYS = dict(zip(T, [31, 28, 31, 30, 31, 30]))
+
+# The plants work from Monday to Friday, one shift of 8 h, except on their
+# holidays (month, day), Table 1
+HOURS_PER_DAY = 8
+HOLIDAYS = {
+    "Plant 1": [("Jan", 1), ("Mar", 29), ("Mar", 30), ("Apr", 2), ("May", 1)],
+    "Plant 2": [("Jan", 1), ("Mar", 29), ("Mar", 30), ("Apr", 2), ("May", 1)],
+    "Plant 3": [("Jan", 1), ("Mar", 12), ("Mar", 19), ("Mar", 30), ("Apr", 2), ("May", 1)],
+}
+
+# Average orders of each retailer (bikes/month) and the share of each model in
+# them, Table 4
+AVERAGE_ORDERS = dict(zip(RETAILERS, [65, 105, 85, 75, 95, 45]))
+PRODUCT_MIX = {r: dict(zip(MODELS, mix)) for r, mix in zip(RETAILERS, [
+    (0.25, 0.35, 0.35, 0.05), (0.50, 0.20, 0.10, 0.20), (0.45, 0.35, 0.10, 0.10),
+    (0.50, 0.30, 0.10, 0.10), (0.50, 0.35, 0.10, 0.05), (0.25, 0.20, 0.50, 0.05)])}
+
+# Seasonal index of each model in each month, mean 1 over the six months, Table 5
+SEASONAL_INDEX = {
+    "City": dict(zip(T, [0.7, 0.9, 0.9, 1.2, 1.2, 1.1])),
+    "Trekking": dict(zip(T, [0.4, 0.7, 0.8, 1.5, 1.5, 1.1])),
+    "Mountain": dict(zip(T, [0.3, 0.6, 0.7, 1.7, 1.7, 1.0])),
+    "Cargo": dict(zip(T, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])),
+}
+
+# Factor of each week, mean 1 over the 26 weeks, Table 6
+WEEK_FACTOR = dict(zip(WEEKS, [0.9, 1.0, 1.1, 1.0, 1.0, 0.95, 1.05, 1.0, 1.0, 1.0, 1.1, 0.9, 1.0,
+                               0.9, 1.0, 1.05, 1.05, 1.0, 0.95, 1.05, 1.0, 1.0, 1.0, 1.05, 0.95, 1.0]))
+
+# Initial stock of each model at each plant (bikes), about the product mix of
+# the orders of January, Table 8; the plants must hold the same at the end of
+# June. Their totals are h_0 of M1
+PLANT_STOCK_0 = {"Plant 1": dict(zip(MODELS, [11, 4, 2, 3])), "Plant 2": dict(zip(MODELS, [5, 2, 1, 2])),
+                 "Plant 3": dict(zip(MODELS, [0, 0, 0, 0]))}
+
+# Assembly time of a bike (h/bike) and setup time of a model (h/setup) at each
+# plant, Table 9: plants 2 and 3 take 5/4 and 5/3 of the assembly time of plant 1,
+# and 5/4 and 3/2 of its setup time
+ASSEMBLY_TIME = {"Plant 1": dict(zip(MODELS, [0.42, 0.52, 0.71, 0.90])),
+                 "Plant 2": dict(zip(MODELS, [0.525, 0.65, 0.8875, 1.125])),
+                 "Plant 3": dict(zip(MODELS, [0.70, 0.867, 1.183, 1.50]))}
+SETUP_TIME = {"Plant 1": dict(zip(MODELS, [2.0, 2.0, 3.0, 4.0])),
+              "Plant 2": dict(zip(MODELS, [2.5, 2.5, 3.75, 5.0])),
+              "Plant 3": dict(zip(MODELS, [3.0, 3.0, 4.5, 6.0]))}
+
+# Setup cost: the changeover crew (EUR/h) times the setup time, plus the check
+# of the first bike (EUR/setup)
+CREW_COST = 40
+FIRST_BIKE_CHECK = 20
+
+# Holding cost at a plant: c_h of M1 times 12/52, a week, times a factor of each
+# model about the value of the bike, rounded to the cent (EUR/(bike·week))
+VALUE_FACTOR = dict(zip(MODELS, [0.8, 1.0, 1.2, 1.4]))

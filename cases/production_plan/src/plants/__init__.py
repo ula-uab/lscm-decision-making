@@ -15,11 +15,13 @@ its notebook shows: ``plant_stock`` (M1, stock at the plants),
 ``distribution_network`` (M3, distribution network) and ``retailers`` (M4,
 retailers, backorder shares and lost sales). ``capacity_scenarios`` (M4B) is a
 version of its own, built on M4: a demand growth and a price by month, overtime,
-rented storage and a plant open or closed.
+rented storage and a plant open or closed. ``lot_sizing`` takes the master plan
+of M4 to the weekly lot plan of each plant, by bike model.
 """
 
-from . import capacity_scenarios, central_warehouse, data, distribution_network, model, plant_stock, retailers
+from . import (capacity_scenarios, central_warehouse, data, distribution_network, lot_sizing, model, plant_stock,
+               retailers)
 from .show import capacity_and_demand, feasible_region, production_plan, show_data
 
 __all__ = ["capacity_and_demand", "capacity_scenarios", "central_warehouse", "data", "distribution_network",
-           "feasible_region", "model", "plant_stock", "production_plan", "retailers", "show_data"]
+           "feasible_region", "lot_sizing", "model", "plant_stock", "production_plan", "retailers", "show_data"]
