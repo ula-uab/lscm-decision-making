@@ -465,7 +465,7 @@ The weekly plans of plants 1 and 2 have a capacity overload in every month (§4)
 
 - Calendar: no holidays, so that every week has five working days.
 - Setups: half the setup times; and, at plants 2 and 3, the setup times of plant 1, because M4 leaves the same hours for setups at every plant although their setups take longer. The setup cost is computed from the new setup time, as in §1.6.
-- Product mix: every week ships the four models in the proportions of the orders of the six months, 43,2 %, 29,4 %, 17,3 % and 10,1 % (§1.2): the bikes that each plant ships in a week (Table 12) are split among the models in those proportions, with the shipments accumulated from week 1 rounded half up. The least stock at the end of each month is split in the same proportions, and at the end of June it is that of Table 8.
+- Product mix: the bikes that each plant ships in each week, all models together (Table 12), are split among the four models in the proportions of the orders of the six months, 43,2 %, 29,4 %, 17,3 % and 10,1 % (§1.2), and the least stock at the end of each month is split in the same proportions. The shipments accumulated from week 1 are rounded half up, and the least stock at the end of June is that of Table 8.
 
 **What comes out** (Tables 17 and 18).
 
