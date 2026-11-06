@@ -27,6 +27,7 @@ Table 2. Weeks with fewer than five working days. Every other week has five work
 | 12 | 19–23 March | 5 | 4 |
 | 13 | 26–30 March | 3 | 4 |
 | 14 | 2–6 April | 4 | 4 |
+| 18 | 30 April – 4 May | 4 | 4 |
 
 Table 3. Working days of each month
 
