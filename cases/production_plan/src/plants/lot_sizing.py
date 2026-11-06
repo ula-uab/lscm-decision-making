@@ -764,9 +764,11 @@ def show_weekly_plan(plant: str = "Plant 1", check: bool = False) -> dict | None
 
 
 @_light
-def _hours_figure(plans: dict, base_plans: dict | None = None) -> None:
+def _hours_figure(plans: dict, base_plans: dict | None = None,
+                  base_label: str = "hours with the data of the case") -> None:
     """For each plant, the hours of assembly and of setups of each week against its
-    available capacity; the capacity overload in red."""
+    available capacity; the capacity overload in red. ``base_plans``, drawn as a
+    dashed line with ``base_label``, gives the hours of other plans to compare."""
     fig, axes = plt.subplots(len(plans), 1, figsize=(11, 3.2 * len(plans)), squeeze=False)
     for ax, (f, plan) in zip(axes[:, 0], plans.items()):
         rows = [plan["weeks"][w] for w in WEEKS]
@@ -783,11 +785,12 @@ def _hours_figure(plans: dict, base_plans: dict | None = None) -> None:
         if base_plans and f in base_plans:
             ax.plot(WEEKS, [float(r["assembly hours"] + r["setup hours"]) for r in
                             (base_plans[f]["weeks"][w] for w in WEEKS)],
-                    color="0.35", lw=1, ls="--", marker=".", label="hours with the data of the case")
+                    color="0.35", lw=1, ls="--", marker=".", label=base_label)
         for weeks in plan_weeks().values():
             ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
         ax.set_xticks(WEEKS)
-        ax.set_ylim(0, 62)
+        top = max(float(r["available"] + r["overload"]) for r in rows)
+        ax.set_ylim(0, max(62, 1.25 * top + 4))
         ax.set_ylabel("Hours of the line (h)")
         ax.set_title(f"{f}: hours of each week; dotted lines at the end of each month", fontsize=10)
         ax.legend(fontsize=7, ncol=5, loc="upper left")
@@ -864,3 +867,64 @@ def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday
     _display(plan_table(plan))
     _hours_figure({plant: plan}, {plant: before})
     return plan
+
+
+def show_reference_plan(plant: str = "Plant 1") -> dict:
+    """The plan of reference of step 7 against the plans of the model: the capacity
+    overload and the setup and holding cost of the six months at the three plants;
+    and the weekly plan of reference of one plant, in the form of Tables 13 to 15,
+    with a figure of its hours next to those of the plan of the model."""
+    plant = _plant(plant)
+    model = {f: weekly_plan(f) for f in PLANTS}
+    reference = {f: lot_for_lot(f) for f in PLANTS}
+    rows = {f: {"Capacity overload, plan of reference (h)": fixed(line_hours(reference[f])["Six months"]["overload"]),
+                "Capacity overload, plan of the model (h)": fixed(line_hours(model[f])["Six months"]["overload"]),
+                "Setup and holding cost, plan of reference (€)": fixed(reference[f]["cost"]),
+                "Setup and holding cost, plan of the model (€)": fixed(model[f]["cost"])} for f in PLANTS}
+    _display(pd.DataFrame(rows).T.rename_axis("Six months"))
+    print(f"{plant}: weekly plan of reference. Bikes by model: {'; '.join(MODELS)}.")
+    _display(plan_table(reference[plant]))
+    _hours_figure({plant: reference[plant]}, {plant: model[plant]}, "hours of the plan of the model")
+    return reference[plant]
+
+
+def _run_rows(plans: dict, key: str) -> pd.DataFrame:
+    rows = {}
+    for (f, name), plan in plans.items():
+        hours = line_hours(plan)
+        rows[f, name] = {t: fixed(hours[t][key]) for t in hours}
+    return pd.DataFrame(rows).T.rename_axis(["Plant", "Run"])
+
+
+def show_runs(plant: str = "none", run_name: str = "As planned") -> dict:
+    """The weekly plans of the three plants for the six months in each run of part
+    d): the capacity overload (Table 17) and the spare capacity
+    (Table 18) of each month, and the months in which another plan has the same
+    capacity overload and the same cost. With a plant and a run, also the weekly
+    plan of that plant in that run, with a figure of its hours next to those of the
+    plan with the data of the case. ``run_name`` is one of ``RUNS``."""
+    if run_name not in RUNS:
+        raise ValueError(f"The run must be one of {', '.join(RUNS)}.")
+    plans = {}
+    for f in PLANTS:
+        for name in RUNS:
+            plan = run(f, name, check=True)
+            if plan is not None:
+                plans[f, name] = plan
+    print("Capacity overload (h) of each plant, by month, in each run.")
+    _display(_run_rows(plans, "overload"))
+    print("Spare capacity (h) of each plant, by month, in each run.")
+    _display(_run_rows(plans, "spare"))
+    others = [f"{f}, {name}: {', '.join(p['other plans'])}" for (f, name), p in plans.items() if p["other plans"]]
+    print("Months in which another plan has the same capacity overload and the same cost: "
+          + ("; ".join(others) if others else "none") + ".")
+    if plant != "none":
+        plant = _plant(plant)
+        if (plant, run_name) not in plans:
+            print(f"{plant} has no run «{run_name}»: its setup times are those of plant 1.")
+            return plans
+        print(f"{plant}, {run_name}: setup and holding cost of the six months {fixed(plans[plant, run_name]['cost'])} €. "
+              f"Bikes by model: {'; '.join(MODELS)}.")
+        _display(plan_table(plans[plant, run_name]))
+        _hours_figure({plant: plans[plant, run_name]}, {plant: plans[plant, "As planned"]})
+    return plans
