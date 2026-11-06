@@ -7,17 +7,17 @@ PuLP and solved with HiGHS; and what the notebook lot_sizing.ipynb shows.
 The computations, each with its data as arguments:
 
 1. ``weekly_orders`` and ``monthly_orders``: the orders of each retailer, by
-   model and week, and by month (Table 7);
-2. ``master_plan``: M4 with those orders (Table 10);
+   model and week, and by month (Table 4);
+2. ``master_plan``: M4 with those orders (Table 7);
 3. ``seasonal_split``, ``shipment_mix``, ``least_stock`` and
    ``weekly_shipments``: what each plant ships each week and the least stock it
-   holds at the end of each month (Tables 10 to 12);
+   holds at the end of each month (Tables 7 to 9);
 4. ``weekly_plan``: one plan for each month, one after the other, each in the
-   two stages of step 6 (Tables 13 to 15);
+   two stages of step 6 (Tables 10 to 12);
 5. ``lot_for_lot``: the plan of step 7, which assembles each week what it ships;
 6. ``line_hours``: assembly, setups, capacity overload and spare capacity by
-   month (Table 16);
-7. ``run``: the plans of the six months with the data of part d) (Tables 17
+   month (Table 13);
+7. ``run``: the plans of the six months with the data of part d) (Tables 14
    and 18).
 
 Quantities are exact: fractions, not floating point, so that every rounding,
@@ -39,9 +39,10 @@ import pandas as pd
 import pulp
 
 from . import retailers
-from .data import (ARCS_M4, ASSEMBLY_TIME, AVERAGE_ORDERS, CREW_COST, FIRST_BIKE_CHECK, HOLIDAYS, HOURS_PER_DAY,
-                   MODELS, MONTH_DAYS, NODES, PLACES_M4, PLANT_STOCK_0, PRODUCT_MIX, RETAILERS, SEASONAL_INDEX,
-                   SETUP_TIME, VALUE_FACTOR, WEEK_FACTOR, WEEKS, F, K_h, T, c_h)
+from .data import (ARCS_M4, ASSEMBLY_TIME, AVERAGE_ORDERS, BACKORDER_SHARE, CENTRAL, CREW_COST, FIRST_BIKE_CHECK,
+                   HOLIDAYS, HOURS_PER_DAY, LOCAL, MODELS, MONTH_DAYS, NODES, PLACES_M4, PLANT_STOCK_0, PRODUCT_MIX,
+                   RAIL_TERMINAL, REGIONAL, RETAILERS, SEASONAL_INDEX, SETUP_TIME, VALUE_FACTOR, WEEK_FACTOR, WEEKS,
+                   F, K_h, K_h_node_m4, K_n, T, c_b, c_h, c_h_node_m4, c_l)
 from .model import _optimal
 from .show import COLOURS, SHORT, _display, _light, _number
 
@@ -141,7 +142,7 @@ def available_capacity(plant: str, holidays: dict = HOLIDAYS) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 1. Orders (§1, Tables 4 to 7)
+# 1. Orders (§1, Table 4)
 # ---------------------------------------------------------------------------
 
 def _week_index(model: str, week: int, seasonal: dict) -> Fraction:
@@ -176,7 +177,7 @@ def model_orders(weekly: dict) -> dict:
 
 def monthly_orders(weekly: dict) -> dict:
     """The orders of each retailer in each month, the four models together (whole
-    bikes), by (r, t): Table 7. The orders accumulated from January are rounded
+    bikes), by (r, t): Table 4. The orders accumulated from January are rounded
     half up."""
     by_model = model_orders(weekly)
     retailers_ = sorted({r for r, _, _ in by_model}, key=RETAILERS.index)
@@ -188,7 +189,7 @@ def monthly_orders(weekly: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 2. Master plan: M4 with the orders of Table 7 (§2, Table 10)
+# 2. Master plan: M4 with the orders of Table 4 (§2, Table 7)
 # ---------------------------------------------------------------------------
 
 def _value(x: float) -> Fraction:
@@ -220,7 +221,7 @@ def master_plan(order: dict) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# 3. Shipments and least stock of each plant (§2, Tables 10 to 12)
+# 3. Shipments and least stock of each plant (§2, Tables 7 to 9)
 # ---------------------------------------------------------------------------
 
 def _share(values: dict) -> dict:
@@ -278,7 +279,7 @@ def _delivered_mix(master: dict, by_model: dict) -> dict:
 
 
 def shipment_mix(master: dict, by_model: dict, split: dict) -> dict:
-    """The product mix of the shipments of the plants in each month (Table 11):
+    """The product mix of the shipments of the plants in each month (Table 8):
     what the retailers receive plus the change in the stock of the warehouses,
     split among the models as the seasonal stock."""
     delivered = _delivered_mix(master, by_model)
@@ -300,7 +301,7 @@ def least_stock(master: dict, split: dict, final: dict = PLANT_STOCK_0) -> dict:
 
 def weekly_shipments(master: dict, mix: dict) -> dict:
     """x_fjw: the bikes of each model that each plant ships to the network in each
-    week (whole bikes), by (f, j, w), Table 12. The shipments of a month are spread
+    week (whole bikes), by (f, j, w), Table 9. The shipments of a month are spread
     evenly over its days from Monday to Friday, and the shipments accumulated from
     week 1 are rounded half up."""
     out = {}
@@ -319,7 +320,7 @@ def six_month_mix(weekly: dict) -> dict:
 
 def same_mix(shipments: dict, least: dict, mix: dict, final: dict = PLANT_STOCK_0) -> tuple[dict, dict]:
     """The shipments and the least stock of part d) with the same product mix in
-    every week: the bikes that each plant ships in a week (Table 12) split among the
+    every week: the bikes that each plant ships in a week (Table 9) split among the
     models with ``mix``, the shipments accumulated from week 1 rounded half up; and
     the least stock at the end of each month split with ``mix``, except at the end
     of June, the required final stock."""
@@ -542,7 +543,7 @@ def lot_for_lot(plant: str, shipments: dict | None = None, least: dict | None = 
 
 
 # ---------------------------------------------------------------------------
-# 6. Hours of the line by month (Table 16)
+# 6. Hours of the line by month (Table 13)
 # ---------------------------------------------------------------------------
 
 def line_hours(plan: dict) -> dict:
@@ -562,7 +563,7 @@ def line_hours(plan: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 7. The runs of part d) (Tables 17 and 18)
+# 7. The runs of part d) (Tables 14 and 15)
 # ---------------------------------------------------------------------------
 
 NO_HOLIDAYS = {f: [] for f in PLANTS}
@@ -607,26 +608,66 @@ def _plant(plant: str) -> str:
     return plant
 
 
+def _name(node: str) -> str:
+    """A node or a retailer with its place: «Retailer 1 (Lleida)»."""
+    return f"{node} ({PLACES_M4[node][0]})"
+
+
+def _retailer(retailer: str) -> str:
+    for r in RETAILERS:
+        if retailer in (r, _name(r)):
+            return r
+    raise ValueError(f"The retailer must be one of {', '.join(RETAILERS)}.")
+
+
 def orders_table(order: dict) -> pd.DataFrame:
-    """Table 7: the orders of each retailer in each month."""
-    table = pd.DataFrame({f"{PLACES_M4[r][0]}": {t: order[r, t] for t in T} for r in RETAILERS}).T
+    """Table 4: the orders of each retailer in each month."""
+    table = pd.DataFrame({_name(r): {t: order[r, t] for t in T} for r in RETAILERS}).T
     table.loc["All"] = table.sum()
     table["Six months"] = table.sum(axis=1)
     return table.rename_axis("Orders (bikes)")
 
 
-def show_orders() -> None:
-    """The orders of the retailers: the six-month totals by model, and Table 7."""
+def weekly_orders_table(weekly: dict, retailer: str) -> pd.DataFrame:
+    """The orders of one retailer in each week, by model, with the total of each
+    week and of the 26 weeks."""
+    table = pd.DataFrame({w: {j: weekly[retailer, j, w] for j in MODELS} for w in WEEKS}).T
+    table["Total"] = table.sum(axis=1)
+    table.loc["26 weeks"] = table.sum()
+    return table.rename_axis("Week")
+
+
+def show_orders(retailer: str = "Retailer 1") -> None:
+    """The orders of the retailers: the six-month totals by model, Table 4, and the
+    orders of one retailer in each week, by model."""
+    retailer = _retailer(retailer)
     data = _base()
     totals = {j: sum(q for (_, i, _), q in data["weekly orders"].items() if i == j) for j in MODELS}
     print("Orders of the 26 weeks, all retailers (bikes): "
           + "; ".join(f"{j} {_number(totals[j])}" for j in MODELS)
           + "; product mix " + "; ".join(f"{fixed(100 * data['six-month mix'][j], 1)} %" for j in MODELS) + ".")
     _display(orders_table(data["orders"]))
+    print(f"{_name(retailer)}: orders in each week, by model (bikes).")
+    _display(weekly_orders_table(data["weekly orders"], retailer))
+
+
+def network_tables() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """The data of M4 at the warehouses, on the arcs and at the retailers."""
+    warehouses = pd.DataFrame({_name(i): {
+        "Holding cost (€/(bike·month))": _number(c_h_node_m4[i]),
+        "Storage capacity (bikes)": _number(K_h_node_m4[i]),
+        "Node capacity (bikes/month)": _number(K_n[i]) if i in K_n else "—"} for i in [CENTRAL, *REGIONAL, *LOCAL]}).T
+    arcs = pd.DataFrame([{"Arc": a + 1, "Origin": _name(arc["origin"]), "Destination": _name(arc["destination"]),
+                          "Mode": arc["mode"], "Transport cost (€/bike)": _number(arc["cost"], 2),
+                          "Arc capacity (bikes/month)": _number(arc["capacity"])}
+                         for a, arc in enumerate(ARCS_M4)]).set_index("Arc")
+    retailers_ = pd.DataFrame({_name(r): {"Backorder share": _number(BACKORDER_SHARE[r], 1),
+                                          "Lost-sale cost (€/bike)": _number(c_l[r])} for r in RETAILERS}).T
+    return (warehouses.rename_axis("Warehouse"), arcs, retailers_.rename_axis("Retailer"))
 
 
 def master_plan_table(master: dict, least: dict) -> pd.DataFrame:
-    """Table 10: the plan of M4 at each plant and the least stock of each model at
+    """Table 7: the plan of M4 at each plant and the least stock of each model at
     the end of each month."""
     rows = {}
     for f in PLANTS:
@@ -639,8 +680,19 @@ def master_plan_table(master: dict, least: dict) -> pd.DataFrame:
 
 
 def show_master_plan() -> None:
-    """M4 solved with the orders of Table 7: its cost, Table 10 and the stock of
-    the network."""
+    """The data of M4 at the warehouses, on the arcs and at the retailers; and M4
+    solved with the orders of Table 4: its cost, Table 7 and the stock of the
+    network."""
+    warehouses, arcs, retailers_ = network_tables()
+    print(f"Warehouses. The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every "
+          "warehouse starts and ends the six months with no stock. Node capacity: the bikes that the warehouse "
+          "can receive in a month.")
+    _display(warehouses)
+    print("Arcs of the network.")
+    _display(arcs)
+    print(f"Retailers. Backorder share: of the orders that a retailer does not receive in their month, the share "
+          f"that is backordered; the rest is lost sales. Backorder cost: {_number(c_b)} €/(bike·month).")
+    _display(retailers_)
     data = _base()
     master = data["master"]
     print(f"M4 with the orders of the retailers: cost {_number(master['cost'], 2)} €; backorders "
@@ -652,7 +704,7 @@ def show_master_plan() -> None:
 
 
 def mix_table(mix: dict, split: dict, master: dict) -> pd.DataFrame:
-    """Table 11: the product mix of the shipments and the split of the seasonal
+    """Table 8: the product mix of the shipments and the split of the seasonal
     stock, by month (%). A month that ends with no stock has no split."""
     rows = {}
     for j in MODELS:
@@ -664,15 +716,15 @@ def mix_table(mix: dict, split: dict, master: dict) -> pd.DataFrame:
 
 
 def shipments_table(shipments: dict, plants=PLANTS) -> pd.DataFrame:
-    """Table 12: the shipments of each plant in each week, by model."""
+    """Table 9: the shipments of each plant in each week, by model."""
     rows = {w: {f: _bikes({j: shipments[f, j, w] for j in MODELS}) for f in plants} for w in WEEKS}
     rows["Total"] = {f: _bikes({j: sum(shipments[f, j, w] for w in WEEKS) for j in MODELS}) for f in plants}
     return pd.DataFrame(rows).T.rename_axis("Week")
 
 
 def show_shipments(plant: str = "Plant 1") -> None:
-    """The product mix of the shipments (Table 11), the shipments of a plant by
-    week and model (its column of Table 12) and its least stock at the end of each
+    """The product mix of the shipments (Table 8), the shipments of a plant by
+    week and model (its column of Table 9) and its least stock at the end of each
     month, with a figure."""
     plant = _plant(plant)
     data = _base()
@@ -708,7 +760,7 @@ def _shipments_figure(plant: str, shipments: dict) -> None:
 
 
 def plan_table(plan: dict) -> pd.DataFrame:
-    """Tables 13 to 15: the weekly lot plan of a plant."""
+    """Tables 10 to 12: the weekly lot plan of a plant."""
     rows = {}
     for w, row in plan["weeks"].items():
         rows[w] = {"Available capacity (h)": _number(float(row["available"])),
@@ -726,7 +778,7 @@ def plan_table(plan: dict) -> pd.DataFrame:
 
 
 def hours_table(plans: dict) -> pd.DataFrame:
-    """Table 16: the hours of the line of each plant, by month."""
+    """Table 13: the hours of the line of each plant, by month."""
     rows = {}
     for f, plan in plans.items():
         for t, row in line_hours(plan).items():
@@ -746,7 +798,7 @@ def _no_plan(plant: str, plan: dict) -> bool:
 
 
 def show_weekly_plan(plant: str = "Plant 1", check: bool = False) -> dict | None:
-    """The weekly lot plan of a plant (Tables 13 to 15), its setup and holding
+    """The weekly lot plan of a plant (Tables 10 to 12), its setup and holding
     cost, and a figure of the hours of each week against the available capacity.
     With ``check``, whether another plan of some month has the same costs."""
     plant = _plant(plant)
@@ -801,7 +853,7 @@ def _hours_figure(plans: dict, base_plans: dict | None = None,
 
 
 def show_line_hours() -> dict:
-    """The hours of the line of the three plants by month (Table 16), with the
+    """The hours of the line of the three plants by month (Table 13), with the
     figure of the hours of each week."""
     plans = {f: weekly_plan(f) for f in PLANTS}
     _display(hours_table(plans))
@@ -872,7 +924,7 @@ def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday
 def show_reference_plan(plant: str = "Plant 1") -> dict:
     """The plan of reference of step 7 against the plans of the model: the capacity
     overload and the setup and holding cost of the six months at the three plants;
-    and the weekly plan of reference of one plant, in the form of Tables 13 to 15,
+    and the weekly plan of reference of one plant, in the form of Tables 10 to 12,
     with a figure of its hours next to those of the plan of the model."""
     plant = _plant(plant)
     model = {f: weekly_plan(f) for f in PLANTS}
@@ -898,8 +950,8 @@ def _run_rows(plans: dict, key: str) -> pd.DataFrame:
 
 def show_runs(plant: str = "none", run_name: str = "As planned") -> dict:
     """The weekly plans of the three plants for the six months in each run of part
-    d): the capacity overload (Table 17) and the spare capacity
-    (Table 18) of each month, and the months in which another plan has the same
+    d): the capacity overload (Table 14) and the spare capacity
+    (Table 15) of each month, and the months in which another plan has the same
     capacity overload and the same cost. With a plant and a run, also the weekly
     plan of that plant in that run, with a figure of its hours next to those of the
     plan with the data of the case. ``run_name`` is one of ``RUNS``."""

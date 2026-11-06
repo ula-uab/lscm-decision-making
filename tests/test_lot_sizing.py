@@ -20,9 +20,8 @@ def load():
 def test_script_prints_the_tables():
     out = subprocess.run([sys.executable, SCRIPT], cwd=CASE, capture_output=True, text=True,
                          check=True).stdout
-    for text in ("orders of Granada for Mountain bikes in week 15: 8 bikes",
-                 "City 1.218; Trekking 828; Mountain 488; Cargo 285; product mix 43,2 %; 29,4 %; 17,3 %; 10,1 %",
-                 "All             290    345    403    616    669    496       2.819",
+    for text in ("City 1.218; Trekking 828; Mountain 488; Cargo 285; product mix 43,2 %; 29,4 %; 17,3 %; 10,1 %",
+                 "All                         290    345    403    616    669    496       2.819",
                  "cost 954.462,98 EUR; backorders 0 and lost sales 0 bikes",
                  "Jan 190; Feb 295; Mar 342; Apr 176; May 0; Jun 30",
                  "setup and holding cost 10.111,28 EUR; another plan with the same costs in: no month",
@@ -40,6 +39,7 @@ def test_script_agrees_with_the_package():
     from plants import lot_sizing as ls
     script = load()
     data = ls.base()
+    assert script.weekly == data["weekly orders"]
     assert script.orders == data["orders"]
     cost, values = script.solve_m4(script.orders)
     master = script.from_master_plan(values)

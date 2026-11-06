@@ -40,7 +40,7 @@ def plans():
     return {f: ls.weekly_plan(f) for f in PLANTS}
 
 
-TABLE_10 = """
+TABLE_7 = """
 | 1 | Jan | 250 | 230 | 40 | 15; 13; 9; 3 |
 | 1 | Feb | 250 | 250 | 40 | 15; 13; 9; 3 |
 | 1 | Mar | 250 | 250 | 40 | 15; 13; 9; 3 |
@@ -58,7 +58,7 @@ TABLE_10 = """
 | 3 | Jun | 76 | 76 | 0 | 0; 0; 0; 0 |
 """
 
-TABLE_11 = """
+TABLE_8 = """
 | Shipments, City | 48,5 | 46,2 | 45,2 | 38,5 | 38,5 | 44,1 |
 | Shipments, Trekking | 24,2 | 27,3 | 28,4 | 32,5 | 32,6 | 29,9 |
 | Shipments, Mountain | 13,0 | 14,8 | 15,1 | 21,8 | 21,4 | 16,5 |
@@ -69,7 +69,7 @@ TABLE_11 = """
 | Seasonal stock, Cargo | 7,4 | 7,4 | 7,4 | 7,6 | — | 16,7 |
 """
 
-TABLE_12 = """
+TABLE_9 = """
 | 1 | 1–5 January | 24; 12; 6; 7 | 19; 9; 5; 6 | 0; 0; 0; 0 |
 | 2 | 8–12 January | 24; 12; 7; 7 | 19; 10; 5; 5 | 0; 0; 0; 0 |
 | 3 | 15–19 January | 25; 12; 6; 8 | 19; 9; 5; 6 | 0; 0; 0; 0 |
@@ -99,7 +99,7 @@ TABLE_12 = """
 | Total | | 649; 439; 259; 153 | 519; 352; 207; 122 | 50; 37; 22; 10 |
 """
 
-TABLE_13 = """
+TABLE_10 = """
 | 1 | 32 | 13; 8; 11; 4 | 0; 0; 7; 0 | 21,03 | 11,00 | 0,03 |
 | 2 | 40 | 27; 12; 0; 15 | 3; 0; 0; 8 | 31,08 | 8,00 | 0,00 |
 | 3 | 40 | 22; 25; 15; 0 | 0; 13; 9; 0 | 32,89 | 7,00 | 0,00 |
@@ -131,7 +131,7 @@ TABLE_13 = """
 
 # Weeks 2, 3 and 11 have a capacity overload of exactly 0,025; 0,075 and 3,525 h,
 # rounded half up
-TABLE_14 = """
+TABLE_11 = """
 | 1 | 32 | 14; 7; 9; 4 | 0; 0; 5; 0 | 24,39 | 13,75 | 6,14 |
 | 2 | 40 | 20; 11; 0; 11 | 1; 1; 0; 6 | 30,03 | 10,00 | 0,03 |
 | 3 | 40 | 18; 20; 10; 0 | 0; 12; 5; 0 | 31,33 | 8,75 | 0,08 |
@@ -161,7 +161,7 @@ TABLE_14 = """
 | Total | 1.000 | 519; 352; 207; 122 | | 822,24 | 238,75 | 66,88 |
 """
 
-TABLE_15 = """
+TABLE_12 = """
 | 1–17 | 640 | 0; 0; 0; 0 | 0; 0; 0; 0 | 0,00 | 0,00 | 0,00 |
 | 18 | 32 | 6; 2; 2; 4 | 3; 0; 0; 3 | 14,30 | 16,50 | 0,00 |
 | 19 | 40 | 0; 13; 8; 0 | 0; 10; 6; 3 | 20,74 | 7,50 | 0,00 |
@@ -175,7 +175,7 @@ TABLE_15 = """
 | Total | 992 | 50; 37; 22; 10 | | 108,11 | 60,00 | 0,00 |
 """
 
-TABLE_16 = """
+TABLE_13 = """
 | 1 | Jan | 1–5 | 192 | 151,77 | 39,00 | 0,03 | 1,26 | 0,0 |
 | 1 | Feb | 6–9 | 160 | 134,90 | 26,00 | 0,90 | 0,00 | 0,6 |
 | 1 | Mar | 10–13 | 144 | 125,31 | 25,00 | 6,33 | 0,02 | 4,4 |
@@ -199,12 +199,12 @@ TABLE_16 = """
 | 3 | Six months | 1–26 | 992 | 108,11 | 60,00 | 0,00 | 823,90 | 0,0 |
 """
 
-TABLE_17 = """
-| 1 | As planned (Table 16) | 0,03 | 0,90 | 6,33 | 6,55 | 2,25 | 4,79 | 20,85 |
+TABLE_14 = """
+| 1 | As planned (Table 13) | 0,03 | 0,90 | 6,33 | 6,55 | 2,25 | 4,79 | 20,85 |
 | 1 | No holidays | 0,00 | 0,90 | 0,00 | 0,00 | 0,00 | 4,79 | 5,69 |
 | 1 | Half the setup times | 0,00 | 0,00 | 4,06 | 0,00 | 0,00 | 0,00 | 4,06 |
 | 1 | Six-month product mix in every week | 0,00 | 3,41 | 8,04 | 6,43 | 1,73 | 5,69 | 25,30 |
-| 2 | As planned (Table 16) | 6,89 | 10,90 | 13,19 | 14,54 | 9,58 | 11,79 | 66,88 |
+| 2 | As planned (Table 13) | 6,89 | 10,90 | 13,19 | 14,54 | 9,58 | 11,79 | 66,88 |
 | 2 | No holidays | 0,00 | 10,90 | 0,71 | 6,54 | 1,58 | 11,79 | 31,51 |
 | 2 | Half the setup times | 0,00 | 0,00 | 4,28 | 0,00 | 0,00 | 0,00 | 4,28 |
 | 2 | Setup times of plant 1 | 3,14 | 5,05 | 7,94 | 7,71 | 2,65 | 6,05 | 32,54 |
@@ -212,17 +212,17 @@ TABLE_17 = """
 | 3 | Every run | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 |
 """
 
-TABLE_18 = """
-| 1 | As planned (Table 16) | 1,26 | 0,00 | 0,02 | 0,07 | 0,08 | 1,97 | 3,40 |
+TABLE_15 = """
+| 1 | As planned (Table 13) | 1,26 | 0,00 | 0,02 | 0,07 | 0,08 | 1,97 | 3,40 |
 | 1 | No holidays | 17,23 | 0,00 | 10,69 | 1,52 | 12,83 | 1,97 | 44,24 |
 | 1 | Half the setup times | 23,73 | 13,10 | 10,25 | 8,02 | 24,33 | 14,68 | 94,11 |
 | 1 | Six-month product mix in every week | 2,03 | 0,00 | 0,00 | 0,00 | 0,00 | 1,39 | 3,42 |
-| 2 | As planned (Table 16) | 0,00 | 0,00 | 0,25 | 2,39 | 2,63 | 0,63 | 5,89 |
+| 2 | As planned (Table 13) | 0,00 | 0,00 | 0,25 | 2,39 | 2,63 | 0,63 | 5,89 |
 | 2 | No holidays | 6,11 | 0,00 | 0,03 | 2,39 | 2,63 | 0,63 | 11,78 |
 | 2 | Half the setup times | 19,99 | 6,60 | 6,34 | 0,98 | 18,68 | 5,09 | 57,66 |
 | 2 | Setup times of plant 1 | 0,00 | 0,15 | 1,50 | 0,06 | 0,45 | 3,14 | 5,30 |
 | 2 | Six-month product mix in every week | 0,28 | 0,00 | 0,78 | 0,41 | 0,00 | 0,91 | 2,38 |
-| 3 | As planned (Table 16) | 192,00 | 160,00 | 136,00 | 152,00 | 121,57 | 62,33 | 823,90 |
+| 3 | As planned (Table 13) | 192,00 | 160,00 | 136,00 | 152,00 | 121,57 | 62,33 | 823,90 |
 | 3 | No holidays | 200,00 | 160,00 | 160,00 | 160,00 | 131,07 | 62,33 | 873,40 |
 | 3 | Half the setup times | 192,00 | 160,00 | 136,00 | 152,00 | 135,07 | 81,83 | 856,90 |
 | 3 | Setup times of plant 1 | 192,00 | 160,00 | 136,00 | 152,00 | 130,57 | 77,33 | 847,90 |
@@ -251,7 +251,7 @@ def test_tables2_and_3_calendar():
         assert worked == expected
 
 
-def test_weekly_orders_example_of_granada(base):
+def test_weekly_orders(base):
     weekly = base["weekly orders"]
     assert weekly["Retailer 6", "Mountain", 15] == 8
     assert sum(weekly["Retailer 6", "Mountain", w] for w in range(1, 16)) == 52
@@ -262,7 +262,7 @@ def test_weekly_orders_example_of_granada(base):
     assert [ls.fixed(100 * base["six-month mix"][j], 1) for j in MODELS] == ["43,2", "29,4", "17,3", "10,1"]
 
 
-def test_table7_orders_of_each_retailer_in_each_month(base):
+def test_table4_orders_of_each_retailer_in_each_month(base):
     expected = {"Retailer 1": [33, 44, 52, 93, 101, 67], "Retailer 2": [74, 82, 95, 128, 141, 110],
                 "Retailer 3": [54, 63, 73, 110, 119, 90], "Retailer 4": [49, 56, 65, 96, 104, 80],
                 "Retailer 5": [58, 70, 82, 125, 133, 102], "Retailer 6": [22, 30, 36, 64, 71, 47]}
@@ -280,7 +280,7 @@ def test_rounding_is_half_up_from_the_exact_value():
 # Master plan, shipments and least stock (§2)
 # ---------------------------------------------------------------------------
 
-def test_m4_with_the_orders_of_table7(base):
+def test_m4_with_the_orders_of_table4(base):
     master = base["master"]
     assert master["cost"] == pytest.approx(954462.98, abs=0.005)
     assert sum(master["backorders"].values()) == 0 and sum(master["lost sales"].values()) == 0
@@ -288,9 +288,9 @@ def test_m4_with_the_orders_of_table7(base):
     assert rt.solve()["cost"] == pytest.approx(1294204.84)          # M4 with forecast 5 does not change
 
 
-def test_table10_plan_of_m4_and_least_stock(base):
+def test_table7_plan_of_m4_and_least_stock(base):
     master, least = base["master"], base["least stock"]
-    for plant, month, assembled, shipped, stock, h_min in rows(TABLE_10):
+    for plant, month, assembled, shipped, stock, h_min in rows(TABLE_7):
         months = T[:4] if month == "Jan–Apr" else [month]
         for t in months:
             f = f"Plant {plant}"
@@ -299,15 +299,15 @@ def test_table10_plan_of_m4_and_least_stock(base):
             assert least[f, t] == bikes(h_min)
 
 
-def test_table11_product_mix(base):
+def test_table8_product_mix(base):
     table = ls.mix_table(base["mix"], base["split"], base["master"])
-    for label, *values in rows(TABLE_11):
+    for label, *values in rows(TABLE_8):
         assert list(table.loc[label]) == values
 
 
-def test_table12_weekly_shipments(base):
+def test_table9_weekly_shipments(base):
     x = base["shipments"]
-    for week, _, *by_plant in rows(TABLE_12):
+    for week, _, *by_plant in rows(TABLE_9):
         for f, text in zip(PLANTS, by_plant):
             if week == "Total":
                 assert {j: sum(x[f, j, w] for w in ls.WEEKS) for j in MODELS} == bikes(text)
@@ -329,9 +329,9 @@ def test_line_data_of_section_6_6():
 # Weekly lot plans (§3) and step 7
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("plant, table, cost", [("Plant 1", TABLE_13, "10.111,28"), ("Plant 2", TABLE_14, "11.758,88"),
-                                                ("Plant 3", TABLE_15, "2.869,97")])
-def test_tables13_to_15_weekly_lot_plans(plans, plant, table, cost):
+@pytest.mark.parametrize("plant, table, cost", [("Plant 1", TABLE_10, "10.111,28"), ("Plant 2", TABLE_11, "11.758,88"),
+                                                ("Plant 3", TABLE_12, "2.869,97")])
+def test_tables10_to_12_weekly_lot_plans(plans, plant, table, cost):
     plan = plans[plant]
     printed = ls.plan_table(plan)
     for week, *cells in rows(table):
@@ -368,9 +368,9 @@ def test_capacity_overload_in_the_weeks_of_easter(plans):
 # Hours of the line (§4) and the runs of part d) (§5)
 # ---------------------------------------------------------------------------
 
-def test_table16_hours_of_the_line(plans):
+def test_table13_hours_of_the_line(plans):
     printed = ls.hours_table(plans)
-    for plant, month, *cells in rows(TABLE_16):
+    for plant, month, *cells in rows(TABLE_13):
         assert list(printed.loc[(f"Plant {plant}", month)]) == cells
 
 
@@ -379,11 +379,11 @@ def _by_month(plan, key):
     return [ls.fixed(hours[t][key]) for t in [*T, "Six months"]]
 
 
-@pytest.mark.parametrize("table, key", [(TABLE_17, "overload"), (TABLE_18, "spare")])
-def test_tables17_and_18_runs_of_part_d(table, key):
+@pytest.mark.parametrize("table, key", [(TABLE_14, "overload"), (TABLE_15, "spare")])
+def test_tables14_and_15_runs_of_part_d(table, key):
     for plant, name, *values in rows(table):
         f = f"Plant {plant}"
-        names = ls.RUNS[1:] if name == "Every run" else [name.replace(" (Table 16)", "")]
+        names = ls.RUNS[1:] if name == "Every run" else [name.replace(" (Table 13)", "")]
         for run in names:
             plan = ls.run(f, run)
             if plan is not None:

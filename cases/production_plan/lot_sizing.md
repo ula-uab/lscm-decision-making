@@ -1,6 +1,6 @@
 # Weekly lot sizing at the plants
 
-This document extends the production plan of an electric bicycle assembler after M4, in [`retailers.md`](retailers.md), and M4B, in [`capacity_scenarios.md`](capacity_scenarios.md). It does not add a version of the master plan. It takes the master plan made with M4 and plans, for each plant and week, which bike models the assembly line assembles and how many bikes of each. The document contains all the data and all the results, so that anyone can follow and check them.
+This document extends the production plan of an electric bicycle assembler after M4, in [`retailers.md`](retailers.md), and M4B, in [`capacity_scenarios.md`](capacity_scenarios.md). It does not add a version of the master plan. It takes the master plan made with M4 and plans, for each plant and week, which bike models the assembly line assembles and how many bikes of each. The document contains all the results and, with the notebook of the case, all the data, so that anyone can follow and check them.
 
 M4 gives the bikes that each plant assembles each month. It is solved with the orders of each retailer in each month, the four models together, so its plan does not distinguish the models. It also counts every month as a standard month of 20 working days, and gives each plant a capacity in bikes per month, which leaves the same hours of every month for setups at every plant. The plants assemble four models, City, Trekking, Mountain and Cargo, on one assembly line each, with their own assembly and setup times and their own calendar. The weekly plan of each plant assembles, model by model, the bikes that the master plan gives the plant. It shows in which plants and months the available capacity of the line is enough for that and, where it is not, which assumption of M4 fails. A longer-term plan fixes data for the shorter-term plans that carry it out; here the weekly plans check whether the plants can carry out the master plan.
 
@@ -42,68 +42,29 @@ Table 3. Working days of each month
 
 ### 1.2 Weekly orders
 
-The retailers order bikes every week, by model. These orders are the real demand of the example, taken as known. The orders of a retailer for a model in a week are its average orders a month (Table 4), times the share of the model in its orders (Table 4), times the seasonal index of the model in that week (Table 5), times 12/52, the share of a month that a week is, times the factor of the week (Table 6). The seasonal index of a week is the average of the indices of the months in which its days from Monday to Friday fall: week 18, from 30 April to 4 May, takes 1/5 of the index of April and 4/5 of that of May. The factors of Table 6 only make the orders differ from one week to the next.
-
-The orders are whole bikes. For each retailer and model, the orders accumulated from week 1 to each week are rounded half up to whole bikes, and the orders of the week are the difference between two consecutive accumulated values. A retailer that orders less than one bike of a model a week orders it in some weeks and not in others, and its total over the 26 weeks keeps to the rule.
-
-For example, Granada orders Mountain bikes in week 15, from 9 to 13 April: 45 × 0,50 × 1,7 × 12/52 × 1,0 = 8,83 bikes. Its orders accumulated from week 1 are 52,39 bikes to week 15 and 43,56 bikes to week 14, rounded to 52 and 44, so Granada orders 8 Mountain bikes in week 15. In week 2, in January, the same computation gives 45 × 0,50 × 0,3 × 12/52 × 1,0 = 1,56 bikes: the difference comes from the seasonal index.
-
-Table 4. Average orders and product mix of each retailer
-
-| Retailer | Place | Average (bikes/month) | City | Trekking | Mountain | Cargo | Why |
-|---|---|---|---|---|---|---|---|
-| Retailer 1 | Lleida | 65 | 25 % | 35 % | 35 % | 5 % | Inland, near the Pyrenees |
-| Retailer 2 | Sabadell | 105 | 50 % | 20 % | 10 % | 20 % | Barcelona metropolitan area |
-| Retailer 3 | Alicante | 85 | 45 % | 35 % | 10 % | 10 % | Coast |
-| Retailer 4 | Murcia | 75 | 50 % | 30 % | 10 % | 10 % | Flat city |
-| Retailer 5 | Córdoba | 95 | 50 % | 35 % | 10 % | 5 % | Flat and hot |
-| Retailer 6 | Granada | 45 | 25 % | 20 % | 50 % | 5 % | Sierra Nevada |
-
-Table 5. Seasonal index of each model (mean 1 over the six months)
-
-| Model | Jan | Feb | Mar | Apr | May | Jun |
-|---|---|---|---|---|---|---|
-| City | 0,7 | 0,9 | 0,9 | 1,2 | 1,2 | 1,1 |
-| Trekking | 0,4 | 0,7 | 0,8 | 1,5 | 1,5 | 1,1 |
-| Mountain | 0,3 | 0,6 | 0,7 | 1,7 | 1,7 | 1,0 |
-| Cargo | 1,0 | 1,0 | 1,0 | 1,0 | 1,0 | 1,0 |
-
-Table 6. Factor of each week (mean 1 over the 26 weeks)
-
-| Weeks | Factors |
-|---|---|
-| 1–5 | 0,9; 1,0; 1,1; 1,0; 1,0 |
-| 6–9 | 0,95; 1,05; 1,0; 1,0 |
-| 10–13 | 1,0; 1,1; 0,9; 1,0 |
-| 14–17 | 0,9; 1,0; 1,05; 1,05 |
-| 18–22 | 1,0; 0,95; 1,05; 1,0; 1,0 |
-| 23–26 | 1,0; 1,05; 0,95; 1,0 |
-
-Over the 26 weeks the retailers order 1.218 City, 828 Trekking, 488 Mountain and 285 Cargo bikes: a product mix of 43,2 %, 29,4 %, 17,3 % and 10,1 %, the product mix of the six months.
+The retailers order bikes every week, by model. These orders are the real demand of the example, taken as known. The orders of each retailer, model and week are in the notebook of the case (§6). Over the 26 weeks the retailers order 1.218 City, 828 Trekking, 488 Mountain and 285 Cargo bikes: a product mix of 43,2 %; 29,4 %; 17,3 % and 10,1 %, the product mix of the six months.
 
 ### 1.3 Orders of each retailer in each month
 
-M4 plans by calendar month. The orders of a retailer in a month are the bikes it orders in that month, the four models together, added up from its weekly orders. The orders of a week are taken as spread evenly over its days from Monday to Friday, so a week that falls in two months gives each month the share of its orders that corresponds to its days in that month. Four weeks fall in two months: week 5 (January 3/5, February 2/5), week 9 (February 3/5, March 2/5), week 18 (April 1/5, May 4/5) and week 22 (May 4/5, June 1/5). For each retailer, the orders accumulated from January to each month are rounded half up to whole bikes, and the orders of the month are the difference between two consecutive accumulated values.
+M4 plans by calendar month. It uses the orders of each retailer in each month, the four models together (Table 4).
 
-For example, Lleida orders 6, 7, 8 and 7 bikes in weeks 1 to 4, and 9 bikes in week 5, which has three days in January. Its orders in January are 6 + 7 + 8 + 7 + 3/5 × 9 = 33,4 bikes, rounded to 33.
-
-Table 7. Orders of each retailer in each month (bikes)
+Table 4. Orders of each retailer in each month (bikes)
 
 | Retailer | Jan | Feb | Mar | Apr | May | Jun | Six months |
 |---|---|---|---|---|---|---|---|
-| Lleida | 33 | 44 | 52 | 93 | 101 | 67 | 390 |
-| Sabadell | 74 | 82 | 95 | 128 | 141 | 110 | 630 |
-| Alicante | 54 | 63 | 73 | 110 | 119 | 90 | 509 |
-| Murcia | 49 | 56 | 65 | 96 | 104 | 80 | 450 |
-| Córdoba | 58 | 70 | 82 | 125 | 133 | 102 | 570 |
-| Granada | 22 | 30 | 36 | 64 | 71 | 47 | 270 |
+| Retailer 1 (Lleida) | 33 | 44 | 52 | 93 | 101 | 67 | 390 |
+| Retailer 2 (Sabadell) | 74 | 82 | 95 | 128 | 141 | 110 | 630 |
+| Retailer 3 (Alicante) | 54 | 63 | 73 | 110 | 119 | 90 | 509 |
+| Retailer 4 (Murcia) | 49 | 56 | 65 | 96 | 104 | 80 | 450 |
+| Retailer 5 (Córdoba) | 58 | 70 | 82 | 125 | 133 | 102 | 570 |
+| Retailer 6 (Granada) | 22 | 30 | 36 | 64 | 71 | 47 | 270 |
 | All | 290 | 345 | 403 | 616 | 669 | 496 | 2.819 |
 
 ### 1.4 Stock at the plants
 
-At the start of January the plants hold the bikes of Table 8, about the product mix of the orders of January. The central, regional and local warehouses start empty. The plants must hold the same bikes at the end of June: the plan leaves the plants as it found them. The totals, 20, 10 and 0 bikes, are the initial stock and the required final stock of M4.
+At the start of January the plants hold the bikes of Table 5. The central, regional and local warehouses start empty. The plants must hold the same bikes at the end of June: the plan leaves the plants as it found them. The totals, 20, 10 and 0 bikes, are the initial stock and the required final stock of M4.
 
-Table 8. Initial and required final stock at each plant (bikes)
+Table 5. Initial and required final stock at each plant (bikes)
 
 | Plant | City | Trekking | Mountain | Cargo | Total |
 |---|---|---|---|---|---|
@@ -113,11 +74,11 @@ Table 8. Initial and required final stock at each plant (bikes)
 
 ### 1.5 The master plan: M4
 
-The master plan is obtained with M4 with every datum of [`retailers.md`](retailers.md) except the orders of the retailers, which are those of Table 7: the network, the six retailers and the arcs, with their transport costs and arc capacities; at the plants, unit assembly costs of 310, 340 and 390 €/bike, capacities of 250, 200 and 150 bikes/month, storage capacities of 40, 30 and 20 bikes, holding costs of 5, 6 and 7 €/(bike·month) and the initial stock and required final stock of §1.4; at the retailers, the backorder shares, the backorder cost and the lost-sale cost of 700 €/bike.
+The master plan is obtained with M4 with every datum of [`retailers.md`](retailers.md) except the orders of the retailers, which are those of Table 4: the network, the six retailers and the arcs, with their transport costs and arc capacities; at the plants, unit assembly costs of 310, 340 and 390 €/bike, capacities of 250, 200 and 150 bikes/month, storage capacities of 40, 30 and 20 bikes, holding costs of 5, 6 and 7 €/(bike·month) and the initial stock and required final stock of §1.4; at the retailers, the backorder shares, the backorder cost of 60 €/(bike·month) and the lost-sale cost of 700 €/bike. The notebook of the case gives the data of the warehouses, of the arcs and of the retailers (§6).
 
 ### 1.6 The assembly lines of the plants
 
-Table 9. Assembly time and setup time at each plant (h)
+Table 6. Assembly time and setup time at each plant (h)
 
 | Model | Assembly, plant 1 (h/bike) | Assembly, plant 2 | Assembly, plant 3 | Setup, plant 1 (h/setup) | Setup, plant 2 | Setup, plant 3 |
 |---|---|---|---|---|---|---|
@@ -126,43 +87,43 @@ Table 9. Assembly time and setup time at each plant (h)
 | Mountain | 0,71 | 0,8875 | 1,183 | 3,0 | 3,75 | 4,5 |
 | Cargo | 0,90 | 1,125 | 1,50 | 4,0 | 5,0 | 6,0 |
 
-- **Assembly time.** The time that one bike takes on the line. Plants 2 and 3 take 5/4 and 5/3 of the time of plant 1: they have fewer workstations on the line. This is consistent with the unit assembly costs of M4: with 190 € of materials, the same at every plant, the rest is labour, 120, 150 and 200 €/bike, in the same proportion 1 : 5/4 : 5/3.
-- **Setup time.** The time that a change to the model takes on the line, in which nothing is assembled: the fixtures for the frame, the parts of the model brought to the line, the test program of the motor and battery, the check of the first bike. Plants 2 and 3 take 5/4 and 3/2 of the time of plant 1: they have fewer quick-change fixtures. Setting up the four models once takes 11; 13,75 and 16,5 h.
+- **Assembly time.** The time that one bike takes on the line.
+- **Setup time.** The time that a change to the model takes on the line, in which nothing is assembled: the fixtures for the frame, the parts of the model brought to the line, the test program of the motor and battery, the check of the first bike. Setting up the four models once takes 11; 13,75 and 16,5 h at plants 1, 2 and 3.
 - **Setup cost.** 40 €/h of the changeover crew times the setup time, plus 20 € for the check of the first bike: at plant 1, 100; 100; 140 and 180 €; at plant 2, 120; 120; 170 and 220 €; at plant 3, 140; 140; 200 and 260 €.
-- **Holding cost.** The holding cost of the plant in M4 times 12/52, a week, times a factor of each model about the value of the bike (0,8; 1,0; 1,2; 1,4), rounded to the cent: at plant 1, 0,92; 1,15; 1,38 and 1,62 €/(bike·week); at plant 2, 1,11; 1,38; 1,66 and 1,94; at plant 3, 1,29; 1,62; 1,94 and 2,26.
+- **Holding cost.** The cost of holding one bike of the model for one week at the plant: at plant 1, 0,92; 1,15; 1,38 and 1,62 €/(bike·week); at plant 2, 1,11; 1,38; 1,66 and 1,94; at plant 3, 1,29; 1,62; 1,94 and 2,26.
 - **Storage capacity.** That of M4: 40, 30 and 20 bikes.
 
-**How the master plan obtained its capacities.** A standard month of 20 working days has 160 h of available capacity. With the product mix of the six months (§1.2), a bike takes 0,5481 h at plant 1, 0,6851 h at plant 2 and 0,9135 h at plant 3. The capacities of M4, 250, 200 and 150 bikes a month, take 137,03 h at every plant, because the assembly times of plants 2 and 3 are 5/4 and 5/3 of those of plant 1 and their capacities 4/5 and 3/5 of its capacity. They leave 22,97 h a month for setups at every plant. A master plan decides the setups only if the lots usually cover more than the demand of one of its periods; otherwise the setups are left to the production plan, and the master plan anticipates their time (Albrecht et al., 2015, p. 160). The 22,97 h are enough to set up each model about twice a month at plant 1 (11 h for the four), 1,7 times at plant 2 (13,75 h) and 1,4 times at plant 3 (16,5 h).
+**How the master plan obtained its capacities.** A standard month of 20 working days has 160 h of available capacity. With the product mix of the six months (§1.2), a bike takes 0,5481 h at plant 1, 0,6851 h at plant 2 and 0,9135 h at plant 3. The capacities of M4, 250, 200 and 150 bikes a month, take 137 h of assembly a month at every plant, because the assembly times of plants 2 and 3 are 5/4 and 5/3 of those of plant 1 and their capacities 4/5 and 3/5 of its capacity. They leave 23 h a month for setups at every plant. A master plan decides the setups only if the lots usually cover more than the demand of one of its periods; otherwise the setups are left to the production plan, and the master plan anticipates their time (Albrecht et al., 2015, p. 160). The 23 h are enough to set up each model about twice a month at plant 1 (11 h for the four), 1,7 times at plant 2 (13,75 h) and 1,4 times at plant 3 (16,5 h).
 
 ## 2. From the master plan to the weekly shipments of each plant
 
-The forecast with which M4 is solved, the orders of Table 7, is right in the total of each retailer and month. What the master plan does not see is how that total is split among the four models.
+The forecast with which M4 is solved, the orders of Table 4, is right in the total of each retailer and month. What the master plan does not see is how that total is split among the four models.
 
 The weekly plan of a plant takes from the master plan two figures for each month: the bikes that the plant ships to the network in the month, and the stock that it keeps at the end of the month, the least stock it must hold then. The retailers receive their bikes from the local warehouses, not from the plants, and the stock of the warehouses absorbs the changes in the orders from one week to the next, so a plant can ship the bikes of a month evenly over its days (§2.2).
 
 ### 2.1 Plan of M4
 
-M4, solved with the orders of Table 7, costs 954.462,98 € and delivers every order in its month, with no backorders and no lost sales. Every optimal plan of M4 has the same bikes assembled, shipped and held at each plant, and the same stock of the network at the end of each month. Plants 1 and 2 assemble at their capacity every month; plant 3 assembles only in May and June (Table 10).
+M4, solved with the orders of Table 4, costs 954.462,98 € and delivers every order in its month, with no backorders and no lost sales. Every optimal plan of M4 has the same bikes assembled, shipped and held at each plant, and the same stock of the network at the end of each month. Plants 1 and 2 assemble at their capacity every month; plant 3 assembles only in May and June (Table 7).
 
 The stock of the network, at the plants and in the warehouses, is 30 bikes at the start of January and 190, 295, 342, 176, 0 and 30 bikes at the end of each month from January to June. It is seasonal stock: it grows in the months before the peak of the orders, in April and May, and falls in the months of the peak.
 
 ### 2.2 Product mix of the shipments and least stock
 
 - **Shipments of a plant in a month.** The bikes that the plant sends to the network in the month in the plan of M4.
-- **Product mix of the shipments.** In a month, the plants together ship to the network what the network delivers to the retailers plus the change in the stock of the warehouses. The deliveries of a retailer serve first its backorders and then its orders of the month, and each bike keeps the product mix of the orders of the retailer in the month in which it was ordered, counted by calendar month as in §1.3. The change in the stock of the warehouses is split among the models as the seasonal stock. Within a month, every plant ships this product mix.
-- **Seasonal stock by model.** The stock of the network at the end of a month, at the plants and in the warehouses, is split among the four models in proportion to the orders of each model, all retailers together, in the months in which it is used: the first group of later consecutive months in which the stock of the network falls. So the stock of every model covers about the same number of weeks of its orders, the rule with which Hax and Meal (1973, p. 15) split the stock of a group of products among its items. The seasonal stock is common to the four models because they share the capacity of the lines (Sürie & Reuter, 2015, p. 50). In the months in which the seasonal stock falls, it falls by model in the same proportion. The stock at the start of January and the required final stock at the end of June are those of Table 8; stock that does not fall in any later month is split with the models of Table 8.
-- **Least stock at the end of a month.** For each model, the stock that the plan of M4 keeps at the plant at the end of the month, split among the models as the seasonal stock of the network. At the end of June, that of Table 8. The least stock of a plant is split among the models in whole bikes keeping its total: each model is rounded down, and the bikes left over go to the models with the largest remainders.
+- **Product mix of the shipments.** In a month, the plants together ship to the network what the network delivers to the retailers plus the change in the stock of the warehouses. The deliveries of a retailer serve first its backorders and then its orders of the month, and each bike keeps the product mix of the orders of the retailer in the month in which it was ordered. The orders are counted by calendar month: the orders of a week that falls in two months count in each month in proportion to its days from Monday to Friday in that month. The change in the stock of the warehouses is split among the models as the seasonal stock. Within a month, every plant ships this product mix.
+- **Seasonal stock by model.** The stock of the network at the end of a month, at the plants and in the warehouses, is split among the four models in proportion to the orders of each model, all retailers together, in the months in which it is used: the first group of later consecutive months in which the stock of the network falls. So the stock of every model covers about the same number of weeks of its orders, the rule with which Hax and Meal (1973, p. 15) split the stock of a group of products among its items. The seasonal stock is common to the four models because they share the capacity of the lines (Sürie & Reuter, 2015, p. 50). In the months in which the seasonal stock falls, it falls by model in the same proportion. The stock at the start of January and the required final stock at the end of June are those of Table 5; stock that does not fall in any later month is split with the models of Table 5.
+- **Least stock at the end of a month.** For each model, the stock that the plan of M4 keeps at the plant at the end of the month, split among the models as the seasonal stock of the network. At the end of June, that of Table 5. The least stock of a plant is split among the models in whole bikes keeping its total: each model is rounded down, and the bikes left over go to the models with the largest remainders.
 - **Week of the end of a month.** The weekly plan measures the stock at the end of each week, and a month does not end on a Sunday. The least stock at the end of a month is required at the end of the last week that has most of its days from Monday to Friday in that month: weeks 5, 9, 13, 17, 22 and 26.
-- **From months to weeks.** The shipments of a month are spread evenly over its days from Monday to Friday, and the shipments of a week are those of its days; a week that falls in two months takes from each month the shipments of its days in it, as in §1.3. For plant $f$, model $j$ and week $w$:
+- **From months to weeks.** The shipments of a month are spread evenly over its days from Monday to Friday, and the shipments of a week are those of its days; a week that falls in two months takes from each month the shipments of its days in it. For plant $f$, model $j$ and week $w$:
 
 $$
 x_{fjw} = \sum_{t} \frac{n_{wt}}{N_t}\, x_{fjt}
 $$
 
-  where the sum runs over the month or months in which the days of week $w$ fall; $x_{fjt}$ is the shipments of model $j$ from plant $f$ in month $t$; $n_{wt}$ the days from Monday to Friday of week $w$ in month $t$; and $N_t$ the days from Monday to Friday of month $t$ (23, 20, 22, 21, 23 and 21 from January to June). For each plant and model, the shipments accumulated from week 1 are rounded half up to whole bikes, and the shipments of a week are the difference between two consecutive accumulated values, as in §1.2.
-- **Stock at the start.** Each plant starts week 1 with its bikes of Table 8.
+  where the sum runs over the month or months in which the days of week $w$ fall; $x_{fjt}$ is the shipments of model $j$ from plant $f$ in month $t$; $n_{wt}$ the days from Monday to Friday of week $w$ in month $t$; and $N_t$ the days from Monday to Friday of month $t$ (23, 20, 22, 21, 23 and 21 from January to June). For each plant and model, the shipments accumulated from week 1 are rounded half up to whole bikes, and the shipments of a week are the difference between two consecutive accumulated values.
+- **Stock at the start.** Each plant starts week 1 with its bikes of Table 5.
 
-Table 10. Plan of M4 at each plant and least stock of each model at the end of each month (bikes). Least stock by model: City; Trekking; Mountain; Cargo.
+Table 7. Plan of M4 at each plant and least stock of each model at the end of each month (bikes). Least stock by model: City; Trekking; Mountain; Cargo.
 
 | Plant | Month | Assembled | Shipped to the network | Stock at the end | Least stock at the end |
 |---|---|---|---|---|---|
@@ -182,9 +143,9 @@ Table 10. Plan of M4 at each plant and least stock of each model at the end of e
 | 3 | May | 43 | 43 | 0 | 0; 0; 0; 0 |
 | 3 | Jun | 76 | 76 | 0 | 0; 0; 0; 0 |
 
-The stock of the network falls in April and May. So the stock at the end of January, February and March is split among the models with the orders of April and May, and the stock at the end of April with the orders of May (Table 11). The shipments of January to March carry the orders of the month plus the stock that the warehouses build for April and May; those of April and May, the orders of the month less the stock that the warehouses use.
+The stock of the network falls in April and May. So the stock at the end of January, February and March is split among the models with the orders of April and May, and the stock at the end of April with the orders of May (Table 8). The shipments of January to March carry the orders of the month plus the stock that the warehouses build for April and May; those of April and May, the orders of the month less the stock that the warehouses use.
 
-Table 11. Product mix of the shipments of the plants and split of the seasonal stock, by month (%). At the end of May the network holds no stock.
+Table 8. Product mix of the shipments of the plants and split of the seasonal stock, by month (%). At the end of May the network holds no stock.
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
@@ -197,7 +158,7 @@ Table 11. Product mix of the shipments of the plants and split of the seasonal s
 | Seasonal stock, Mountain | 21,6 | 21,6 | 21,6 | 21,3 | — | 10,0 |
 | Seasonal stock, Cargo | 7,4 | 7,4 | 7,4 | 7,6 | — | 16,7 |
 
-Table 12. Shipments of each plant to the network in each week, by model (bikes): City; Trekking; Mountain; Cargo
+Table 9. Shipments of each plant to the network in each week, by model (bikes): City; Trekking; Mountain; Cargo
 
 | Week | Monday to Friday | Plant 1 | Plant 2 | Plant 3 |
 |---|---|---|---|---|
@@ -240,7 +201,7 @@ The model of the weekly plan of a plant is written in seven steps: the planning 
 - **Planning task:** lot sizing, in production, in the short term: which bike models the assembly line of one plant assembles in each week, and how many bikes of each. Short-term production planning determines the lot sizes and the sequence of the lots, and lot sizing balances the costs of changeovers and of holding stock (Fleischmann et al., 2015, p. 81).
 - **Planning horizon:** the weeks of one month of the master plan, four or five, in periods of one week: the weeks that have most of their days from Monday to Friday in that month (weeks 1–5, 6–9, 10–13, 14–17, 18–22 and 23–26, §2.2). The plans follow one another without overlapping; each plan is carried out entirely, starts with the stock that the previous one left and ends in the week of the end of its month. A few weeks, because the orders by model are known only a few weeks ahead; the example takes them as known (§3.8, assumption 1). The plan does not need to cover the peak of April and May and the months before it, as the master plan does: the master plan has already fixed the stock that each plant holds at the end of each month. A plan that ended in the middle of a month would not see the least stock of the end of that month, and the next plan would have to assemble it in one week.
 - **Decisions fixed before the plan, which enter as data:**
-  - from the master plan: the shipments of the plant to the network in each week, by model (Table 12), and the least stock of each model at the end of each month (Table 10);
+  - from the master plan: the shipments of the plant to the network in each week, by model (Table 9), and the least stock of each model at the end of each month (Table 7);
   - from long-term plans: the assembly line of the plant, with the assembly time and the setup time of each model, and its storage capacity;
   - the working days of the calendar of the plant, which give the available capacity of each week.
 - **Directives to shorter-term plans:** the lots of each week, that is, the models and the bikes of each, for the sequencing of the line; and the capacity overload of each week, the hours that the plant covers with overtime.
@@ -261,7 +222,7 @@ The model of the weekly plan of a plant is written in seven steps: the planning 
 
 ### 3.3 Level of detail
 
-- **Time:** weeks from Monday to Sunday, never split. The shipments are given by week (Table 12), and a lot covers the shipments of one or more whole weeks; the stock is measured at the end of each week (§3.8, assumption 6).
+- **Time:** weeks from Monday to Sunday, never split. The shipments are given by week (Table 9), and a lot covers the shipments of one or more whole weeks; the stock is measured at the end of each week (§3.8, assumption 6).
 - **Products:** the four models, not aggregated: they take different assembly times and setup times, so the hours that a week needs depend on how many bikes of each model are assembled in it.
 - **Resources:** the assembly line of the plant, with its available capacity in hours, not in bikes: the setups use the same hours as the assembly, and a bike takes a different time for each model.
 - **Locations:** one plant at a time. The master plan has already decided which bikes each plant ships, and each plant has its own line, so the plants share no resource in the weekly plan.
@@ -272,15 +233,15 @@ For one plant and the plan of one month, of $L$ weeks, that starts in week $w_0$
 
 - **Sets:** $J$, the four models, with index $j$; $W = \{w_0, \dots, \bar w\}$, the weeks of the plan, with index $w$, where $\bar w = w_0 + L - 1$ is the week of the end of the month (§2.2).
 - **Data:**
-  - $a_j$: assembly time of a bike of model $j$ at the plant (h/bike), Table 9;
-  - $a^{\text{set}}_j$: setup time of model $j$ at the plant (h/setup), Table 9;
+  - $a_j$: assembly time of a bike of model $j$ at the plant (h/bike), Table 6;
+  - $a^{\text{set}}_j$: setup time of model $j$ at the plant (h/setup), Table 6;
   - $c^{\text{set}}_j$: setup cost of model $j$ at the plant (€/setup), §1.6;
   - $c^h_j$: holding cost of model $j$ at the plant (€/(bike·week)), §1.6;
   - $K_w$: available capacity of the line in week $w$ (h), its working days times 8 h (§1.1);
   - $K^h$: storage capacity of the plant (bikes), §1.6;
-  - $x_{jw}$: bikes of model $j$ that the plant ships to the network in week $w$, Table 12;
-  - $h^{\min}_j$: least stock of model $j$ at the end of the month (bikes), Table 10, required at the end of week $\bar w$;
-  - $h_{j,w_0-1}$: stock of model $j$ at the start of the plan (bikes): Table 8 in the first plan, and in the others the stock that the previous plan left.
+  - $x_{jw}$: bikes of model $j$ that the plant ships to the network in week $w$, Table 9;
+  - $h^{\min}_j$: least stock of model $j$ at the end of the month (bikes), Table 7, required at the end of week $\bar w$;
+  - $h_{j,w_0-1}$: stock of model $j$ at the start of the plan (bikes): Table 5 in the first plan, and in the others the stock that the previous plan left.
 
   No datum of the model is uncertain: the orders are taken as known (§3.8, assumption 1).
 - **Decision variables:**
@@ -319,7 +280,7 @@ The weekly model is checked against what is known of the plant before its result
 
 - **A plan that the plant can carry out.** The plant can assemble each week what it ships in that week, model by model, less the stock of that model it already holds, with a setup of every model it assembles, and in the week of the end of the month also what it lacks of the least stock. Evaluated in the model, this plan needs 173,77 h of capacity overload at plant 1 and 216,69 h at plant 2 over the six months, and costs 13.446,46 € and 16.557,69 € in setups and holding. The plans of the model need 20,85 h and 66,88 h, and cost 10.111,28 € and 11.758,88 €. A model whose plan were worse than this one would have a constraint that is too restrictive (§3.5).
 - **No feasible solution.** It cannot happen with the data of the case, because the capacity of the line is relaxed (§3.5). A month whose lots do not fit in the available capacity of the line shows a capacity overload instead. The model does not check whether the plant can work those hours as overtime: the cost and the limit of overtime are left out (§3.2).
-- **Where the capacity overload falls.** Over a month, the capacity overload is small: at most 4,4 % of the available capacity of the month at plant 1, and 9,6 % at plant 2 (Table 16). But it falls in one or two weeks of the month, and in those weeks it is large: 25 % of the available capacity in week 13 at plant 1, and 44 % in week 14 at plant 2. Weeks 13 and 14 have fewer working days, because of Easter. In the week before each of them the storage of the plant is full, so the plant cannot assemble ahead for them.
+- **Where the capacity overload falls.** Over a month, the capacity overload is small: at most 4,4 % of the available capacity of the month at plant 1, and 9,6 % at plant 2 (Table 13). But it falls in one or two weeks of the month, and in those weeks it is large: 25 % of the available capacity in week 13 at plant 1, and 44 % in week 14 at plant 2. Weeks 13 and 14 have fewer working days, because of Easter. In the week before each of them the storage of the plant is full, so the plant cannot assemble ahead for them.
 
 ### 3.8 Assumptions
 
@@ -334,9 +295,9 @@ The weekly model is checked against what is known of the plant before its result
 
 ### 3.9 Weekly lot plans of the three plants
 
-Each plan is solved to its exact optimum, in the two stages of §3.6, and it is the only optimal plan. Tables 13 to 15 give, for each plant and week, the bikes of each model assembled, the stock at the end of the week, and the hours of assembly, of setups and of capacity overload. A model with bikes in «Assembled» is set up in that week, and those bikes are one lot. The setup and holding cost of the six months is 10.111,28 € at plant 1, 11.758,88 € at plant 2 and 2.869,97 € at plant 3.
+Each plan is solved to its exact optimum, in the two stages of §3.6, and it is the only optimal plan. Tables 10 to 12 give, for each plant and week, the bikes of each model assembled, the stock at the end of the week, and the hours of assembly, of setups and of capacity overload. A model with bikes in «Assembled» is set up in that week, and those bikes are one lot. The setup and holding cost of the six months is 10.111,28 € at plant 1, 11.758,88 € at plant 2 and 2.869,97 € at plant 3.
 
-Table 13. Weekly lot plan of plant 1. Bikes by model: City; Trekking; Mountain; Cargo.
+Table 10. Weekly lot plan of plant 1. Bikes by model: City; Trekking; Mountain; Cargo.
 
 | Week | Available capacity (h) | Assembled (bikes) | Stock at the end (bikes) | Assembly (h) | Setups (h) | Capacity overload (h) |
 |---|---|---|---|---|---|---|
@@ -368,7 +329,7 @@ Table 13. Weekly lot plan of plant 1. Bikes by model: City; Trekking; Mountain; 
 | 26 | 40 | 35; 20; 11; 0 | 11; 4; 2; 3 | 32,91 | 7,00 | 0,00 |
 | Total | 1.000 | 649; 439; 259; 153 | | 822,45 | 195,00 | 20,85 |
 
-Table 14. Weekly lot plan of plant 2. Bikes by model: City; Trekking; Mountain; Cargo.
+Table 11. Weekly lot plan of plant 2. Bikes by model: City; Trekking; Mountain; Cargo.
 
 | Week | Available capacity (h) | Assembled (bikes) | Stock at the end (bikes) | Assembly (h) | Setups (h) | Capacity overload (h) |
 |---|---|---|---|---|---|---|
@@ -400,7 +361,7 @@ Table 14. Weekly lot plan of plant 2. Bikes by model: City; Trekking; Mountain; 
 | 26 | 40 | 25; 16; 8; 0 | 5; 2; 1; 2 | 30,63 | 8,75 | 0,00 |
 | Total | 1.000 | 519; 352; 207; 122 | | 822,24 | 238,75 | 66,88 |
 
-Table 15. Weekly lot plan of plant 3. Bikes by model: City; Trekking; Mountain; Cargo.
+Table 12. Weekly lot plan of plant 3. Bikes by model: City; Trekking; Mountain; Cargo.
 
 | Week | Available capacity (h) | Assembled (bikes) | Stock at the end (bikes) | Assembly (h) | Setups (h) | Capacity overload (h) |
 |---|---|---|---|---|---|---|
@@ -420,9 +381,9 @@ At plants 1 and 2, City and Trekking are assembled in 21 to 24 of the 26 weeks, 
 
 ## 4. Capacity overload and spare capacity at each plant
 
-The plans of each plant for the six months are those of Tables 13 to 15, which give the hours of assembly, of setups and of capacity overload of each week. The spare capacity of a week is its available capacity less its hours of assembly and setups, when these do not fill it. Table 16 adds them up by month. A month can have a capacity overload in some weeks and spare capacity in others.
+The plans of each plant for the six months are those of Tables 10 to 12, which give the hours of assembly, of setups and of capacity overload of each week. The spare capacity of a week is its available capacity less its hours of assembly and setups, when these do not fill it. Table 13 adds them up by month. A month can have a capacity overload in some weeks and spare capacity in others.
 
-Table 16. Hours of the line of each plant, by month. Capacity overload (%): share of the available capacity of the month.
+Table 13. Hours of the line of each plant, by month. Capacity overload (%): share of the available capacity of the month.
 
 | Plant | Month | Weeks | Available capacity (h) | Assembly (h) | Setups (h) | Capacity overload (h) | Spare capacity (h) | Capacity overload (%) |
 |---|---|---|---|---|---|---|---|---|
@@ -449,7 +410,7 @@ Table 16. Hours of the line of each plant, by month. Capacity overload (%): shar
 | 3 | Six months | 1–26 | 992 | 108,11 | 60,00 | 0,00 | 823,90 | 0,0 |
 
 - Plants 1 and 2 have a capacity overload in every month and almost no spare capacity. Over the six months, the capacity overload is 2,1 % of the available capacity at plant 1 and 6,7 % at plant 2. It is largest in March and April: 4,4 % and 4,3 % at plant 1, and 9,2 % and 9,6 % at plant 2.
-- Plant 3 has no capacity overload. The master plan gives it 43 bikes in May and 76 in June (Table 10), and in those months 63 % and 39 % of its available capacity is spare capacity.
+- Plant 3 has no capacity overload. The master plan gives it 43 bikes in May and 76 in June (Table 7), and in those months 63 % and 39 % of its available capacity is spare capacity.
 - At plants 1 and 2 the capacity overload repeats in every month. This points to the assumptions with which the master plan set their capacity (§5).
 
 ## 5. Assumptions of the master plan behind the capacity overload
@@ -457,8 +418,8 @@ Table 16. Hours of the line of each plant, by month. Capacity overload (%): shar
 **What is checked.** M4 does not see the weeks, the models or the setups: for M4, each plant can assemble a fixed number of bikes a month, 250, 200 and 150. These capacities rest on three assumptions:
 
 1. every month has 20 working days, 160 h;
-2. a bike takes the same assembly time in every month: the average of the four models, weighted by the orders of each model in the six months;
-3. the hours that the assembly does not use, 22,97 h a month, are enough for the setups, and they are the same at every plant.
+2. a bike takes the same assembly time in every month: the average of the four models, weighted by the product mix of the orders of the six months;
+3. the 23 h a month that the assembly does not use are left for the setups, the same in every month and at every plant.
 
 The weekly plans of plants 1 and 2 have a capacity overload in every month (§4), so at least one of these assumptions fails.
 
@@ -466,48 +427,48 @@ The weekly plans of plants 1 and 2 have a capacity overload in every month (§4)
 
 - Calendar: no holidays, so that every week has five working days.
 - Setups: half the setup times; and, at plants 2 and 3, the setup times of plant 1, because M4 leaves the same hours for setups at every plant although their setups take longer. The setup cost is computed from the new setup time, as in §1.6.
-- Product mix: the bikes that each plant ships in each week, all models together (Table 12), are split among the four models in the proportions of the orders of the six months, 43,2 %, 29,4 %, 17,3 % and 10,1 % (§1.2), and the least stock at the end of each month is split in the same proportions. The shipments accumulated from week 1 are rounded half up, and the least stock at the end of June is that of Table 8.
+- Product mix: the bikes that each plant ships in each week, all models together (Table 9), are split among the four models with the product mix of the six months, 43,2 %; 29,4 %; 17,3 % and 10,1 % (§1.2), and so is the least stock at the end of each month. The shipments accumulated from week 1 are rounded half up, and the least stock at the end of June is that of Table 5.
 
-**What comes out** (Tables 17 and 18).
+**What comes out** (Tables 14 and 15).
 
 - **Calendar.** Without holidays, the capacity overload of plant 1 falls from 20,85 to 5,69 h: that of the months with holidays disappears, and that of February and June, which have none, remains. At plant 2 it falls by about half, from 66,88 to 31,51 h. The calendar explains part of the capacity overload, not all of it.
-- **Setups.** With half the setup times, the capacity overload almost disappears: about 4 h is left at each plant, in March. With the setup times of plant 1, the capacity overload of plant 2 falls by about half, to 32,54 h. The weekly plans need 25 to 44 h of setups a month at plant 1 and 32,50 to 48,75 h at plant 2 (Table 16), and M4 leaves 22,97 h. This is the main cause, and it is present in every month.
+- **Setups.** With half the setup times, the capacity overload almost disappears: about 4 h is left at each plant, in March. With the setup times of plant 1, the capacity overload of plant 2 falls by about half, to 32,54 h. The weekly plans need 25 to 44 h of setups a month at plant 1 and 32,50 to 48,75 h at plant 2 (Table 13), and M4 leaves 23 h. This is the main cause, and it is present in every month.
 - **Product mix.** With the same product mix in every week, the capacity overload does not fall: it rises to 25,30 h at plant 1 and 68,85 h at plant 2. It is not a cause.
 - **Plant 3** has no capacity overload in any run: M4 gives it few bikes.
 
-In two runs another plan has the same capacity overload and the same cost: the plan of February at plant 1 with the product mix of the six months, and the plan of May at plant 3 with half the setup times. The other plans change the week in which part of a lot is assembled, not the hours of each month or the stock at the end of the month, so Tables 17 and 18 do not change.
+In two runs another plan has the same capacity overload and the same cost: the plan of February at plant 1 with the product mix of the six months, and the plan of May at plant 3 with half the setup times. The other plans change the week in which part of a lot is assembled, not the hours of each month or the stock at the end of the month, so Tables 14 and 15 do not change.
 
 **Conclusion.** M4 leaves fewer hours for setups than the plants need, and the same hours at every plant, although the setups of plant 2 take longer. It also counts every month as a month of 20 working days. For the plants to carry it out, the master plan has to leave more hours for setups, more at plant 2 than at plant 1, and use the working days of each month. A simple way to anticipate setups in master planning is to reduce the capacity of each period by a fixed amount for the setup times expected; when the setup times depend on the product mix, that amount may not be accurate enough (Albrecht et al., 2015, p. 157). The master plan reserves some hours of capacity for the setups, and whether those hours are enough is known only when the plan is detailed (Stadtler, 2015, p. 208).
 
-Table 17. Capacity overload (h) of each plant, by month, in each run
+Table 14. Capacity overload (h) of each plant, by month, in each run
 
 | Plant | Run | Jan | Feb | Mar | Apr | May | Jun | Six months |
 |---|---|---|---|---|---|---|---|---|
-| 1 | As planned (Table 16) | 0,03 | 0,90 | 6,33 | 6,55 | 2,25 | 4,79 | 20,85 |
+| 1 | As planned (Table 13) | 0,03 | 0,90 | 6,33 | 6,55 | 2,25 | 4,79 | 20,85 |
 | 1 | No holidays | 0,00 | 0,90 | 0,00 | 0,00 | 0,00 | 4,79 | 5,69 |
 | 1 | Half the setup times | 0,00 | 0,00 | 4,06 | 0,00 | 0,00 | 0,00 | 4,06 |
 | 1 | Six-month product mix in every week | 0,00 | 3,41 | 8,04 | 6,43 | 1,73 | 5,69 | 25,30 |
-| 2 | As planned (Table 16) | 6,89 | 10,90 | 13,19 | 14,54 | 9,58 | 11,79 | 66,88 |
+| 2 | As planned (Table 13) | 6,89 | 10,90 | 13,19 | 14,54 | 9,58 | 11,79 | 66,88 |
 | 2 | No holidays | 0,00 | 10,90 | 0,71 | 6,54 | 1,58 | 11,79 | 31,51 |
 | 2 | Half the setup times | 0,00 | 0,00 | 4,28 | 0,00 | 0,00 | 0,00 | 4,28 |
 | 2 | Setup times of plant 1 | 3,14 | 5,05 | 7,94 | 7,71 | 2,65 | 6,05 | 32,54 |
 | 2 | Six-month product mix in every week | 5,98 | 12,06 | 14,09 | 13,53 | 9,93 | 13,28 | 68,85 |
 | 3 | Every run | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 | 0,00 |
 
-Table 18. Spare capacity (h) of each plant, by month, in each run
+Table 15. Spare capacity (h) of each plant, by month, in each run
 
 | Plant | Run | Jan | Feb | Mar | Apr | May | Jun | Six months |
 |---|---|---|---|---|---|---|---|---|
-| 1 | As planned (Table 16) | 1,26 | 0,00 | 0,02 | 0,07 | 0,08 | 1,97 | 3,40 |
+| 1 | As planned (Table 13) | 1,26 | 0,00 | 0,02 | 0,07 | 0,08 | 1,97 | 3,40 |
 | 1 | No holidays | 17,23 | 0,00 | 10,69 | 1,52 | 12,83 | 1,97 | 44,24 |
 | 1 | Half the setup times | 23,73 | 13,10 | 10,25 | 8,02 | 24,33 | 14,68 | 94,11 |
 | 1 | Six-month product mix in every week | 2,03 | 0,00 | 0,00 | 0,00 | 0,00 | 1,39 | 3,42 |
-| 2 | As planned (Table 16) | 0,00 | 0,00 | 0,25 | 2,39 | 2,63 | 0,63 | 5,89 |
+| 2 | As planned (Table 13) | 0,00 | 0,00 | 0,25 | 2,39 | 2,63 | 0,63 | 5,89 |
 | 2 | No holidays | 6,11 | 0,00 | 0,03 | 2,39 | 2,63 | 0,63 | 11,78 |
 | 2 | Half the setup times | 19,99 | 6,60 | 6,34 | 0,98 | 18,68 | 5,09 | 57,66 |
 | 2 | Setup times of plant 1 | 0,00 | 0,15 | 1,50 | 0,06 | 0,45 | 3,14 | 5,30 |
 | 2 | Six-month product mix in every week | 0,28 | 0,00 | 0,78 | 0,41 | 0,00 | 0,91 | 2,38 |
-| 3 | As planned (Table 16) | 192,00 | 160,00 | 136,00 | 152,00 | 121,57 | 62,33 | 823,90 |
+| 3 | As planned (Table 13) | 192,00 | 160,00 | 136,00 | 152,00 | 121,57 | 62,33 | 823,90 |
 | 3 | No holidays | 200,00 | 160,00 | 160,00 | 160,00 | 131,07 | 62,33 | 873,40 |
 | 3 | Half the setup times | 192,00 | 160,00 | 136,00 | 152,00 | 135,07 | 81,83 | 856,90 |
 | 3 | Setup times of plant 1 | 192,00 | 160,00 | 136,00 | 152,00 | 130,57 | 77,33 | 847,90 |
@@ -517,7 +478,7 @@ Table 18. Spare capacity (h) of each plant, by month, in each run
 
 The Python script `lot_sizing_solver.py`, in this folder, prints every table of this document, the plan of §3.7 and, for each plan, whether another plan has the same capacity overload and the same cost. It computes the orders, solves M4 with them, and solves the weekly plans with the library PuLP and the solver HiGHS (`pip install pulp highspy`), each one to its exact optimum; the top of the file explains how to install and run it. Every quantity is computed as an exact fraction, and every rounding, to whole bikes or to the figures shown in the tables, is half up from the exact value: in floating point, 25,5 bikes can be stored as 25,4999… and rounded down. Running it is optional: it is support material, not part of what is assessed.
 
-The notebook [`notebooks/lot_sizing.ipynb`](notebooks/lot_sizing.ipynb) computes the orders, the master plan, the shipments and the least stock of a plant, the weekly lot plan of a plant, the plan of reference of §3.7 against the plans of the model, and the hours of the line of the three plants by month. It solves the plans of a plant again with one datum changed: a holiday, a setup time, an assembly time or the storage capacity. It also solves the runs of §5, and gives Tables 17 and 18 and the months in which another plan has the same costs. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/lot_sizing.ipynb). Its code is in the package `plants` of this folder (`src/plants/lot_sizing.py`), which calls M4 (`src/plants/retailers.py`) without changing it and reads the data from `src/plants/data.py`.
+The notebook [`notebooks/lot_sizing.ipynb`](notebooks/lot_sizing.ipynb) gives the orders of each retailer, model and week, and of each retailer and month; the data of the warehouses, of the arcs and of the retailers, and the master plan; the shipments and the least stock of a plant; the weekly lot plan of a plant, the plan of reference of §3.7 against the plans of the model, and the hours of the line of the three plants by month. It solves the plans of a plant again with one datum changed: a holiday, a setup time, an assembly time or the storage capacity. It also solves the runs of §5, and gives Tables 14 and 15 and the months in which another plan has the same costs. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/lot_sizing.ipynb). Its code is in the package `plants` of this folder (`src/plants/lot_sizing.py`), which calls M4 (`src/plants/retailers.py`) without changing it and reads the data from `src/plants/data.py`.
 
 ## References
 

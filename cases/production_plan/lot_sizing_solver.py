@@ -1,18 +1,18 @@
 # Lot sizing at the plants
 #
 # This script reproduces every table of lot_sizing.md (same folder): the
-# calendar (Tables 1 to 3); the orders of the retailers (Tables 4 to 7); the
-# stock at the plants (Table 8) and their assembly lines (Table 9); the plan of
-# M4 solved with the orders of Table 7, and the least stock of each plant
-# (Table 10); the product mix of the shipments (Table 11) and the shipments of
-# each plant in each week (Table 12); the weekly lot plans of the three plants
-# (Tables 13 to 15); the hours of the line by month (Table 16); and the runs of
-# part d) (Tables 17 and 18). It also prints the numbers of the text that are in
+# calendar (Tables 1 to 3); the orders of the retailers (Table 4); the
+# stock at the plants (Table 5) and their assembly lines (Table 6); the plan of
+# M4 solved with the orders of Table 4, and the least stock of each plant
+# (Table 7); the product mix of the shipments (Table 8) and the shipments of
+# each plant in each week (Table 9); the weekly lot plans of the three plants
+# (Tables 10 to 12); the hours of the line by month (Table 13); and the runs of
+# part d) (Tables 14 and 15). It also prints the numbers of the text that are in
 # no table: the cost of M4, the setup and holding cost of each plant, the plan of
 # step 7, and whether another plan has the same costs.
 #
 # The models are written with the PuLP library and solved by the HiGHS solver.
-# M4 is the model of retailers.md, unchanged, solved with the orders of Table 7.
+# M4 is the model of retailers.md, unchanged, solved with the orders of Table 4.
 # Every quantity is computed as an exact fraction, and every rounding is half up
 # from the exact value.
 #
@@ -120,7 +120,7 @@ c_b, c_l = 60, 700
 
 
 # ---------------------------------------------------------------------------
-# §1 Data of the weekly plans (Tables 1 to 9)
+# §1 Data of the weekly plans (Tables 1 to 6)
 # ---------------------------------------------------------------------------
 
 MODELS = ["City", "Trekking", "Mountain", "Cargo"]
@@ -133,8 +133,9 @@ HOLIDAYS = {"Plant 1": [("Jan", 1), ("Mar", 29), ("Mar", 30), ("Apr", 2), ("May"
             "Plant 2": [("Jan", 1), ("Mar", 29), ("Mar", 30), ("Apr", 2), ("May", 1)],
             "Plant 3": [("Jan", 1), ("Mar", 12), ("Mar", 19), ("Mar", 30), ("Apr", 2), ("May", 1)]}
 
-# Average orders (bikes/month) and product mix of each retailer, Table 4;
-# seasonal index of each model, Table 5; factor of each week, Table 6
+# The data with which the weekly orders are generated (the document gives the
+# orders, not these data): average orders (bikes/month) and product mix of each
+# retailer; seasonal index of each model; factor of each week
 AVERAGE = dict(zip(RETAILERS, [65, 105, 85, 75, 95, 45]))
 MIX = {r: dict(zip(MODELS, m)) for r, m in zip(RETAILERS, [
     ("0.25", "0.35", "0.35", "0.05"), ("0.50", "0.20", "0.10", "0.20"), ("0.45", "0.35", "0.10", "0.10"),
@@ -145,11 +146,11 @@ SEASONAL = {j: dict(zip(T, values.split())) for j, values in SEASONAL.items()}
 FACTOR = dict(zip(WEEKS, "0.9 1.0 1.1 1.0 1.0 0.95 1.05 1.0 1.0 1.0 1.1 0.9 1.0 "
                          "0.9 1.0 1.05 1.05 1.0 0.95 1.05 1.0 1.0 1.0 1.05 0.95 1.0".split()))
 
-# Initial and required final stock of each model at each plant (bikes), Table 8
+# Initial and required final stock of each model at each plant (bikes), Table 5
 STOCK_0 = {"Plant 1": dict(zip(MODELS, [11, 4, 2, 3])), "Plant 2": dict(zip(MODELS, [5, 2, 1, 2])),
            "Plant 3": dict(zip(MODELS, [0, 0, 0, 0]))}
 
-# Assembly time (h/bike) and setup time (h/setup) at each plant, Table 9
+# Assembly time (h/bike) and setup time (h/setup) at each plant, Table 6
 ASSEMBLY = {"Plant 1": "0.42 0.52 0.71 0.90", "Plant 2": "0.525 0.65 0.8875 1.125", "Plant 3": "0.70 0.867 1.183 1.50"}
 SETUP = {"Plant 1": "2 2 3 4", "Plant 2": "2.5 2.5 3.75 5", "Plant 3": "3 3 4.5 6"}
 ASSEMBLY = {f: dict(zip(MODELS, map(Fraction, v.split()))) for f, v in ASSEMBLY.items()}
@@ -226,7 +227,7 @@ def available_capacity(f, holidays=HOLIDAYS):
 
 
 # ---------------------------------------------------------------------------
-# §1 Orders of the retailers (§6.2 and §6.3 of the document: Table 7)
+# §1 Orders of the retailers (§1.2 and §1.3 of the document: Table 4)
 # ---------------------------------------------------------------------------
 
 weekly = {}
@@ -245,7 +246,7 @@ SIX_MONTH_MIX = share({j: sum(weekly[r, j, w] for r in RETAILERS for w in WEEKS)
 
 
 # ---------------------------------------------------------------------------
-# §2 The master plan: M4, solved with the orders of Table 7
+# §2 The master plan: M4, solved with the orders of Table 4
 # ---------------------------------------------------------------------------
 
 def solve_m4(order):
@@ -304,7 +305,7 @@ def solve_m4(order):
 
 
 # ---------------------------------------------------------------------------
-# §2 Shipments and least stock of each plant (§6.7 of the document)
+# §2 Shipments and least stock of each plant (§2.2 of the document)
 # ---------------------------------------------------------------------------
 
 def from_master_plan(v):
@@ -523,20 +524,18 @@ if __name__ == "__main__":
           + "; ".join(f"{t} {N[t]}" for t in T))
     print()
     totals = {j: sum(weekly[r, j, w] for r in RETAILERS for w in WEEKS) for j in MODELS}
-    print("Weekly orders (§6.2): orders of Granada for Mountain bikes in week 15: "
-          f"{weekly['Retailer 6', 'Mountain', 15]} bikes")
     print("Orders of the 26 weeks, all retailers: " + "; ".join(f"{j} {eu(totals[j], 0)}" for j in MODELS)
           + "; product mix " + "; ".join(f"{eu(100 * SIX_MONTH_MIX[j], 1)} %" for j in MODELS))
     print()
-    print("Table 7. Orders of each retailer in each month (bikes)")
-    print(f"{'':<12}" + "".join(f"{t:>7}" for t in T) + f"{'Six months':>12}")
+    print("Table 4. Orders of each retailer in each month (bikes)")
+    print(f"{'':<24}" + "".join(f"{t:>7}" for t in T) + f"{'Six months':>12}")
     for r in RETAILERS:
-        print(f"{PLACES[r]:<12}" + "".join(f"{orders[r, t]:>7}" for t in T)
+        print(f"{r + ' (' + PLACES[r] + ')':<24}" + "".join(f"{orders[r, t]:>7}" for t in T)
               + f"{sum(orders[r, t] for t in T):>12}")
-    print(f"{'All':<12}" + "".join(f"{sum(orders[r, t] for r in RETAILERS):>7}" for t in T)
+    print(f"{'All':<24}" + "".join(f"{sum(orders[r, t] for r in RETAILERS):>7}" for t in T)
           + f"{eu(sum(orders.values()), 0):>12}")
     print()
-    print("Table 9 and §6.6. Setup cost (EUR/setup) and holding cost (EUR/(bike*week)): "
+    print("Table 6 and §1.6. Setup cost (EUR/setup) and holding cost (EUR/(bike*week)): "
           + "City; Trekking; Mountain; Cargo")
     for f in F:
         print(f"{f}: setup cost {'; '.join(eu(v, 0) for v in setup_cost(SETUP[f]).values())}; "
@@ -544,11 +543,11 @@ if __name__ == "__main__":
 
     title("§2 From the master plan to the weekly shipments of each plant")
     cost, v = solve_m4(orders)
-    print(f"M4 with the orders of Table 7: cost {eu(cost)} EUR; backorders {eu(sum(v['b'].values()), 0)} and "
+    print(f"M4 with the orders of Table 4: cost {eu(cost)} EUR; backorders {eu(sum(v['b'].values()), 0)} and "
           f"lost sales {eu(sum(v['l'].values()), 0)} bikes")
     m = from_master_plan(v)
     print()
-    print("Table 10. Plan of M4 at each plant and least stock at the end of each month (bikes)")
+    print("Table 7. Plan of M4 at each plant and least stock at the end of each month (bikes)")
     print(f"{'Plant':<9}{'Month':<6}{'Assembled':>10}{'Shipped':>9}{'Stock':>7}   Least stock")
     for f in F:
         for t in T:
@@ -557,14 +556,14 @@ if __name__ == "__main__":
     print("Stock of the network at the end of each month (bikes): "
           + "; ".join(f"{t} {eu(m['network'][t], 0)}" for t in T))
     print()
-    print("Table 11. Product mix of the shipments and split of the seasonal stock (%)")
+    print("Table 8. Product mix of the shipments and split of the seasonal stock (%)")
     print(f"{'':<28}" + "".join(f"{t:>7}" for t in T))
     for label, key in (("Shipments", "mix"), ("Seasonal stock", "split")):
         for j in MODELS:
             print(f"{label + ', ' + j:<28}" + "".join(
                 f"{eu(100 * m[key][t][j], 1) if key == 'mix' or m['network'][t] else '—':>7}" for t in T))
     print()
-    print("Table 12. Shipments of each plant in each week (bikes): City; Trekking; Mountain; Cargo")
+    print("Table 9. Shipments of each plant in each week (bikes): City; Trekking; Mountain; Cargo")
     for w in WEEKS:
         print(f"{w:<6}" + "".join(f"{bikes({j: m['x'][f, j, w] for j in MODELS}):>20}" for f in F))
     print(f"{'Total':<6}" + "".join(f"{bikes({j: sum(m['x'][f, j, w] for w in WEEKS) for j in MODELS}):>20}"
@@ -575,7 +574,7 @@ if __name__ == "__main__":
     for k, f in enumerate(F):
         weeks, plan_cost, others = weekly_plan(f, m["x"], m["least"])
         plans[f] = weeks
-        print(f"Table {13 + k}. Weekly lot plan of {f.lower()}: setup and holding cost {eu(plan_cost)} EUR; "
+        print(f"Table {10 + k}. Weekly lot plan of {f.lower()}: setup and holding cost {eu(plan_cost)} EUR; "
               f"another plan with the same costs in: {', '.join(others) if others else 'no month'}")
         print(f"{'Week':<6}{'Available':>10}{'Assembled':>20}{'Stock at the end':>18}{'Assembly':>10}"
               f"{'Setups':>8}{'Overload':>10}")
@@ -601,7 +600,7 @@ if __name__ == "__main__":
               f"its storage capacity {K_h[f]}")
 
     title("§4 Capacity overload and spare capacity at each plant")
-    print("Table 16. Hours of the line of each plant, by month")
+    print("Table 13. Hours of the line of each plant, by month")
     print(f"{'Plant':<9}{'Month':<12}{'Available':>10}{'Assembly':>10}{'Setups':>8}{'Overload':>10}{'Spare':>9}"
           f"{'Overload %':>12}")
     for f in F:
@@ -629,7 +628,7 @@ if __name__ == "__main__":
             weeks, _, others = weekly_plan(f, x, least, a_set=a_set, k_w=k_w)
             results[f, name] = (by_month(weeks, "overload"), by_month(weeks, "spare"), others)
     for k, (label, index) in enumerate((("Capacity overload", 0), ("Spare capacity", 1))):
-        print(f"Table {17 + k}. {label} (h) of each plant, by month, in each run")
+        print(f"Table {14 + k}. {label} (h) of each plant, by month, in each run")
         print(f"{'':<48}" + "".join(f"{t:>9}" for t in T) + f"{'Six months':>12}")
         for (f, name), result in results.items():
             values = result[index]
