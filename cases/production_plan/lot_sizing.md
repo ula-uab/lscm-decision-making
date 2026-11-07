@@ -8,7 +8,7 @@ M4 gives the bikes that each plant assembles each month. It is solved with the o
 
 ### 1.1 Calendar
 
-The horizon has 26 weeks from Monday to Sunday, the first starting on Monday 1 January. The calendar is invented and names no year. The plants work from Monday to Friday, one shift of 8 h, except on their holidays (Table 1). The available capacity of the line of a plant in a week is its working days times 8 h.
+The horizon has 26 weeks from Monday to Sunday, the first starting on Monday 1 January. The plants work from Monday to Friday, one shift of 8 h, except on their holidays (Table 1). The available capacity of the line of a plant in a week is its working days times 8 h.
 
 Table 1. Holidays from Monday to Friday
 
@@ -88,7 +88,7 @@ Table 6. Assembly time and setup time at each plant (h)
 | Cargo | 0,90 | 1,125 | 1,50 | 4,0 | 5,0 | 6,0 |
 
 - **Assembly time.** The time that one bike takes on the line.
-- **Setup time.** The time that a change to the model takes on the line, in which nothing is assembled: the fixtures for the frame, the parts of the model brought to the line, the test program of the motor and battery, the check of the first bike. Setting up the four models once takes 11; 13,75 and 16,5 h at plants 1, 2 and 3.
+- **Setup time.** The time that a change to a model takes on the line, during which nothing is assembled. Setting up the four models once takes 11; 13,75 and 16,5 h at plants 1, 2 and 3.
 - **Setup cost.** 40 €/h of the changeover crew times the setup time, plus 20 € for the check of the first bike: at plant 1, 100; 100; 140 and 180 €; at plant 2, 120; 120; 170 and 220 €; at plant 3, 140; 140; 200 and 260 €.
 - **Holding cost.** The cost of holding one bike of the model for one week at the plant: at plant 1, 0,92; 1,15; 1,38 and 1,62 €/(bike·week); at plant 2, 1,11; 1,38; 1,66 and 1,94; at plant 3, 1,29; 1,62; 1,94 and 2,26.
 - **Storage capacity.** That of M4: 40, 30 and 20 bikes.
@@ -110,17 +110,11 @@ The stock of the network, at the plants and in the warehouses, is 30 bikes at th
 ### 2.2 Product mix of the shipments and least stock
 
 - **Shipments of a plant in a month.** The bikes that the plant sends to the network in the month in the plan of M4.
-- **Product mix of the shipments.** In a month, the plants together ship to the network what the network delivers to the retailers plus the change in the stock of the warehouses. The deliveries of a retailer serve first its backorders and then its orders of the month, and each bike keeps the product mix of the orders of the retailer in the month in which it was ordered. The orders are counted by calendar month: the orders of a week that falls in two months count in each month in proportion to its days from Monday to Friday in that month. The change in the stock of the warehouses is split among the models as the seasonal stock. Within a month, every plant ships this product mix.
-- **Seasonal stock by model.** The stock of the network at the end of a month, at the plants and in the warehouses, is split among the four models in proportion to the orders of each model, all retailers together, in the months in which it is used: the first group of later consecutive months in which the stock of the network falls. So the stock of every model covers about the same number of weeks of its orders, the rule with which Hax and Meal (1973, p. 15) split the stock of a group of products among its items. The seasonal stock is common to the four models because they share the capacity of the lines (Sürie & Reuter, 2015, p. 50). In the months in which the seasonal stock falls, it falls by model in the same proportion. The stock at the start of January and the required final stock at the end of June are those of Table 5; stock that does not fall in any later month is split with the models of Table 5.
-- **Least stock at the end of a month.** For each model, the stock that the plan of M4 keeps at the plant at the end of the month, split among the models as the seasonal stock of the network. At the end of June, that of Table 5. The least stock of a plant is split among the models in whole bikes keeping its total: each model is rounded down, and the bikes left over go to the models with the largest remainders.
-- **Week of the end of a month.** The weekly plan measures the stock at the end of each week, and a month does not end on a Sunday. The least stock at the end of a month is required at the end of the last week that has most of its days from Monday to Friday in that month: weeks 5, 9, 13, 17, 22 and 26.
-- **From months to weeks.** The shipments of a month are spread evenly over its days from Monday to Friday, and the shipments of a week are those of its days; a week that falls in two months takes from each month the shipments of its days in it. For plant $f$, model $j$ and week $w$:
-
-$$
-x_{fjw} = \sum_{t} \frac{n_{wt}}{N_t}\, x_{fjt}
-$$
-
-  where the sum runs over the month or months in which the days of week $w$ fall; $x_{fjt}$ is the shipments of model $j$ from plant $f$ in month $t$; $n_{wt}$ the days from Monday to Friday of week $w$ in month $t$; and $N_t$ the days from Monday to Friday of month $t$ (23, 20, 22, 21, 23 and 21 from January to June). For each plant and model, the shipments accumulated from week 1 are rounded half up to whole bikes, and the shipments of a week are the difference between two consecutive accumulated values.
+- **Product mix of the shipments.** The shipments of a month are split among the four models with the product mix of what the network delivers and stores in that month. Within a month, every plant ships this product mix.
+- **Seasonal stock by model.** The stock of the network at the end of a month, at the plants and in the warehouses, is split among the four models with the product mix of the orders of the later months in which that stock is used.
+- **Least stock at the end of a month.** For each model, the stock that the plan of M4 keeps at the plant at the end of the month, split among the models as the seasonal stock of the network. At the end of June, the required final stock of Table 5.
+- **Week of the end of a month.** The least stock of a month is required at the end of the last week with most of its days in that month: weeks 5, 9, 13, 17, 22 and 26.
+- **From months to weeks.** The shipments of a month are spread evenly over its days from Monday to Friday, which gives the shipments of each plant by model and week (Table 9).
 - **Stock at the start.** Each plant starts week 1 with its bikes of Table 5.
 
 Table 7. Plan of M4 at each plant and least stock of each model at the end of each month (bikes). Least stock by model: City; Trekking; Mountain; Cargo.
@@ -143,7 +137,7 @@ Table 7. Plan of M4 at each plant and least stock of each model at the end of ea
 | 3 | May | 43 | 43 | 0 | 0; 0; 0; 0 |
 | 3 | Jun | 76 | 76 | 0 | 0; 0; 0; 0 |
 
-The stock of the network falls in April and May. So the stock at the end of January, February and March is split among the models with the orders of April and May, and the stock at the end of April with the orders of May (Table 8). The shipments of January to March carry the orders of the month plus the stock that the warehouses build for April and May; those of April and May, the orders of the month less the stock that the warehouses use.
+The stock of the network falls in April and May. So the stock at the end of January, February and March is split among the models with the orders of April and May, and the stock at the end of April with the orders of May; the stock at the end of June, 30 bikes, is split as the required final stock of Table 5 (Table 8). The shipments of January to March carry the orders of the month plus the stock that the warehouses build for April and May; those of April and May, the orders of the month less the stock that the warehouses use.
 
 Table 8. Product mix of the shipments of the plants and split of the seasonal stock, by month (%). At the end of May the network holds no stock.
 
@@ -427,7 +421,7 @@ The weekly plans of plants 1 and 2 have a capacity overload in every month (§4)
 
 - Calendar: no holidays, so that every week has five working days.
 - Setups: half the setup times; and, at plants 2 and 3, the setup times of plant 1, because M4 leaves the same hours for setups at every plant although their setups take longer. The setup cost is computed from the new setup time, as in §1.6.
-- Product mix: the bikes that each plant ships in each week, all models together (Table 9), are split among the four models with the product mix of the six months, 43,2 %; 29,4 %; 17,3 % and 10,1 % (§1.2), and so is the least stock at the end of each month. The shipments accumulated from week 1 are rounded half up, and the least stock at the end of June is that of Table 5.
+- Product mix: the bikes that each plant ships in each week, all models together (Table 9), are split among the four models with the product mix of the six months, 43,2 %; 29,4 %; 17,3 % and 10,1 % (§1.2), and so is the least stock at the end of each month, except at the end of June, which keeps the required final stock of Table 5.
 
 **What comes out** (Tables 14 and 15).
 
@@ -476,7 +470,7 @@ Table 15. Spare capacity (h) of each plant, by month, in each run
 
 ## 6. Reproducing the numbers
 
-The Python script `lot_sizing_solver.py`, in this folder, prints every table of this document, the plan of §3.7 and, for each plan, whether another plan has the same capacity overload and the same cost. It computes the orders, solves M4 with them, and solves the weekly plans with the library PuLP and the solver HiGHS (`pip install pulp highspy`), each one to its exact optimum; the top of the file explains how to install and run it. Every quantity is computed as an exact fraction, and every rounding, to whole bikes or to the figures shown in the tables, is half up from the exact value: in floating point, 25,5 bikes can be stored as 25,4999… and rounded down. Running it is optional: it is support material, not part of what is assessed.
+The Python script `lot_sizing_solver.py`, in this folder, prints every table of this document, the plan of §3.7 and, for each plan, whether another plan has the same capacity overload and the same cost. It solves M4 with the orders of Table 4, and solves the weekly plans with the library PuLP and the solver HiGHS (`pip install pulp highspy`), each one to its exact optimum; the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
 The notebook [`notebooks/lot_sizing.ipynb`](notebooks/lot_sizing.ipynb) gives the orders of each retailer, model and week, and of each retailer and month; the data of the warehouses, of the arcs and of the retailers, and the master plan; the shipments and the least stock of a plant; the weekly lot plan of a plant, the plan of reference of §3.7 against the plans of the model, and the hours of the line of the three plants by month. It solves the plans of a plant again with one datum changed: a holiday, a setup time, an assembly time or the storage capacity. It also solves the runs of §5, and gives Tables 14 and 15 and the months in which another plan has the same costs. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/lot_sizing.ipynb). Its code is in the package `plants` of this folder (`src/plants/lot_sizing.py`), which calls M4 (`src/plants/retailers.py`) without changing it and reads the data from `src/plants/data.py`.
 
@@ -486,12 +480,8 @@ Albrecht, M., Rohde, J., & Wagner, M. (2015). Master planning. In H. Stadtler, C
 
 Fleischmann, B., Meyr, H., & Wagner, M. (2015). Advanced planning. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 71–95). Springer. https://doi.org/10.1007/978-3-642-55309-7
 
-Hax, A. C., & Meal, H. C. (1973). *Hierarchical integration of production planning and scheduling* (Working paper 656-73). Sloan School of Management, Massachusetts Institute of Technology. https://prolog.univie.ac.at/teaching/LVAs/KFK-Seminar/SS14/HaxMeal1973.pdf
-
 Stadtler, H. (2015). Production planning and scheduling. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 195–211). Springer. https://doi.org/10.1007/978-3-642-55309-7
-
-Sürie, C., & Reuter, B. (2015). Supply chain analysis. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 29–54). Springer. https://doi.org/10.1007/978-3-642-55309-7
 
 ---
 
-The places and the distances of the network have the sources given in `retailers.md`. The other data of this example are invented (2026); they do not describe a real company.
+The places and the distances of the network have the sources given in `retailers.md`. Original case by J. J. Ramos (UAB, 2026).
