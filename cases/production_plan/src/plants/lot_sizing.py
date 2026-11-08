@@ -1335,8 +1335,7 @@ def _monthly_hours_figure(plans: dict) -> None:
         ax.spines[["top", "right"]].set_visible(False)
     axes[0, 0].set_ylabel("Hours of the line in the month (h)")
     axes[0, -1].legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
-    fig.suptitle("Hours of the line of each plant, by month; in red, the capacity overload above the available "
-                 "capacity and its share of it", fontsize=11)
+    fig.suptitle("Capacity overload and spare capacity of each plant, by month", fontsize=11)
     fig.tight_layout()
     plt.show()
 
@@ -1440,15 +1439,13 @@ def _runs_figure(plans: dict) -> None:
 
 
 def show_line_hours(show_tables: bool = False) -> dict:
-    """The hours of the line of the three plants by month and in each week: the
-    figure of each month and the figure of each week or, with ``show_tables``,
-    Table 13."""
+    """The capacity overload and the spare capacity of the three plants by month:
+    the figure of each month or, with ``show_tables``, Table 13."""
     plans = {f: weekly_plan(f) for f in PLANTS}
     if show_tables:
         _display(hours_table(plans))
     else:
         _monthly_hours_figure(plans)
-        _hours_figure(plans)
     return plans
 
 
