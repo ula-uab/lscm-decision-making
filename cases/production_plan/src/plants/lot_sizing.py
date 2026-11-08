@@ -641,22 +641,49 @@ def weekly_orders_table(weekly: dict, retailer: str) -> pd.DataFrame:
 
 
 def show_orders(retailer: str = "Retailer 1", show_table: bool = False) -> None:
-    """The orders of the retailers: the six-month totals by model, Table 4, and the
-    figure of the orders of each retailer in each week, by model; with
-    ``show_table``, the weekly orders of one retailer in a table instead of the
-    figure."""
+    """The orders of the retailers: the six-month totals by model, and the orders of
+    each retailer in each month and in each week, by model, in two figures or, with
+    ``show_table``, in Table 4 and the table of the weekly orders of one retailer."""
     retailer = _retailer(retailer)
     data = _base()
     totals = {j: sum(q for (_, i, _), q in data["weekly orders"].items() if i == j) for j in MODELS}
     print("Orders of the 26 weeks, all retailers (bikes): "
           + "; ".join(f"{j} {_number(totals[j])}" for j in MODELS)
           + "; product mix " + "; ".join(f"{fixed(100 * data['six-month mix'][j], 1)} %" for j in MODELS) + ".")
-    _display(orders_table(data["orders"]))
     if show_table:
+        _display(orders_table(data["orders"]))
         print(f"{_name(retailer)}: orders in each week, by model (bikes).")
         _display(weekly_orders_table(data["weekly orders"], retailer))
     else:
+        _monthly_orders_figure(data["orders"])
         _orders_figure(data["weekly orders"])
+
+
+@_light
+def _monthly_orders_figure(order: dict) -> None:
+    """The orders of each month, stacked by retailer, with the orders of each
+    retailer inside its part of the bar and the total above it (Table 4)."""
+    fig, ax = plt.subplots(figsize=(11, 4.6))
+    colours = plt.get_cmap("Set2")
+    bottom = [0] * len(T)
+    for k, r in enumerate(RETAILERS):
+        values = [order[r, t] for t in T]
+        ax.bar(range(len(T)), values, 0.62, bottom=bottom, color=colours(k), label=_name(r))
+        for i, v in enumerate(values):
+            ax.text(i, bottom[i] + v / 2, _number(v), ha="center", va="center", fontsize=7.5)
+        bottom = [b + v for b, v in zip(bottom, values)]
+    for i, total in enumerate(bottom):
+        ax.text(i, total + max(bottom) * 0.015, _number(total), ha="center", va="bottom", fontsize=8.5,
+                weight="bold")
+    ax.set_xticks(range(len(T)), T)
+    ax.set_ylim(0, max(bottom) * 1.1)
+    ax.set_ylabel("Orders (bikes)")
+    ax.set_title("Orders of each retailer in each month, the four models together: the data with which M4 is "
+                 f"solved ({_number(sum(bottom))} bikes in the six months)", fontsize=10)
+    ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    plt.show()
 
 
 @_light
