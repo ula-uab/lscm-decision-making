@@ -704,22 +704,70 @@ def network_tables() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 
 def master_plan_table(master: dict, least: dict) -> pd.DataFrame:
-    """Table 7: the plan of M4 at each plant and the least stock of each model at
-    the end of each month."""
+    """Table 7: what the plan of M4 sets for each plant and month, with the least
+    stock of each model at the end of the month."""
     rows = {}
     for f in PLANTS:
         for t in T:
-            rows[f, t] = {"Assembled": _number(float(master["assembled"][f, t])),
-                          "Shipped to the network": _number(float(master["shipped"][f, t])),
-                          "Stock at the end": _number(float(master["stock"][f, t])),
-                          "Least stock at the end": _bikes(least[f, t])}
-    return pd.DataFrame(rows).T.rename_axis(["Plant", "Month"])
+            rows[f, t] = {("Assembly", ""): float(master["assembled"][f, t]),
+                          ("Shipments to the network", ""): float(master["shipped"][f, t]),
+                          ("Stock at the end of the month", ""): float(master["stock"][f, t]),
+                          **{("Least stock at the end of the month", j): least[f, t][j] for j in MODELS}}
+    table = pd.DataFrame(rows).T.rename_axis(["Plant", "Month"])
+    table.columns = pd.MultiIndex.from_tuples(table.columns)
+    return table
+
+
+@_light
+def _master_plan_figure(master: dict, least: dict) -> None:
+    """For each plant, above, the bikes it has to assemble and ship to the network in
+    each month, with its capacity; below, the stock it has to hold at the end of each
+    month, stacked by model: the least stock of each model."""
+    fig, axes = plt.subplots(2, len(PLANTS), figsize=(15, 6.6), sharex=True, gridspec_kw={"height_ratios": [1.5, 1]})
+    x = range(len(T))
+    colours = plt.get_cmap("tab10")
+    top = max(K[f][t] for f in PLANTS for t in T) * 1.3
+    stock_top = max(float(master["stock"][f, t]) for f in PLANTS for t in T) * 1.2
+    for k, f in enumerate(PLANTS):
+        above, below = axes[0, k], axes[1, k]
+        assembly = [float(master["assembled"][f, t]) for t in T]
+        shipments = [float(master["shipped"][f, t]) for t in T]
+        above.bar([i - 0.21 for i in x], assembly, 0.41, color=COLOURS[f], label="assembly")
+        above.bar([i + 0.21 for i in x], shipments, 0.41, color=COLOURS[f], alpha=0.4, label="shipments to the network")
+        above.step([-0.5, *x, len(T) - 0.5], [K[f][T[0]], *(K[f][t] for t in T), K[f][T[-1]]], where="mid",
+                   color="black", lw=1, ls="--", label="capacity")
+        for i in x:
+            for value, dx in ((assembly[i], -0.21), (shipments[i], 0.21)):
+                if value:                  # inside the top of the bar, clear of the capacity line
+                    above.text(i + dx, value - top * 0.02, _number(value), ha="center", va="top", fontsize=6.5,
+                               color="white" if dx < 0 else "black")
+        above.set_ylim(0, top)
+        above.set_title(_name(f), fontsize=10)
+        above.legend(fontsize=7, loc="upper left", frameon=False, ncol=3)
+        bottom = [0.0] * len(T)
+        for q, j in enumerate(MODELS):
+            values = [float(least[f, t][j]) for t in T]
+            below.bar(x, values, 0.55, bottom=bottom, color=colours(q), label=j)
+            bottom = [b + v for b, v in zip(bottom, values)]
+        for i in x:
+            below.text(i, bottom[i] + stock_top * 0.02, _number(bottom[i]), ha="center", fontsize=7)
+        below.set_ylim(0, stock_top)
+        below.set_xticks(list(x), T)
+        for ax in (above, below):
+            ax.spines[["top", "right"]].set_visible(False)
+    axes[0, 0].set_ylabel("Bikes per month")
+    axes[1, 0].set_ylabel("Stock at the end\nof the month (bikes)")
+    axes[1, -1].legend(fontsize=7, loc="upper left", bbox_to_anchor=(1.0, 1.0), title="Least stock", title_fontsize=7)
+    fig.suptitle("Master plan M4: what each plant has to assemble, ship to the network and hold at the end of "
+                 "each month", fontsize=11)
+    fig.tight_layout()
+    plt.show()
 
 
 def show_master_plan(show_tables: bool = False) -> None:
-    """The data of M4 on the figure of the network and, with ``show_tables``, in
-    three tables; and M4 solved with the orders of Table 4: its cost, Table 7 and
-    the stock of the network."""
+    """The data of M4 on the figure of the network; and M4 solved with the orders of
+    Table 4: its cost, the figure of its plan at the plants and the stock of the
+    network. With ``show_tables``, the data and the plan also in tables (Table 7)."""
     print(f"The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every warehouse starts and "
           "ends the six months with no stock. Node capacity: the bikes that the warehouse can receive in a month. "
           "Backorder share: of the orders that a retailer does not receive in their month, the share that is "
@@ -734,7 +782,9 @@ def show_master_plan(show_tables: bool = False) -> None:
     print(f"M4 with the orders of the retailers: cost {_number(master['cost'], 2)} €; backorders "
           f"{_number(float(sum(master['backorders'].values())))} and lost sales "
           f"{_number(float(sum(master['lost sales'].values())))} bikes.")
-    _display(master_plan_table(master, data["least stock"]))
+    _master_plan_figure(master, data["least stock"])
+    if show_tables:
+        _display(master_plan_table(master, data["least stock"]))
     print("Stock of the network, plants and warehouses, at the end of each month (bikes): "
           + "; ".join(f"{t} {_number(float(master['network stock'][t]))}" for t in T) + ".")
 
