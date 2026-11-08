@@ -1216,12 +1216,145 @@ def _hours_figure(plans: dict, base_plans: dict | None = None,
     plt.show()
 
 
-def show_line_hours() -> dict:
-    """The hours of the line of the three plants by month (Table 13), with the
-    figure of the hours of each week."""
+def _bar_labels(ax, xs, values, decimals: int = 2, colour: str = "black") -> None:
+    top = ax.get_ylim()[1]
+    for x, v in zip(xs, values):
+        if v > 0:
+            ax.text(x, v + top * 0.01, fixed(v, decimals), ha="center", va="bottom", fontsize=6.5, color=colour,
+                    rotation=90)
+
+
+@_light
+def _monthly_hours_figure(plans: dict) -> None:
+    """For each plant, the hours of its line in each month: assembly and setups,
+    then the spare capacity up to the available capacity, and the capacity
+    overload above it, with its share of the available capacity (Table 13)."""
+    fig, axes = plt.subplots(1, len(plans), figsize=(15, 4.6), sharey=True, squeeze=False)
+    x = range(len(T))
+    for ax, (f, plan) in zip(axes[0], plans.items()):
+        hours = line_hours(plan)
+        assembly = [float(hours[t]["assembly hours"]) for t in T]
+        setups = [float(hours[t]["setup hours"]) for t in T]
+        spare = [float(hours[t]["spare"]) for t in T]
+        over = [float(hours[t]["overload"]) for t in T]
+        ax.bar(x, assembly, 0.62, color=COLOURS[f], label="assembly")
+        ax.bar(x, setups, 0.62, bottom=assembly, color=COLOURS[f], alpha=0.45, label="setups")
+        ax.bar(x, spare, 0.62, bottom=[a + s_ for a, s_ in zip(assembly, setups)], color="white",
+               edgecolor="0.5", hatch="///", lw=0.6, label="spare capacity")
+        for i, t in enumerate(T):
+            available = float(hours[t]["available"])
+            ax.plot([i - 0.38, i + 0.38], [available, available], color="black", lw=1.4,
+                    label="available capacity" if i == 0 else None)
+            if over[i] > 0:
+                ax.text(i, assembly[i] + setups[i] + 3, f"+{fixed(over[i])} h\n{fixed(100 * hours[t]['overload share'], 1)} %",
+                        ha="center", va="bottom", fontsize=7, color=SHORT)
+        ax.set_xticks(list(x), T)
+        ax.set_ylim(0, 250)
+        ax.set_title(f"{_name(f)}\ncapacity overload of the six months: {fixed(hours['Six months']['overload'])} h",
+                     fontsize=10)
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0, 0].set_ylabel("Hours of the line in the month (h)")
+    axes[0, -1].legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    fig.suptitle("Hours of the line of each plant, by month; in red, the capacity overload above the available "
+                 "capacity and its share of it", fontsize=11)
+    fig.tight_layout()
+    plt.show()
+
+
+@_light
+def _compare_months_figure(plant: str, new: dict, old: dict, label: str, old_label: str) -> None:
+    """The capacity overload and the spare capacity of each month of a plan next to
+    those of another plan."""
+    fig, axes = plt.subplots(1, 2, figsize=(13, 3.8))
+    x = range(len(T))
+    for ax, key, title in zip(axes, ("overload", "spare"), ("Capacity overload (h)", "Spare capacity (h)")):
+        before = [float(old[t][key]) for t in T]
+        after = [float(new[t][key]) for t in T]
+        ax.bar([i - 0.2 for i in x], before, 0.38, color="0.75", label=old_label)
+        ax.bar([i + 0.2 for i in x], after, 0.38, color=COLOURS[plant], label=label)
+        ax.set_ylim(0, max(before + after + [1]) * 1.3)
+        _bar_labels(ax, [i - 0.2 for i in x], before)
+        _bar_labels(ax, [i + 0.2 for i in x], after)
+        ax.set_xticks(list(x), T)
+        ax.set_title(f"{_name(plant)}: {title.lower()} by month; six months {fixed(old['Six months'][key])} and "
+                     f"{fixed(new['Six months'][key])} h", fontsize=9.5)
+        ax.set_ylabel(title)
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0].legend(fontsize=8, loc="upper left")
+    fig.tight_layout()
+    plt.show()
+
+
+@_light
+def _reference_figure(model: dict, reference: dict) -> None:
+    """For the three plants, the capacity overload and the setup and holding cost of
+    the six months of the plan of reference and of the plan of the model."""
+    fig, axes = plt.subplots(1, 2, figsize=(13, 3.8))
+    x = range(len(PLANTS))
+    values = {"overload": ({f: float(line_hours(reference[f])["Six months"]["overload"]) for f in PLANTS},
+                           {f: float(line_hours(model[f])["Six months"]["overload"]) for f in PLANTS}),
+              "cost": ({f: float(reference[f]["cost"]) for f in PLANTS}, {f: float(model[f]["cost"]) for f in PLANTS})}
+    titles = {"overload": "Capacity overload of the six months (h)", "cost": "Setup and holding cost of the six months (€)"}
+    for ax, key in zip(axes, values):
+        ref, mod = values[key]
+        ax.bar([i - 0.2 for i in x], [ref[f] for f in PLANTS], 0.38, color="0.75", label="plan of reference")
+        ax.bar([i + 0.2 for i in x], [mod[f] for f in PLANTS], 0.38, color=[COLOURS[f] for f in PLANTS],
+               label="plan of the model")
+        top = max(list(ref.values()) + list(mod.values()) + [1])
+        ax.set_ylim(0, top * 1.2)
+        for i, f in enumerate(PLANTS):
+            for dx, v in ((-0.2, ref[f]), (0.2, mod[f])):
+                ax.text(i + dx, v + top * 0.015, fixed(v), ha="center", va="bottom", fontsize=7.5)
+        ax.set_xticks(list(x), [_name(f) for f in PLANTS], fontsize=8)
+        ax.set_title(titles[key], fontsize=10)
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0].legend(fontsize=8, loc="upper left")
+    fig.tight_layout()
+    plt.show()
+
+
+@_light
+def _runs_figure(plans: dict) -> None:
+    """For each plant, the capacity overload (above) and the spare capacity (below)
+    of each month in each run (Tables 14 and 15)."""
+    fig, axes = plt.subplots(2, len(PLANTS), figsize=(16, 7.4), squeeze=False)
+    colours = plt.get_cmap("Set1")
+    width = 0.8 / len(RUNS)
+    for row, key, label in ((0, "overload", "Capacity overload (h)"), (1, "spare", "Spare capacity (h)")):
+        for col, f in enumerate(PLANTS):
+            ax = axes[row, col]
+            top = max([float(line_hours(p)[t][key]) for (g, _), p in plans.items() if g == f for t in T] + [1])
+            for k, name in enumerate(RUNS):
+                if (f, name) not in plans:
+                    continue
+                hours = line_hours(plans[f, name])
+                ax.bar([i - 0.4 + width * (k + 0.5) for i in range(len(T))], [float(hours[t][key]) for t in T],
+                       width, color="0.3" if name == "As planned" else colours(k),
+                       label=name if (row, col) == (0, 1) else None)
+            ax.set_ylim(0, top * 1.1)
+            if top == 1:
+                ax.text(0.5, 0.5, f"no {label.split(' (')[0].lower()} in any run", transform=ax.transAxes,
+                        ha="center", va="center", fontsize=9, color="0.4")
+            ax.set_xticks(range(len(T)), T)
+            ax.set_title(f"{_name(f)}: {label.lower()}", fontsize=10)
+            ax.spines[["top", "right"]].set_visible(False)
+        axes[row, 0].set_ylabel(label)
+    fig.suptitle("Weekly plans under the assumptions of the master plan: each run, by plant and month", fontsize=11)
+    fig.legend(fontsize=8, loc="upper center", ncol=len(RUNS), bbox_to_anchor=(0.5, 0.95), frameon=False)
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    plt.show()
+
+
+def show_line_hours(show_tables: bool = False) -> dict:
+    """The hours of the line of the three plants by month and in each week: the
+    figure of each month and the figure of each week or, with ``show_tables``,
+    Table 13."""
     plans = {f: weekly_plan(f) for f in PLANTS}
-    _display(hours_table(plans))
-    _hours_figure(plans)
+    if show_tables:
+        _display(hours_table(plans))
+    else:
+        _monthly_hours_figure(plans)
+        _hours_figure(plans)
     return plans
 
 
@@ -1270,7 +1403,7 @@ def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday
     before = weekly_plan(plant)
     new, old = line_hours(plan), line_hours(before)
     rows = {}
-    for t in new:
+    for t in new:                             # the six months included
         rows[t] = {"Available capacity (h)": _number(float(new[t]["available"])),
                    "Setups (h)": fixed(new[t]["setup hours"]),
                    "Capacity overload (h)": fixed(new[t]["overload"]),
@@ -1279,7 +1412,10 @@ def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday
                    "Spare capacity, data of the case (h)": fixed(old[t]["spare"])}
     print(f"Setup and holding cost of the six months: {fixed(plan['cost'])} €; with the data of the case, "
           f"{fixed(before['cost'])} €.")
-    _display(pd.DataFrame(rows).T.rename_axis("Month"))
+    if show_tables:
+        _display(pd.DataFrame(rows).T.rename_axis("Month"))
+    else:
+        _compare_months_figure(plant, new, old, "data changed", "data of the case")
     _show_plan(plant, plan, show_tables, before)
     return plan
 
@@ -1297,7 +1433,10 @@ def show_reference_plan(plant: str = "Plant 1", show_tables: bool = False) -> di
                 "Capacity overload, plan of the model (h)": fixed(line_hours(model[f])["Six months"]["overload"]),
                 "Setup and holding cost, plan of reference (€)": fixed(reference[f]["cost"]),
                 "Setup and holding cost, plan of the model (€)": fixed(model[f]["cost"])} for f in PLANTS}
-    _display(pd.DataFrame(rows).T.rename_axis("Six months"))
+    if show_tables:
+        _display(pd.DataFrame(rows).T.rename_axis("Six months"))
+    else:
+        _reference_figure(model, reference)
     print(f"{_name(plant)}: weekly plan of reference.")
     _show_plan(plant, reference[plant], show_tables, model[plant], "hours of the plan of the model")
     return reference[plant]
@@ -1327,12 +1466,15 @@ def show_runs(plant: str = "none", run_name: str = "As planned", show_tables: bo
             plan = run(f, name, check=True)
             if plan is not None:
                 plans[f, name] = plan
-    print("Capacity overload (h) of each plant, by month, in each run.")
-    _display(_run_rows(plans, "overload"))
-    print("Spare capacity (h) of each plant, by month, in each run.")
-    _display(_run_rows(plans, "spare"))
+    if show_tables:
+        print("Capacity overload (h) of each plant, by month, in each run.")
+        _display(_run_rows(plans, "overload"))
+        print("Spare capacity (h) of each plant, by month, in each run.")
+        _display(_run_rows(plans, "spare"))
+    else:
+        _runs_figure(plans)
     others = [f"{f}, {name}: {', '.join(p['other plans'])}" for (f, name), p in plans.items() if p["other plans"]]
-    print("Months in which another plan has the same capacity overload and the same cost: "
+    print("Months with another optimal plan: "
           + ("; ".join(others) if others else "none") + ".")
     if plant != "none":
         plant = _plant(plant)
