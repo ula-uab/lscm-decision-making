@@ -14,7 +14,8 @@ The computations, each with its data as arguments:
    holds at the end of each month (Tables 7 to 9);
 4. ``weekly_plan``: one plan for each month, one after the other, each in the
    two stages of step 6 (Tables 10 to 12);
-5. ``lot_for_lot``: the plan of step 7, which assembles each week what it ships;
+5. ``limit_case``: the two limit cases of step 7, with the plans expected
+   without solving the model, ``lot_for_lot`` and ``one_lot_a_month``;
 6. ``line_hours``: assembly, setups, capacity overload and spare capacity by
    month (Table 13);
 7. ``run``: the plans of the six months with the data of part d) (Tables 14
@@ -24,8 +25,8 @@ Quantities are exact: fractions, not floating point, so that every rounding,
 half up, starts from the exact value.
 
 The notebook calls one function per step: ``show_orders``, ``show_master_plan``,
-``show_shipments``, ``show_weekly_plan``, ``show_line_hours`` and
-``change_test``.
+``show_shipments``, ``show_weekly_plan``, ``show_limit_case``,
+``show_line_hours``, ``change_test`` and ``show_runs``.
 """
 
 from __future__ import annotations
@@ -520,16 +521,20 @@ def weekly_plan(plant: str, shipments: dict | None = None, least: dict | None = 
 
 
 # ---------------------------------------------------------------------------
-# 5. The plan of step 7: each week assembles what it ships
+# 5. Validation of step 7: two limit cases with a known plan
 # ---------------------------------------------------------------------------
 
-def lot_for_lot(plant: str, shipments: dict | None = None, least: dict | None = None, assembly: dict | None = None,
-                setup: dict | None = None, holding: dict | None = None, capacity: dict | None = None,
-                initial: dict | None = None) -> dict:
-    """The plan of step 7 at a plant: each week assembles, model by model, what it
-    ships less the stock it holds, with a setup of every model it assembles; in the
-    week of the end of the month it also assembles what it lacks of the least
-    stock. Returns what ``weekly_plan`` returns, evaluated in the model."""
+LIMIT_CASES = ["A · expensive holding", "B · expensive setups"]
+LIMIT_CAPACITY = 1000     # h of available capacity in every week: the line never binds
+LIMIT_HOLDING = 10000     # EUR/(bike·week), case A
+LIMIT_SETUP_TIME = 100    # h/setup, case B
+NO_STORAGE_LIMIT = 10000  # bikes, case B
+
+
+def _known_plan(plant: str, lots, shipments: dict | None, least: dict | None, assembly: dict | None,
+                setup: dict | None, holding: dict | None, capacity: dict | None, initial: dict | None) -> dict:
+    """A plan built by a rule, evaluated in the model: ``lots(weeks, x, least, stock)``
+    gives the bikes of each model assembled in each week of a month."""
     data = _base()
     shipments = data["shipments"] if shipments is None else shipments
     least = data["least stock"] if least is None else least
@@ -537,14 +542,75 @@ def lot_for_lot(plant: str, shipments: dict | None = None, least: dict | None = 
     stock = dict(stock)
     weeks = {}
     for t, plan_weeks_ in plan_weeks().items():
+        x = {(j, w): shipments[plant, j, w] for j in MODELS for w in plan_weeks_}
+        lot = lots(plan_weeks_, x, least[plant, t], stock)
         for w in plan_weeks_:
-            need = {j: shipments[plant, j, w] + (least[plant, t][j] if w == plan_weeks_[-1] else 0) for j in MODELS}
-            assembled = {j: max(0, need[j] - stock[j]) for j in MODELS}
-            stock = {j: stock[j] + assembled[j] - shipments[plant, j, w] for j in MODELS}
+            assembled = {j: lot.get((j, w), 0) for j in MODELS}
+            stock = {j: stock[j] + assembled[j] - x[j, w] for j in MODELS}
             weeks[w] = _week(stock, assembled, {j: int(assembled[j] > 0) for j in MODELS}, assembly, setup,
                              capacity[w])
     return {"plant": plant, "weeks": weeks, "cost": _cost(weeks, setup, holding), "other plans": None,
             "least": {t: least[plant, t] for t in T}, "storage": K_h[plant]}
+
+
+def lot_for_lot(plant: str, shipments: dict | None = None, least: dict | None = None, assembly: dict | None = None,
+                setup: dict | None = None, holding: dict | None = None, capacity: dict | None = None,
+                initial: dict | None = None) -> dict:
+    """The expected plan of limit case A: each week assembles, model by model, what
+    it ships less the stock it holds; in the week of the end of the month it also
+    assembles what it lacks of the least stock. Returns what ``weekly_plan``
+    returns, evaluated in the model."""
+    def lots(weeks, x, least, stock):
+        out, stock = {}, dict(stock)
+        for w in weeks:
+            for j in MODELS:
+                out[j, w] = max(0, x[j, w] + (least[j] if w == weeks[-1] else 0) - stock[j])
+                stock[j] += out[j, w] - x[j, w]
+        return out
+    return _known_plan(plant, lots, shipments, least, assembly, setup, holding, capacity, initial)
+
+
+def one_lot_a_month(plant: str, shipments: dict | None = None, least: dict | None = None,
+                    assembly: dict | None = None, setup: dict | None = None, holding: dict | None = None,
+                    capacity: dict | None = None, initial: dict | None = None) -> dict:
+    """The expected plan of limit case B: one lot of each model in each month, in
+    the first week whose shipments the stock does not cover, with what the month
+    still needs of that model, its least stock included; if the stock covers the
+    shipments but not the least stock, in the week of the end of the month."""
+    def lots(weeks, x, least, stock):
+        out = {}
+        for j in MODELS:
+            need = sum(x[j, w] for w in weeks) + least[j] - stock[j]
+            if need <= 0:
+                continue
+            shipped = 0
+            for w in weeks:
+                shipped += x[j, w]
+                if shipped > stock[j] or w == weeks[-1]:
+                    out[j, w] = need
+                    break
+        return out
+    return _known_plan(plant, lots, shipments, least, assembly, setup, holding, capacity, initial)
+
+
+def limit_case(plant: str, case: str) -> dict:
+    """A limit case of step 7 at a plant, one of ``LIMIT_CASES``: the plan of the
+    model with its data ("model") and the plan expected without solving it
+    ("expected"), and the weeks in which their lots differ ("different weeks")."""
+    capacity = {w: LIMIT_CAPACITY for w in WEEKS}
+    if case == LIMIT_CASES[0]:
+        holding = {j: LIMIT_HOLDING for j in MODELS}
+        model = weekly_plan(plant, holding=holding, capacity=capacity)
+        expected = lot_for_lot(plant, holding=holding, capacity=capacity)
+    elif case == LIMIT_CASES[1]:
+        setup = {j: LIMIT_SETUP_TIME for j in MODELS}
+        model = weekly_plan(plant, setup=setup, capacity=capacity, storage=NO_STORAGE_LIMIT)
+        expected = one_lot_a_month(plant, setup=setup, capacity=capacity)
+        model["storage"] = expected["storage"] = None
+    else:
+        raise ValueError(f"The limit case must be one of {', '.join(LIMIT_CASES)}.")
+    different = [w for w in WEEKS if model["weeks"][w]["assembled"] != expected["weeks"][w]["assembled"]]
+    return {"model": model, "expected": expected, "different weeks": different}
 
 
 # ---------------------------------------------------------------------------
@@ -1107,11 +1173,12 @@ def _lots_figure(plant: str, plan: dict) -> None:
                 if v >= 4:
                     ax.text(w, b + v / 2, _number(v), ha="center", va="center", fontsize=6.5, color="white")
             bottom = [b + v for b, v in zip(bottom, values)]
-        ax.set_ylim(0, max(max(bottom), plan["storage"] if key == "stock" else 0, 1) * 1.15)
+        ax.set_ylim(0, max(max(bottom), (plan["storage"] or 0) if key == "stock" else 0, 1) * 1.15)
         for weeks in plan_weeks().values():
             ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
         ax.spines[["top", "right"]].set_visible(False)
-    below.axhline(plan["storage"], color="black", ls="--", lw=1, label="storage capacity")
+    if plan["storage"] is not None:
+        below.axhline(plan["storage"], color="black", ls="--", lw=1, label="storage capacity")
     for t, weeks in plan_weeks().items():
         total = sum(plan["least"][t].values())
         below.plot([weeks[-1] - 0.45, weeks[-1] + 0.45], [total, total], color="black", lw=2.6,
@@ -1183,10 +1250,14 @@ def show_weekly_plan(plant: str = "Plant 1", check: bool = False, show_tables: b
 def _hours_figure(plans: dict, base_plans: dict | None = None,
                   base_label: str = "hours with the data of the case") -> None:
     """For each plant, the hours of assembly and of setups of each week against its
-    available capacity; the capacity overload in red. ``base_plans``, drawn as a
-    dashed line with ``base_label``, gives the hours of other plans to compare."""
-    fig, axes = plt.subplots(len(plans), 1, figsize=(11, 3.2 * len(plans)), squeeze=False)
-    for ax, (f, plan) in zip(axes[:, 0], plans.items()):
+    available capacity and, below, the capacity overload of each week in red, on its
+    own scale, so that an overload of a few minutes can be read. ``base_plans``,
+    drawn as a dashed line with ``base_label``, gives the hours of other plans to
+    compare."""
+    fig, axes = plt.subplots(2 * len(plans), 1, figsize=(11, 4.6 * len(plans)), squeeze=False,
+                             gridspec_kw={"height_ratios": [3, 1.3] * len(plans)})
+    for k, (f, plan) in enumerate(plans.items()):
+        ax, ax_over = axes[2 * k, 0], axes[2 * k + 1, 0]
         rows = [plan["weeks"][w] for w in WEEKS]
         assembly = [float(r["assembly hours"]) for r in rows]
         setups = [float(r["setup hours"]) for r in rows]
@@ -1195,23 +1266,32 @@ def _hours_figure(plans: dict, base_plans: dict | None = None,
         ax.step([w - 0.5 for w in WEEKS] + [WEEKS[-1] + 0.5],
                 [float(r["available"]) for r in rows] + [float(rows[-1]["available"])],
                 where="post", color="black", lw=1.2, label="available capacity")
-        over = [w for w, r in zip(WEEKS, rows) if r["overload"] > 0]
-        ax.scatter(over, [float(plan["weeks"][w]["available"] + plan["weeks"][w]["overload"]) + 1.5 for w in over],
-                   color=SHORT, marker="v", s=18, label="capacity overload")
+        overload = [float(r["overload"]) for r in rows]
+        ax_over.bar(WEEKS, overload, color=SHORT, width=0.75)
+        for w, v in zip(WEEKS, overload):
+            if v > 0:
+                ax_over.text(w, v, fixed(v, 2), ha="center", va="bottom", fontsize=6.5, color=SHORT)
+        if not any(overload):
+            ax_over.text(0.5, 0.5, "no capacity overload in any week", transform=ax_over.transAxes,
+                         ha="center", va="center", fontsize=8, color="0.4")
+        ax_over.set_ylim(0, max(1.0, 1.35 * max(overload)))
+        ax_over.set_ylabel("Capacity\noverload (h)")
         if base_plans and f in base_plans:
             ax.plot(WEEKS, [float(r["assembly hours"] + r["setup hours"]) for r in
                             (base_plans[f]["weeks"][w] for w in WEEKS)],
                     color="0.35", lw=1, ls="--", marker=".", label=base_label)
-        for weeks in plan_weeks().values():
-            ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
-        ax.set_xticks(WEEKS)
+        for a in (ax, ax_over):
+            for weeks in plan_weeks().values():
+                a.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
+            a.set_xticks(WEEKS)
+            a.spines[["top", "right"]].set_visible(False)
         top = max(float(r["available"] + r["overload"]) for r in rows)
         ax.set_ylim(0, max(62, 1.25 * top + 4))
         ax.set_ylabel("Hours of the line (h)")
         ax.set_title(f"{f}: hours of each week; dotted lines at the end of each month", fontsize=10)
-        ax.legend(fontsize=7, ncol=5, loc="upper left")
-        ax.spines[["top", "right"]].set_visible(False)
-    axes[-1, 0].set_xlabel("Week")
+        ax.legend(fontsize=7, ncol=4, loc="upper left")
+        ax_over.set_title(f"{f}: capacity overload of each week (h)", fontsize=9)
+        ax_over.set_xlabel("Week")
     fig.tight_layout()
     plt.show()
 
@@ -1286,31 +1366,45 @@ def _compare_months_figure(plant: str, new: dict, old: dict, label: str, old_lab
 
 
 @_light
-def _reference_figure(model: dict, reference: dict) -> None:
-    """For the three plants, the capacity overload and the setup and holding cost of
-    the six months of the plan of reference and of the plan of the model."""
-    fig, axes = plt.subplots(1, 2, figsize=(13, 3.8))
-    x = range(len(PLANTS))
-    values = {"overload": ({f: float(line_hours(reference[f])["Six months"]["overload"]) for f in PLANTS},
-                           {f: float(line_hours(model[f])["Six months"]["overload"]) for f in PLANTS}),
-              "cost": ({f: float(reference[f]["cost"]) for f in PLANTS}, {f: float(model[f]["cost"]) for f in PLANTS})}
-    titles = {"overload": "Capacity overload of the six months (h)", "cost": "Setup and holding cost of the six months (€)"}
-    for ax, key in zip(axes, values):
-        ref, mod = values[key]
-        ax.bar([i - 0.2 for i in x], [ref[f] for f in PLANTS], 0.38, color="0.75", label="plan of reference")
-        ax.bar([i + 0.2 for i in x], [mod[f] for f in PLANTS], 0.38, color=[COLOURS[f] for f in PLANTS],
-               label="plan of the model")
-        top = max(list(ref.values()) + list(mod.values()) + [1])
-        ax.set_ylim(0, top * 1.2)
-        for i, f in enumerate(PLANTS):
-            for dx, v in ((-0.2, ref[f]), (0.2, mod[f])):
-                ax.text(i + dx, v + top * 0.015, fixed(v), ha="center", va="bottom", fontsize=7.5)
-        ax.set_xticks(list(x), [_name(f) for f in PLANTS], fontsize=8)
-        ax.set_title(titles[key], fontsize=10)
+def _limit_figure(plant: str, case: dict) -> None:
+    """For each model, the lots of each week of the plan of the model (bars) and of
+    the expected plan (black marks) in a limit case of step 7."""
+    model, expected = case["model"], case["expected"]
+    fig, axes = plt.subplots(len(MODELS), 1, figsize=(13, 8.4), sharex=True)
+    colours = plt.get_cmap("tab10")
+    for k, (ax, j) in enumerate(zip(axes, MODELS)):
+        lots = [model["weeks"][w]["assembled"][j] for w in WEEKS]
+        known = [expected["weeks"][w]["assembled"][j] for w in WEEKS]
+        ax.bar(WEEKS, lots, 0.75, color=colours(k), label="plan of the model")
+        ax.scatter([w for w, v in zip(WEEKS, known) if v > 0], [v for v in known if v > 0], marker="_", s=260,
+                   linewidths=2.4, color="black", zorder=3, label="expected plan")
+        for w, v in zip(WEEKS, lots):
+            if v > 0:
+                ax.text(w, v, _number(v), ha="center", va="bottom", fontsize=6.5)
+        for weeks in plan_weeks().values():
+            ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
+        ax.set_ylim(0, max(lots + known + [1]) * 1.3)
+        ax.set_ylabel(f"{j}\n(bikes)", fontsize=8)
         ax.spines[["top", "right"]].set_visible(False)
-    axes[0].legend(fontsize=8, loc="upper left")
+    axes[0].legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    axes[0].set_title(f"{_name(plant)}: lots of each model, the bikes assembled in each week; dotted lines at the end "
+                      "of each month", fontsize=10)
+    axes[-1].set_xticks(WEEKS)
+    axes[-1].set_xlabel("Week")
     fig.tight_layout()
     plt.show()
+
+
+def _limit_table(case: dict) -> pd.DataFrame:
+    """The lots of each week of the plan of the model and of the expected plan in a
+    limit case of step 7, one column for each model."""
+    rows = {w: {**{("Assembly, plan of the model (bikes)", j): case["model"]["weeks"][w]["assembled"][j]
+                   for j in MODELS},
+                **{("Assembly, expected plan (bikes)", j): case["expected"]["weeks"][w]["assembled"][j]
+                   for j in MODELS}} for w in WEEKS}
+    table = pd.DataFrame(rows).T.rename_axis("Week")
+    table.columns = pd.MultiIndex.from_tuples(table.columns)
+    return table
 
 
 @_light
@@ -1420,26 +1514,34 @@ def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday
     return plan
 
 
-def show_reference_plan(plant: str = "Plant 1", show_tables: bool = False) -> dict:
-    """The plan of reference of step 7 against the plans of the model: the capacity
-    overload and the setup and holding cost of the six months at the three plants;
-    and the weekly plan of reference of one plant, in the form of Tables 10 to 12,
-    in figures, with its hours next to those of the plan of the model, or, with
-    ``show_tables``, in one table."""
+def show_limit_case(plant: str = "Plant 1", case: str = LIMIT_CASES[0], show_tables: bool = False) -> dict:
+    """A limit case of step 7: for the three plants, whether the plan of the model
+    is the expected plan; for one plant, the lots of the two plans and the lots and
+    stock of the plan of the model, in figures or, with ``show_tables``, in
+    tables."""
     plant = _plant(plant)
-    model = {f: weekly_plan(f) for f in PLANTS}
-    reference = {f: lot_for_lot(f) for f in PLANTS}
-    rows = {f: {"Capacity overload, plan of reference (h)": fixed(line_hours(reference[f])["Six months"]["overload"]),
-                "Capacity overload, plan of the model (h)": fixed(line_hours(model[f])["Six months"]["overload"]),
-                "Setup and holding cost, plan of reference (€)": fixed(reference[f]["cost"]),
-                "Setup and holding cost, plan of the model (€)": fixed(model[f]["cost"])} for f in PLANTS}
+    if case == LIMIT_CASES[0]:
+        print(f"Limit case A: holding cost {_number(LIMIT_HOLDING)} €/(bike·week) for every model; available "
+              f"capacity {_number(LIMIT_CAPACITY)} h in every week.")
+    elif case == LIMIT_CASES[1]:
+        cost = setup_cost({j: LIMIT_SETUP_TIME for j in MODELS})[MODELS[0]]
+        print(f"Limit case B: setup time {_number(LIMIT_SETUP_TIME)} h and setup cost {fixed(cost, 0)} € for every "
+              f"model; available capacity {_number(LIMIT_CAPACITY)} h in every week; no limit on the storage "
+              "capacity.")
+    cases = {f: limit_case(f, case) for f in PLANTS}
+    for f, result in cases.items():
+        overload = sum(row["overload"] for row in result["model"]["weeks"].values())
+        verdict = ("is the expected plan in all 26 weeks" if not result["different weeks"] else
+                   "differs from the expected plan in weeks " + ", ".join(map(str, result["different weeks"])))
+        print(f"{_name(f)}: the plan of the model {verdict}; capacity overload {fixed(overload)} h.")
+    result = cases[plant]
     if show_tables:
-        _display(pd.DataFrame(rows).T.rename_axis("Six months"))
+        _display(_limit_table(result))
+        _display(_plan_by_model(result["model"]))
     else:
-        _reference_figure(model, reference)
-    print(f"{_name(plant)}: weekly plan of reference.")
-    _show_plan(plant, reference[plant], show_tables, model[plant], "hours of the plan of the model")
-    return reference[plant]
+        _limit_figure(plant, result)
+        _lots_figure(plant, result["model"])
+    return result
 
 
 def _run_rows(plans: dict, key: str) -> pd.DataFrame:

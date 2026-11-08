@@ -348,12 +348,28 @@ def test_the_weekly_plans_are_the_only_optimal_plans():
         assert ls.weekly_plan(f, check=True)["other plans"] == []
 
 
-def test_step7_plan_that_assembles_what_it_ships(plans):
-    for plant, overload, cost in (("Plant 1", "173,77", "13.446,46"), ("Plant 2", "216,69", "16.557,69")):
-        plan = ls.lot_for_lot(plant)
-        assert ls.fixed(ls.line_hours(plan)["Six months"]["overload"]) == overload
-        assert ls.fixed(plan["cost"]) == cost
-    assert [ls.fixed(ls.line_hours(plans[f])["Six months"]["overload"]) for f in PLANTS[:2]] == ["20,85", "66,88"]
+def test_step7_limit_cases_give_the_expected_plan():
+    for case in ls.LIMIT_CASES:
+        for f in PLANTS:
+            result = ls.limit_case(f, case)
+            assert result["different weeks"] == []
+            assert sum(row["overload"] for row in result["model"]["weeks"].values()) == 0
+            assert result["model"]["cost"] == result["expected"]["cost"]
+
+
+def test_step7_case_b_has_one_lot_of_each_model_a_month():
+    for f, months in (("Plant 1", 6), ("Plant 2", 6), ("Plant 3", 2)):
+        weeks = ls.limit_case(f, ls.LIMIT_CASES[1])["model"]["weeks"]
+        for j in ls.MODELS:
+            assert sum(row["setups"][j] for row in weeks.values()) == months
+    assert ls.setup_cost({j: ls.LIMIT_SETUP_TIME for j in ls.MODELS})["City"] == 4020
+
+
+def test_show_limit_case_runs_in_both_modes(monkeypatch):
+    monkeypatch.setattr(ls.plt, "show", lambda: ls.plt.close("all"))
+    for show_tables in (False, True):
+        result = ls.show_limit_case("Plant 3", ls.LIMIT_CASES[1], show_tables=show_tables)
+        assert result["different weeks"] == []
 
 
 def test_capacity_overload_in_the_weeks_of_easter(plans):
