@@ -493,8 +493,9 @@ def weekly_plan(plant: str, shipments: dict | None = None, least: dict | None = 
     model. Returns, for each week, the available capacity, the bikes assembled and
     in stock at the end of the week, the setups, the hours of assembly and of
     setups, the capacity overload and the spare capacity; the setup and holding
-    cost (EUR); and, with ``check``, the months in which another plan has the same
-    costs. Returns None, with the month, if a month has no plan."""
+    cost (EUR); with ``check``, the months in which another plan has the same
+    costs; and the least stock and the storage capacity of the plan. Returns None,
+    with the month, if a month has no plan."""
     data = _base()
     shipments = data["shipments"] if shipments is None else shipments
     least = data["least stock"] if least is None else least
@@ -515,7 +516,7 @@ def weekly_plan(plant: str, shipments: dict | None = None, least: dict | None = 
             weeks[w] = _week(stock, assembled, {j: plan["setups"][j, w] for j in MODELS}, assembly, setup,
                              capacity[w])
     return {"plant": plant, "weeks": weeks, "cost": _cost(weeks, setup, holding),
-            "other plans": others if check else None}
+            "other plans": others if check else None, "least": {t: least[plant, t] for t in T}, "storage": storage}
 
 
 # ---------------------------------------------------------------------------
@@ -542,7 +543,8 @@ def lot_for_lot(plant: str, shipments: dict | None = None, least: dict | None = 
             stock = {j: stock[j] + assembled[j] - shipments[plant, j, w] for j in MODELS}
             weeks[w] = _week(stock, assembled, {j: int(assembled[j] > 0) for j in MODELS}, assembly, setup,
                              capacity[w])
-    return {"plant": plant, "weeks": weeks, "cost": _cost(weeks, setup, holding), "other plans": None}
+    return {"plant": plant, "weeks": weeks, "cost": _cost(weeks, setup, holding), "other plans": None,
+            "least": {t: least[plant, t] for t in T}, "storage": K_h[plant]}
 
 
 # ---------------------------------------------------------------------------
@@ -1067,6 +1069,79 @@ def plan_table(plan: dict) -> pd.DataFrame:
     return pd.DataFrame(rows).T.rename_axis("Week")
 
 
+def _plan_by_model(plan: dict) -> pd.DataFrame:
+    """The weekly lot plan of a plant in one table, one column for each model: the
+    form of Tables 10 to 12 for the notebook."""
+    rows = {}
+    for w, row in plan["weeks"].items():
+        rows[w] = {("Available capacity (h)", ""): _number(float(row["available"])),
+                   **{("Assembly (bikes)", j): row["assembled"][j] for j in MODELS},
+                   **{("Stock at the end of the week (bikes)", j): row["stock"][j] for j in MODELS},
+                   ("Assembly (h)", ""): fixed(row["assembly hours"]), ("Setups (h)", ""): fixed(row["setup hours"]),
+                   ("Capacity overload (h)", ""): fixed(row["overload"])}
+    weeks = plan["weeks"].values()
+    rows["Total"] = {("Available capacity (h)", ""): _number(float(sum(r["available"] for r in weeks))),
+                     **{("Assembly (bikes)", j): sum(r["assembled"][j] for r in weeks) for j in MODELS},
+                     **{("Stock at the end of the week (bikes)", j): "" for j in MODELS},
+                     ("Assembly (h)", ""): fixed(sum(r["assembly hours"] for r in weeks)),
+                     ("Setups (h)", ""): fixed(sum(r["setup hours"] for r in weeks)),
+                     ("Capacity overload (h)", ""): fixed(sum(r["overload"] for r in weeks))}
+    table = pd.DataFrame(rows).T.rename_axis("Week")
+    table.columns = pd.MultiIndex.from_tuples(table.columns)
+    return table
+
+
+@_light
+def _lots_figure(plant: str, plan: dict) -> None:
+    """Above: the lots, the bikes assembled in each week stacked by model. Below:
+    the stock at the end of each week stacked by model, with the storage capacity
+    and the least stock at the end of each month."""
+    fig, (above, below) = plt.subplots(2, 1, figsize=(13, 6.6), sharex=True)
+    colours = plt.get_cmap("tab10")
+    for ax, key in ((above, "assembled"), (below, "stock")):
+        bottom = [0] * len(WEEKS)
+        for k, j in enumerate(MODELS):
+            values = [plan["weeks"][w][key][j] for w in WEEKS]
+            ax.bar(WEEKS, values, 0.75, bottom=bottom, color=colours(k), label=j)
+            for w, v, b in zip(WEEKS, values, bottom):
+                if v >= 4:
+                    ax.text(w, b + v / 2, _number(v), ha="center", va="center", fontsize=6.5, color="white")
+            bottom = [b + v for b, v in zip(bottom, values)]
+        ax.set_ylim(0, max(max(bottom), plan["storage"] if key == "stock" else 0, 1) * 1.15)
+        for weeks in plan_weeks().values():
+            ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
+        ax.spines[["top", "right"]].set_visible(False)
+    below.axhline(plan["storage"], color="black", ls="--", lw=1, label="storage capacity")
+    for t, weeks in plan_weeks().items():
+        total = sum(plan["least"][t].values())
+        below.plot([weeks[-1] - 0.45, weeks[-1] + 0.45], [total, total], color="black", lw=2.6,
+                   label="least stock, all models" if t == T[0] else None)
+    above.set_title(f"{_name(plant)}: lots, the bikes assembled in each week by model; each block of colour is one "
+                    "lot", fontsize=10)
+    above.set_ylabel("Assembly (bikes)")
+    above.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    below.set_title(f"{_name(plant)}: stock at the end of each week, by model", fontsize=10)
+    below.set_ylabel("Stock (bikes)")
+    below.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    below.set_xticks(WEEKS)
+    below.tick_params(labelsize=7)
+    below.set_xlabel("Week")
+    fig.tight_layout()
+    plt.show()
+
+
+def _show_plan(plant: str, plan: dict, show_tables: bool, base: dict | None = None,
+               base_label: str = "hours with the data of the case") -> None:
+    """A weekly lot plan in one table or, without ``show_tables``, in the figure of
+    its lots and stock and the figure of its hours (with those of ``base`` as a
+    dashed line)."""
+    if show_tables:
+        _display(_plan_by_model(plan))
+    else:
+        _lots_figure(plant, plan)
+        _hours_figure({plant: plan}, {plant: base} if base else None, base_label)
+
+
 def hours_table(plans: dict) -> pd.DataFrame:
     """Table 13: the hours of the line of each plant, by month."""
     rows = {}
@@ -1087,21 +1162,20 @@ def _no_plan(plant: str, plan: dict) -> bool:
     return False
 
 
-def show_weekly_plan(plant: str = "Plant 1", check: bool = False) -> dict | None:
-    """The weekly lot plan of a plant (Tables 10 to 12), its setup and holding
-    cost, and a figure of the hours of each week against the available capacity.
-    With ``check``, whether another plan of some month has the same costs."""
+def show_weekly_plan(plant: str = "Plant 1", check: bool = False, show_tables: bool = False) -> dict | None:
+    """The weekly lot plan of a plant and its setup and holding cost: the figures
+    of its lots, its stock and its hours or, with ``show_tables``, one table (Tables
+    10 to 12). With ``check``, whether another plan of some month has the same
+    costs."""
     plant = _plant(plant)
     plan = weekly_plan(plant, check=check)
     if _no_plan(plant, plan):
         return None
-    print(f"{plant}: setup and holding cost of the six months {fixed(plan['cost'])} €. Bikes by model: "
-          f"{'; '.join(MODELS)}.")
+    print(f"{_name(plant)}: setup and holding cost of the six months {fixed(plan['cost'])} €.")
     if check:
-        print("Another plan has the same capacity overload and the same cost in "
-              + (", ".join(plan["other plans"]) if plan["other plans"] else "no month") + ".")
-    _display(plan_table(plan))
-    _hours_figure({plant: plan})
+        print("Months with another optimal plan: "
+              + (", ".join(plan["other plans"]) if plan["other plans"] else "none") + ".")
+    _show_plan(plant, plan, show_tables)
     return plan
 
 
@@ -1153,13 +1227,13 @@ def show_line_hours() -> dict:
 
 def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday_week: int = 0,
                 model: str = "Cargo", setup_time: float = 0, assembly_time: float = 0,
-                storage: int = 0) -> dict | None:
+                storage: int = 0, show_tables: bool = False) -> dict | None:
     """The weekly plans of a plant for the six months with some of its data
     changed: no holidays, or one more holiday on the Wednesday of a week; the
     setup time and the assembly time of one model; and the storage capacity. A 0
     keeps the datum of the case. The setup cost follows the setup time. Shows the
     hours of the line by month, next to those with the data of the case, and the
-    weekly plan."""
+    weekly plan in figures or, with ``show_tables``, in one table."""
     plant = _plant(plant)
     if model not in MODELS:
         raise ValueError(f"The model must be one of {', '.join(MODELS)}.")
@@ -1206,16 +1280,16 @@ def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday
     print(f"Setup and holding cost of the six months: {fixed(plan['cost'])} €; with the data of the case, "
           f"{fixed(before['cost'])} €.")
     _display(pd.DataFrame(rows).T.rename_axis("Month"))
-    _display(plan_table(plan))
-    _hours_figure({plant: plan}, {plant: before})
+    _show_plan(plant, plan, show_tables, before)
     return plan
 
 
-def show_reference_plan(plant: str = "Plant 1") -> dict:
+def show_reference_plan(plant: str = "Plant 1", show_tables: bool = False) -> dict:
     """The plan of reference of step 7 against the plans of the model: the capacity
     overload and the setup and holding cost of the six months at the three plants;
     and the weekly plan of reference of one plant, in the form of Tables 10 to 12,
-    with a figure of its hours next to those of the plan of the model."""
+    in figures, with its hours next to those of the plan of the model, or, with
+    ``show_tables``, in one table."""
     plant = _plant(plant)
     model = {f: weekly_plan(f) for f in PLANTS}
     reference = {f: lot_for_lot(f) for f in PLANTS}
@@ -1224,9 +1298,8 @@ def show_reference_plan(plant: str = "Plant 1") -> dict:
                 "Setup and holding cost, plan of reference (€)": fixed(reference[f]["cost"]),
                 "Setup and holding cost, plan of the model (€)": fixed(model[f]["cost"])} for f in PLANTS}
     _display(pd.DataFrame(rows).T.rename_axis("Six months"))
-    print(f"{plant}: weekly plan of reference. Bikes by model: {'; '.join(MODELS)}.")
-    _display(plan_table(reference[plant]))
-    _hours_figure({plant: reference[plant]}, {plant: model[plant]}, "hours of the plan of the model")
+    print(f"{_name(plant)}: weekly plan of reference.")
+    _show_plan(plant, reference[plant], show_tables, model[plant], "hours of the plan of the model")
     return reference[plant]
 
 
@@ -1238,13 +1311,14 @@ def _run_rows(plans: dict, key: str) -> pd.DataFrame:
     return pd.DataFrame(rows).T.rename_axis(["Plant", "Run"])
 
 
-def show_runs(plant: str = "none", run_name: str = "As planned") -> dict:
+def show_runs(plant: str = "none", run_name: str = "As planned", show_tables: bool = False) -> dict:
     """The weekly plans of the three plants for the six months in each run of part
     d): the capacity overload (Table 14) and the spare capacity
     (Table 15) of each month, and the months in which another plan has the same
     capacity overload and the same cost. With a plant and a run, also the weekly
     plan of that plant in that run, with a figure of its hours next to those of the
-    plan with the data of the case. ``run_name`` is one of ``RUNS``."""
+    plan with the data of the case, or in one table with ``show_tables``.
+    ``run_name`` is one of ``RUNS``."""
     if run_name not in RUNS:
         raise ValueError(f"The run must be one of {', '.join(RUNS)}.")
     plans = {}
@@ -1265,8 +1339,8 @@ def show_runs(plant: str = "none", run_name: str = "As planned") -> dict:
         if (plant, run_name) not in plans:
             print(f"{plant} has no run «{run_name}»: its setup times are those of plant 1.")
             return plans
-        print(f"{plant}, {run_name}: setup and holding cost of the six months {fixed(plans[plant, run_name]['cost'])} €. "
-              f"Bikes by model: {'; '.join(MODELS)}.")
-        _display(plan_table(plans[plant, run_name]))
-        _hours_figure({plant: plans[plant, run_name]}, {plant: plans[plant, "As planned"]})
+        print(f"{_name(plant)}, {run_name}: setup and holding cost of the six months "
+              f"{fixed(plans[plant, run_name]['cost'])} €.")
+        _show_plan(plant, plans[plant, run_name], show_tables, plans[plant, "As planned"],
+                   "hours of the plan «As planned»")
     return plans
