@@ -637,9 +637,10 @@ def weekly_orders_table(weekly: dict, retailer: str) -> pd.DataFrame:
     return table.rename_axis("Week")
 
 
-def show_orders(retailer: str = "Retailer 1") -> None:
-    """The orders of the retailers: the six-month totals by model, Table 4, and the
-    orders of one retailer in each week, by model."""
+def show_orders(retailer: str = "Retailer 1", show_table: bool = False) -> None:
+    """The orders of the retailers: the six-month totals by model, Table 4, the
+    figure of the orders of each retailer in each week, by model, and, with
+    ``show_table``, the weekly orders of one retailer."""
     retailer = _retailer(retailer)
     data = _base()
     totals = {j: sum(q for (_, i, _), q in data["weekly orders"].items() if i == j) for j in MODELS}
@@ -647,8 +648,41 @@ def show_orders(retailer: str = "Retailer 1") -> None:
           + "; ".join(f"{j} {_number(totals[j])}" for j in MODELS)
           + "; product mix " + "; ".join(f"{fixed(100 * data['six-month mix'][j], 1)} %" for j in MODELS) + ".")
     _display(orders_table(data["orders"]))
-    print(f"{_name(retailer)}: orders in each week, by model (bikes).")
-    _display(weekly_orders_table(data["weekly orders"], retailer))
+    _orders_figure(data["weekly orders"])
+    if show_table:
+        print(f"{_name(retailer)}: orders in each week, by model (bikes).")
+        _display(weekly_orders_table(data["weekly orders"], retailer))
+
+
+@_light
+def _orders_figure(weekly: dict) -> None:
+    """One panel for each retailer, with the same scale: its orders of each week
+    stacked by model."""
+    top = max(sum(weekly[r, j, w] for j in MODELS) for r in RETAILERS for w in WEEKS)
+    fig, axes = plt.subplots(3, 2, figsize=(12, 8), sharex=True)
+    colours = plt.get_cmap("tab10")
+    for ax, r in zip(axes.flat, RETAILERS):
+        bottom = [0] * len(WEEKS)
+        for k, j in enumerate(MODELS):
+            values = [weekly[r, j, w] for w in WEEKS]
+            ax.bar(WEEKS, values, bottom=bottom, color=colours(k), width=0.75, label=j)
+            bottom = [b + v for b, v in zip(bottom, values)]
+        for t, weeks in plan_weeks().items():
+            ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
+            ax.annotate(t, ((weeks[0] + weeks[-1]) / 2, top * 1.04), ha="center", fontsize=8)
+        ax.set_ylim(0, top * 1.13)
+        ax.set_xticks(WEEKS)
+        ax.tick_params(labelsize=7)
+        ax.set_title(_name(r), fontsize=10)
+        ax.spines[["top", "right"]].set_visible(False)
+    for ax in axes[:, 0]:
+        ax.set_ylabel("Orders (bikes)")
+    for ax in axes[-1]:
+        ax.set_xlabel("Week")
+    axes[0, 1].legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    fig.suptitle("Orders of each retailer in each week, by model", fontsize=11)
+    fig.tight_layout()
+    plt.show()
 
 
 def network_tables() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
