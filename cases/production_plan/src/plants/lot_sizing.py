@@ -385,10 +385,10 @@ def build_month(weeks: list, shipments: dict, least: dict, initial: dict, assemb
     objective of stage 1. Returns the model and its variables ("p", "h", "delta" by
     (j, w); "o" by w)."""
     model = pulp.LpProblem("lot_sizing", pulp.LpMinimize)
-    # p = bikes assembled (integer); h = stock at the end of the week; delta = 1 if
+    # p = bikes assembled (integer); h = stock at the end of the week (integer); delta = 1 if
     # the model is set up and assembled in the week; o = capacity overload (h)
     p = {(j, w): model.add_variable(f"p_{j}_{w}", lowBound=0, cat="Integer") for j in MODELS for w in weeks}
-    h = {(j, w): model.add_variable(f"h_{j}_{w}", lowBound=0) for j in MODELS for w in weeks}
+    h = {(j, w): model.add_variable(f"h_{j}_{w}", lowBound=0, cat="Integer") for j in MODELS for w in weeks}
     delta = {(j, w): model.add_variable(f"delta_{j}_{w}", lowBound=0, upBound=1, cat="Integer")
              for j in MODELS for w in weeks}
     o = {w: model.add_variable(f"o_{w}", lowBound=0) for w in weeks}

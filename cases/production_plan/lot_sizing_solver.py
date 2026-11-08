@@ -395,7 +395,7 @@ def month_plan(weeks, x, h_min, h_start, a, a_set, c_set, c_hold, k_h, k_w):
     costs; None if it has no plan."""
     model = pulp.LpProblem("lot_sizing", pulp.LpMinimize)
     p = {(j, w): model.add_variable(f"p_{j}_{w}", lowBound=0, cat="Integer") for j in MODELS for w in weeks}
-    h = {(j, w): model.add_variable(f"h_{j}_{w}", lowBound=0) for j in MODELS for w in weeks}
+    h = {(j, w): model.add_variable(f"h_{j}_{w}", lowBound=0, cat="Integer") for j in MODELS for w in weeks}
     d = {(j, w): model.add_variable(f"delta_{j}_{w}", lowBound=0, upBound=1, cat="Integer")
          for j in MODELS for w in weeks}
     o = {w: model.add_variable(f"o_{w}", lowBound=0) for w in weeks}

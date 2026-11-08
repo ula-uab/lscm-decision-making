@@ -240,7 +240,7 @@ For one plant and the plan of one month, of $L$ weeks, that starts in week $w_0$
   No datum of the model is uncertain: the orders are taken as known (§3.8, assumption 1).
 - **Decision variables:**
   - $p_{jw}$: bikes of model $j$ assembled in week $w$, integer and non-negative (§3.8, assumption 7); the bikes of a model assembled in one week are one lot;
-  - $h_{jw}$: bikes of model $j$ in stock at the plant at the end of week $w$, non-negative;
+  - $h_{jw}$: bikes of model $j$ in stock at the plant at the end of week $w$, integer and non-negative (§3.8, assumption 7);
   - $\delta_{jw}$: logical decision variable, 1 if model $j$ is set up and assembled in week $w$, 0 otherwise;
   - $o_w$: capacity overload in week $w$, the hours that the line needs above $K_w$, covered with overtime (h), non-negative.
 
@@ -251,7 +251,7 @@ For one plant and the plan of one month, of $L$ weeks, that starts in week $w_0$
 - A model can be assembled in a week only if it is set up in that week, $p_{jw} \le M_{jw}\, \delta_{jw}$ for every model $j$ and week $w$: logical constraint of the kind «only if». The valid bound is $M_{jw} = x_{jw} + K^h$: by the balance, $p_{jw} = x_{jw} + h_{jw} - h_{j,w-1}$, and no feasible plan holds more than $K^h$ bikes of a model at the end of a week, nor less than none at the start.
 - The stock of the plant at the end of each week, all models together, is at most its storage capacity, $\sum_{j \in J} h_{jw} \le K^h$ for every week $w$: capacity (§3.8, assumption 8).
 - At the end of the last week of the plan, the week of the end of the month, the plant holds at least the least stock of each model, $h_{j\bar w} \ge h^{\min}_j$ for every model $j$: a lower bound on one variable, the required final stock of the plan, set by the master plan.
-- The plant assembles and holds no negative number of bikes, $p_{jw}$ is integer, $\delta_{jw}$ is 0 or 1, and $o_w$ is not negative.
+- The plant assembles and holds no negative number of bikes, $p_{jw}$ and $h_{jw}$ are integer, $\delta_{jw}$ is 0 or 1, and $o_w$ is not negative.
 
 ### 3.6 Objective
 
@@ -284,7 +284,7 @@ The weekly model is checked against what is known of the plant before its result
 4. Each week starts with a setup, and each further lot of the week is one change of model. The lots of a week are not sequenced.
 5. The hours that the line needs above the available capacity of a week are the capacity overload, which the plant covers with overtime.
 6. The holding cost is charged on the stock of the weekly plan at the end of each week.
-7. Bikes are whole: the quantities assembled are integer.
+7. Bikes are whole: the bikes assembled and the bikes in stock are integer.
 8. At the end of each week, the stock of a plant, all models together, is at most its storage capacity.
 
 ### 3.9 Weekly lot plans of the three plants
