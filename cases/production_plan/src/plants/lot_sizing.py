@@ -26,7 +26,7 @@ half up, starts from the exact value.
 
 The notebook calls one function per step: ``show_orders``, ``show_master_plan``,
 ``show_shipments``, ``show_weekly_plan``, ``show_limit_case``,
-``show_line_hours``, ``change_test`` and ``show_runs``.
+``show_line_hours`` and ``show_runs``.
 """
 
 from __future__ import annotations
@@ -1341,30 +1341,6 @@ def _monthly_hours_figure(plans: dict) -> None:
 
 
 @_light
-def _compare_months_figure(plant: str, new: dict, old: dict, label: str, old_label: str) -> None:
-    """The capacity overload and the spare capacity of each month of a plan next to
-    those of another plan."""
-    fig, axes = plt.subplots(1, 2, figsize=(13, 3.8))
-    x = range(len(T))
-    for ax, key, title in zip(axes, ("overload", "spare"), ("Capacity overload (h)", "Spare capacity (h)")):
-        before = [float(old[t][key]) for t in T]
-        after = [float(new[t][key]) for t in T]
-        ax.bar([i - 0.2 for i in x], before, 0.38, color="0.75", label=old_label)
-        ax.bar([i + 0.2 for i in x], after, 0.38, color=COLOURS[plant], label=label)
-        ax.set_ylim(0, max(before + after + [1]) * 1.3)
-        _bar_labels(ax, [i - 0.2 for i in x], before)
-        _bar_labels(ax, [i + 0.2 for i in x], after)
-        ax.set_xticks(list(x), T)
-        ax.set_title(f"{_name(plant)}: {title.lower()} by month; six months {fixed(old['Six months'][key])} and "
-                     f"{fixed(new['Six months'][key])} h", fontsize=9.5)
-        ax.set_ylabel(title)
-        ax.spines[["top", "right"]].set_visible(False)
-    axes[0].legend(fontsize=8, loc="upper left")
-    fig.tight_layout()
-    plt.show()
-
-
-@_light
 def _limit_figure(plant: str, case: dict) -> None:
     """For each model, the lots of each week of the plan of the model (bars) and of
     the expected plan (black marks) in a limit case of step 7."""
@@ -1424,7 +1400,11 @@ def _runs_figure(plans: dict) -> None:
                 ax.bar([i - 0.4 + width * (k + 0.5) for i in range(len(T))], [float(hours[t][key]) for t in T],
                        width, color="0.3" if name == "As planned" else colours(k),
                        label=name if (row, col) == (0, 1) else None)
-            ax.set_ylim(0, top * 1.1)
+            ax.set_ylim(0, top * (1.75 if top > 1 else 1.1))
+            totals = [f"{name}: {fixed(line_hours(plans[f, name])['Six months'][key])} h" for name in RUNS
+                      if (f, name) in plans]
+            ax.text(1.0, 1.0, "Six months\n" + "\n".join(totals), transform=ax.transAxes, ha="right", va="top",
+                    fontsize=6.5, bbox={"facecolor": "white", "edgecolor": "0.7", "lw": 0.5})
             if top == 1:
                 ax.text(0.5, 0.5, f"no {label.split(' (')[0].lower()} in any run", transform=ax.transAxes,
                         ha="center", va="center", fontsize=9, color="0.4")
@@ -1447,68 +1427,6 @@ def show_line_hours(show_tables: bool = False) -> dict:
     else:
         _monthly_hours_figure(plans)
     return plans
-
-
-def change_test(plant: str = "Plant 2", no_holidays: bool = False, extra_holiday_week: int = 0,
-                model: str = "Cargo", setup_time: float = 0, assembly_time: float = 0,
-                storage: int = 0, show_tables: bool = False) -> dict | None:
-    """The weekly plans of a plant for the six months with some of its data
-    changed: no holidays, or one more holiday on the Wednesday of a week; the
-    setup time and the assembly time of one model; and the storage capacity. A 0
-    keeps the datum of the case. The setup cost follows the setup time. Shows the
-    hours of the line by month, next to those with the data of the case, and the
-    weekly plan in figures or, with ``show_tables``, in one table."""
-    plant = _plant(plant)
-    if model not in MODELS:
-        raise ValueError(f"The model must be one of {', '.join(MODELS)}.")
-    holidays = {f: list(v) for f, v in HOLIDAYS.items()}
-    changes = []
-    if no_holidays:
-        holidays[plant] = []
-        changes.append("no holidays")
-    if extra_holiday_week:
-        if not 1 <= extra_holiday_week <= len(WEEKS):
-            raise ValueError(f"The week must be between 1 and {len(WEEKS)}.")
-        day = 7 * (extra_holiday_week - 1) + 2
-        month = _month_of(day)
-        holidays[plant].append((month, day - _day(month, 1) + 1))
-        changes.append(f"one more holiday in week {extra_holiday_week}")
-    setup = dict(SETUP_TIME[plant])
-    assembly = dict(ASSEMBLY_TIME[plant])
-    if setup_time and exact(setup_time) != exact(setup[model]):
-        changes.append(f"setup time of {model} {_number(setup_time)} h instead of {_number(setup[model])} h")
-        setup[model] = setup_time
-    if assembly_time and exact(assembly_time) != exact(assembly[model]):
-        changes.append(f"assembly time of {model} {_number(assembly_time, 3)} h/bike instead of "
-                       f"{_number(assembly[model], 3)} h/bike")
-        assembly[model] = assembly_time
-    if storage and storage != K_h[plant]:
-        changes.append(f"storage capacity {_number(storage)} bikes instead of {_number(K_h[plant])}")
-    else:
-        storage = None
-    print(f"{plant}: " + ("; ".join(changes) if changes else "the data of the case") + ".")
-    plan = weekly_plan(plant, assembly=assembly, setup=setup, storage=storage,
-                       capacity=available_capacity(plant, holidays))
-    if _no_plan(plant, plan):
-        return None
-    before = weekly_plan(plant)
-    new, old = line_hours(plan), line_hours(before)
-    rows = {}
-    for t in new:                             # the six months included
-        rows[t] = {"Available capacity (h)": _number(float(new[t]["available"])),
-                   "Setups (h)": fixed(new[t]["setup hours"]),
-                   "Capacity overload (h)": fixed(new[t]["overload"]),
-                   "Capacity overload, data of the case (h)": fixed(old[t]["overload"]),
-                   "Spare capacity (h)": fixed(new[t]["spare"]),
-                   "Spare capacity, data of the case (h)": fixed(old[t]["spare"])}
-    print(f"Setup and holding cost of the six months: {fixed(plan['cost'])} €; with the data of the case, "
-          f"{fixed(before['cost'])} €.")
-    if show_tables:
-        _display(pd.DataFrame(rows).T.rename_axis("Month"))
-    else:
-        _compare_months_figure(plant, new, old, "data changed", "data of the case")
-    _show_plan(plant, plan, show_tables, before)
-    return plan
 
 
 def show_limit_case(plant: str = "Plant 1", case: str = LIMIT_CASES[0], show_tables: bool = False) -> dict:
@@ -1541,6 +1459,78 @@ def show_limit_case(plant: str = "Plant 1", case: str = LIMIT_CASES[0], show_tab
     return result
 
 
+STANDARD_DAYS = 20   # working days of every month in the master plan
+ASSUMPTION_PLANTS = PLANTS[:2]   # the plants that assemble at their capacity in every month
+
+
+def master_plan_hours(plant: str) -> dict:
+    """The hours of a month of the master plan at a plant: the available capacity of
+    a standard month of 20 working days; the assembly of its capacity in bikes at the
+    average assembly time of the six-month product mix; and what is left of the
+    available capacity for setups (h)."""
+    mix = _base()["six-month mix"]
+    available = Fraction(STANDARD_DAYS * HOURS_PER_DAY)
+    assembly = K[plant][T[0]] * sum(mix[j] * exact(ASSEMBLY_TIME[plant][j]) for j in MODELS)
+    return {"available": available, "assembly hours": assembly, "setup hours": available - assembly}
+
+
+@_light
+def _assumptions_figure(plans: dict) -> None:
+    """For plants 1 and 2 and each month, the hours that the master plan assumes
+    (grey) next to those that the weekly plans need (colour): assembly, setups and
+    available capacity."""
+    fig, axes = plt.subplots(1, len(ASSUMPTION_PLANTS), figsize=(14, 5.0), sharey=True, squeeze=False)
+    for ax, f in zip(axes[0], ASSUMPTION_PLANTS):
+        mp = {k: float(v) for k, v in master_plan_hours(f).items()}
+        hours = line_hours(plans[f])
+        for i, t in enumerate(T):
+            ax.bar(i - 0.2, mp["assembly hours"], 0.38, color="0.7",
+                   label="master plan: assembly" if i == 0 else None)
+            ax.bar(i - 0.2, mp["setup hours"], 0.38, bottom=mp["assembly hours"], color="0.88", hatch="///",
+                   edgecolor="0.5", lw=0.6, label="master plan: setups" if i == 0 else None)
+            ax.plot([i - 0.39, i - 0.01], [mp["available"]] * 2, color="0.3", lw=1.4, ls="--",
+                    label="master plan: available capacity, 20 working days" if i == 0 else None)
+            assembly, setups = float(hours[t]["assembly hours"]), float(hours[t]["setup hours"])
+            ax.bar(i + 0.2, assembly, 0.38, color=COLOURS[f], label="weekly plans: assembly" if i == 0 else None)
+            ax.bar(i + 0.2, setups, 0.38, bottom=assembly, color=COLOURS[f], alpha=0.45,
+                   label="weekly plans: setups" if i == 0 else None)
+            ax.plot([i + 0.01, i + 0.39], [float(hours[t]["available"])] * 2, color="black", lw=1.6,
+                    label="weekly plans: available capacity" if i == 0 else None)
+            ax.text(i - 0.2, mp["assembly hours"] + mp["setup hours"] / 2, fixed(mp["setup hours"], 0),
+                    ha="center", va="center", fontsize=7)
+            ax.text(i + 0.2, assembly + setups / 2, fixed(setups, 1), ha="center", va="center", fontsize=7)
+        ax.set_xticks(range(len(T)), T)
+        ax.set_ylim(0, 240)
+        ax.set_title(f"{_name(f)}: master plan {fixed(mp['assembly hours'], 0)} h of assembly and "
+                     f"{fixed(mp['setup hours'], 0)} h of setups a month", fontsize=10)
+        ax.legend(fontsize=7.5, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.32), frameon=False)
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0, 0].set_ylabel("Hours of the line in the month (h)")
+    fig.suptitle("Hours of a month assumed by the master plan (grey) and needed by the weekly plans (colour); "
+                 "setup hours written in the bars", fontsize=11)
+    fig.tight_layout()
+    plt.show()
+
+
+def _assumptions_table(plans: dict) -> pd.DataFrame:
+    """The hours of each month assumed by the master plan and needed by the weekly
+    plans, at plants 1 and 2."""
+    rows = {}
+    for f in ASSUMPTION_PLANTS:
+        mp = master_plan_hours(f)
+        hours = line_hours(plans[f])
+        for t in T:
+            rows[f, t] = {("Available capacity (h)", "Master plan"): fixed(mp["available"], 0),
+                          ("Available capacity (h)", "Weekly plans"): fixed(hours[t]["available"], 0),
+                          ("Assembly (h)", "Master plan"): fixed(mp["assembly hours"]),
+                          ("Assembly (h)", "Weekly plans"): fixed(hours[t]["assembly hours"]),
+                          ("Setups (h)", "Master plan"): fixed(mp["setup hours"]),
+                          ("Setups (h)", "Weekly plans"): fixed(hours[t]["setup hours"])}
+    table = pd.DataFrame(rows).T.rename_axis(["Plant", "Month"])
+    table.columns = pd.MultiIndex.from_tuples(table.columns)
+    return table
+
+
 def _run_rows(plans: dict, key: str) -> pd.DataFrame:
     rows = {}
     for (f, name), plan in plans.items():
@@ -1549,39 +1539,27 @@ def _run_rows(plans: dict, key: str) -> pd.DataFrame:
     return pd.DataFrame(rows).T.rename_axis(["Plant", "Run"])
 
 
-def show_runs(plant: str = "none", run_name: str = "As planned", show_tables: bool = False) -> dict:
+def show_runs(show_tables: bool = False) -> dict:
     """The weekly plans of the three plants for the six months in each run of part
-    d): the capacity overload (Table 14) and the spare capacity
-    (Table 15) of each month, and the months in which another plan has the same
-    capacity overload and the same cost. With a plant and a run, also the weekly
-    plan of that plant in that run, with a figure of its hours next to those of the
-    plan with the data of the case, or in one table with ``show_tables``.
-    ``run_name`` is one of ``RUNS``."""
-    if run_name not in RUNS:
-        raise ValueError(f"The run must be one of {', '.join(RUNS)}.")
+    d): the capacity overload (Table 14) and the spare capacity (Table 15) of each
+    month, in a figure or, with ``show_tables``, in tables, which also give the six
+    months. A line shows which run is being solved."""
     plans = {}
-    for f in PLANTS:
-        for name in RUNS:
-            plan = run(f, name, check=True)
+    for k, name in enumerate(RUNS, start=1):
+        print(f"Solving the weekly plans of the three plants, run {k} of {len(RUNS)}: {name}…", flush=True)
+        for f in PLANTS:
+            plan = run(f, name)
             if plan is not None:
                 plans[f, name] = plan
+    as_planned = {f: plans[f, "As planned"] for f in PLANTS}
     if show_tables:
+        print("Hours of each month assumed by the master plan and needed by the weekly plans.")
+        _display(_assumptions_table(as_planned))
         print("Capacity overload (h) of each plant, by month, in each run.")
         _display(_run_rows(plans, "overload"))
         print("Spare capacity (h) of each plant, by month, in each run.")
         _display(_run_rows(plans, "spare"))
     else:
+        _assumptions_figure(as_planned)
         _runs_figure(plans)
-    others = [f"{f}, {name}: {', '.join(p['other plans'])}" for (f, name), p in plans.items() if p["other plans"]]
-    print("Months with another optimal plan: "
-          + ("; ".join(others) if others else "none") + ".")
-    if plant != "none":
-        plant = _plant(plant)
-        if (plant, run_name) not in plans:
-            print(f"{plant} has no run «{run_name}»: its setup times are those of plant 1.")
-            return plans
-        print(f"{_name(plant)}, {run_name}: setup and holding cost of the six months "
-              f"{fixed(plans[plant, run_name]['cost'])} €.")
-        _show_plan(plant, plans[plant, run_name], show_tables, plans[plant, "As planned"],
-                   "hours of the plan «As planned»")
     return plans

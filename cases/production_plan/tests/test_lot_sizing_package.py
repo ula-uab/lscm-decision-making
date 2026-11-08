@@ -421,3 +421,11 @@ def test_notebook_runs():
     nb = nbformat.read(NOTEBOOK, as_version=4)
     nbclient.NotebookClient(nb, timeout=300, kernel_name="python3",
                             resources={"metadata": {"path": str(NOTEBOOK.parent)}}).execute()
+
+
+def test_master_plan_hours_of_a_month():
+    for f in ("Plant 1", "Plant 2"):
+        hours = ls.master_plan_hours(f)
+        assert hours["available"] == 160
+        assert ls.fixed(hours["assembly hours"], 0) == "137"
+        assert ls.fixed(hours["setup hours"], 0) == "23"
