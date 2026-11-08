@@ -892,39 +892,132 @@ def shipments_table(shipments: dict, plants=PLANTS) -> pd.DataFrame:
     return pd.DataFrame(rows).T.rename_axis("Week")
 
 
-def show_shipments(plant: str = "Plant 1") -> None:
-    """The product mix of the shipments (Table 8), the shipments of a plant by
-    week and model (its column of Table 9) and its least stock at the end of each
-    month, with a figure."""
+def _mix_tables(mix: dict, split: dict, master: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """The product mix of the shipments of each month, and the split of the
+    seasonal stock at the end of each month with the stock of the network (Table 8,
+    one table for each)."""
+    shipments = pd.DataFrame({t: {j: fixed(100 * mix[t][j], 1) for j in MODELS} for t in T})
+    stock = pd.DataFrame({t: {j: fixed(100 * split[t][j], 1) if master["network stock"][t] else "—" for j in MODELS}
+                          for t in T})
+    stock.loc["Stock of the network (bikes)"] = [_number(float(master["network stock"][t])) for t in T]
+    return (shipments.rename_axis("Product mix of the shipments (%)"),
+            stock.rename_axis("Split of the seasonal stock (%)"))
+
+
+def _plant_shipments_table(shipments: dict, plant: str) -> pd.DataFrame:
+    """The shipments of one plant in each week, one column for each model (its
+    column of Table 9)."""
+    table = pd.DataFrame({w: {j: shipments[plant, j, w] for j in MODELS} for w in WEEKS}).T
+    table["Total"] = table.sum(axis=1)
+    table.loc["26 weeks"] = table.sum()
+    return table.rename_axis("Week")
+
+
+def _least_stock_table(least: dict, plant: str) -> pd.DataFrame:
+    """The least stock of one plant at the end of each month, one column for each
+    model; its total is the stock at the end of the month of the master plan."""
+    weeks = plan_weeks()
+    table = pd.DataFrame({(t, weeks[t][-1]): {j: least[plant, t][j] for j in MODELS} for t in T}).T
+    table["Total"] = table.sum(axis=1)
+    return table.rename_axis(["Month", "Required at the end of week"])
+
+
+def show_shipments(plant: str = "Plant 1", show_tables: bool = False) -> None:
+    """The product mix of the shipments and the split of the seasonal stock, and the
+    shipments of one plant in each week and its least stock at the end of each
+    month, by model: in two figures or, with ``show_tables``, in tables."""
     plant = _plant(plant)
     data = _base()
-    _display(mix_table(data["mix"], data["split"], data["master"]))
-    print(f"{plant}: shipments to the network in each week (bikes: {'; '.join(MODELS)}).")
-    _display(shipments_table(data["shipments"], [plant]))
-    print(f"{plant}: least stock at the end of each month (bikes: {'; '.join(MODELS)}): "
-          + "; ".join(f"{t} ({_bikes(data['least stock'][plant, t])})" for t in T) + ".")
-    _shipments_figure(plant, data["shipments"])
+    if show_tables:
+        for table in _mix_tables(data["mix"], data["split"], data["master"]):
+            _display(table)
+        print(f"{_name(plant)}: shipments to the network in each week (bikes).")
+        _display(_plant_shipments_table(data["shipments"], plant))
+        print(f"{_name(plant)}: least stock at the end of each month (bikes). Its total is the stock at the end of "
+              "the month of the master plan (§2).")
+        _display(_least_stock_table(data["least stock"], plant))
+    else:
+        _mix_figure(data["mix"], data["split"], data["master"])
+        _shipments_figure(plant, data["shipments"], data["least stock"])
 
 
 @_light
-def _shipments_figure(plant: str, shipments: dict) -> None:
-    fig, ax = plt.subplots(figsize=(11, 3.6))
-    bottom = [0] * len(WEEKS)
+def _mix_figure(mix: dict, split: dict, master: dict) -> None:
+    """Left: the product mix of the shipments of each month. Right: the split of the
+    seasonal stock at the end of each month, with the stock of the network above
+    each bar."""
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.4), sharey=True)
     colours = plt.get_cmap("tab10")
+    titles = ("Product mix of the shipments of each month",
+              "Split of the seasonal stock at the end of each month\n(above each bar: stock of the network, "
+              "plants and warehouses)")
+    for ax, shares, title in zip(axes, (mix, split), titles):
+        for i, t in enumerate(T):
+            if shares is split and not master["network stock"][t]:
+                ax.text(i, 50, "no stock", ha="center", va="center", fontsize=8, color="0.4", rotation=90)
+                continue
+            bottom = 0.0
+            for k, j in enumerate(MODELS):
+                value = 100 * float(shares[t][j])
+                ax.bar(i, value, 0.62, bottom=bottom, color=colours(k), label=j if i == 0 else None)
+                ax.text(i, bottom + value / 2, fixed(value, 1), ha="center", va="center", fontsize=7, color="white")
+                bottom += value
+            if shares is split:
+                ax.text(i, 102, f"{_number(float(master['network stock'][t]))} bikes", ha="center", va="bottom",
+                        fontsize=8)
+        ax.set_xticks(range(len(T)), T)
+        ax.set_ylim(0, 112)
+        ax.set_title(title, fontsize=10)
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0].set_ylabel("Share of each model (%)")
+    axes[1].legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    fig.tight_layout()
+    plt.show()
+
+
+@_light
+def _shipments_figure(plant: str, shipments: dict, least: dict) -> None:
+    """Above: the shipments of the plant in each week, stacked by model. Below: its
+    least stock at the end of each month, stacked by model, in the week in which it
+    is required."""
+    fig, (above, below) = plt.subplots(2, 1, figsize=(13, 6.2), sharex=True, gridspec_kw={"height_ratios": [1.6, 1]})
+    colours = plt.get_cmap("tab10")
+    bottom = [0] * len(WEEKS)
     for k, j in enumerate(MODELS):
         values = [shipments[plant, j, w] for w in WEEKS]
-        ax.bar(WEEKS, values, bottom=bottom, color=colours(k), width=0.75, label=j)
+        above.bar(WEEKS, values, 0.75, bottom=bottom, color=colours(k), label=j)
         bottom = [b + v for b, v in zip(bottom, values)]
+    top = max(max(bottom) * 1.2, 1)
+    for w, total in zip(WEEKS, bottom):
+        above.text(w, total + top * 0.01, _number(total), ha="center", fontsize=7)
+    stock_top = max(max(sum(least[plant, t].values()) for t in T) * 1.25, 10)
     for t, weeks in plan_weeks().items():
-        ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
-        ax.annotate(t, ((weeks[0] + weeks[-1]) / 2, max(bottom) * 1.05), ha="center", fontsize=8)
-    ax.set_xticks(WEEKS)
-    ax.set_xlabel("Week")
-    ax.set_ylabel("Shipments (bikes)")
-    ax.set_ylim(0, max(bottom) * 1.15 + 1)
-    ax.set_title(f"{plant}: shipments to the network in each week, by model", fontsize=10)
-    ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
-    ax.spines[["top", "right"]].set_visible(False)
+        for ax in (above, below):
+            ax.axvline(weeks[-1] + 0.5, color="0.6", lw=0.8, ls=":")
+        above.text((weeks[0] + weeks[-1]) / 2, top * 0.97, t, ha="center", fontsize=8)
+        level = 0
+        for k, j in enumerate(MODELS):
+            value = least[plant, t][j]
+            below.bar(weeks[-1], value, 0.75, bottom=level, color=colours(k))
+            if value >= stock_top * 0.07:
+                below.text(weeks[-1], level + value / 2, _number(value), ha="center", va="center", fontsize=7,
+                           color="white")
+            level += value
+        below.text(weeks[-1], level + stock_top * 0.02, _number(level), ha="center", fontsize=7)
+    above.set_ylim(0, top)
+    above.set_ylabel("Shipments (bikes)")
+    above.set_title(f"{_name(plant)}: shipments to the network in each week, by model", fontsize=10)
+    above.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    below.set_ylim(0, stock_top)
+    below.set_ylabel("Least stock (bikes)")
+    below.set_title(f"{_name(plant)}: least stock at the end of each month, by model, required at the end of the "
+                    "last week of the month; its total is the stock at the end of the month of the master plan",
+                    fontsize=9)
+    below.set_xticks(WEEKS)
+    below.tick_params(labelsize=7)
+    below.set_xlabel("Week")
+    for ax in (above, below):
+        ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     plt.show()
 
