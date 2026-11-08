@@ -641,9 +641,10 @@ def weekly_orders_table(weekly: dict, retailer: str) -> pd.DataFrame:
 
 
 def show_orders(retailer: str = "Retailer 1", show_table: bool = False) -> None:
-    """The orders of the retailers: the six-month totals by model, Table 4, the
-    figure of the orders of each retailer in each week, by model, and, with
-    ``show_table``, the weekly orders of one retailer."""
+    """The orders of the retailers: the six-month totals by model, Table 4, and the
+    figure of the orders of each retailer in each week, by model; with
+    ``show_table``, the weekly orders of one retailer in a table instead of the
+    figure."""
     retailer = _retailer(retailer)
     data = _base()
     totals = {j: sum(q for (_, i, _), q in data["weekly orders"].items() if i == j) for j in MODELS}
@@ -651,10 +652,11 @@ def show_orders(retailer: str = "Retailer 1", show_table: bool = False) -> None:
           + "; ".join(f"{j} {_number(totals[j])}" for j in MODELS)
           + "; product mix " + "; ".join(f"{fixed(100 * data['six-month mix'][j], 1)} %" for j in MODELS) + ".")
     _display(orders_table(data["orders"]))
-    _orders_figure(data["weekly orders"])
     if show_table:
         print(f"{_name(retailer)}: orders in each week, by model (bikes).")
         _display(weekly_orders_table(data["weekly orders"], retailer))
+    else:
+        _orders_figure(data["weekly orders"])
 
 
 @_light
@@ -767,24 +769,27 @@ def _master_plan_figure(master: dict, least: dict) -> None:
 def show_master_plan(show_tables: bool = False) -> None:
     """The data of M4 on the figure of the network; and M4 solved with the orders of
     Table 4: its cost, the figure of its plan at the plants and the stock of the
-    network. With ``show_tables``, the data and the plan also in tables (Table 7)."""
+    network. With ``show_tables``, the data and the plan in tables (Table 7) instead
+    of the figures."""
     print(f"The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every warehouse starts and "
           "ends the six months with no stock. Node capacity: the bikes that the warehouse can receive in a month. "
           "Backorder share: of the orders that a retailer does not receive in their month, the share that is "
           f"backordered; the rest is lost sales. Backorder cost: {_number(c_b)} €/(bike·month); lost-sale cost: "
           f"{_number(c_l[RETAILERS[0]])} €/bike at every retailer.")
-    _network_figure()
     if show_tables:
         for table in network_tables():
             _display(table)
+    else:
+        _network_figure()
     data = _base()
     master = data["master"]
     print(f"M4 with the orders of the retailers: cost {_number(master['cost'], 2)} €; backorders "
           f"{_number(float(sum(master['backorders'].values())))} and lost sales "
           f"{_number(float(sum(master['lost sales'].values())))} bikes.")
-    _master_plan_figure(master, data["least stock"])
     if show_tables:
         _display(master_plan_table(master, data["least stock"]))
+    else:
+        _master_plan_figure(master, data["least stock"])
     print("Stock of the network, plants and warehouses, at the end of each month (bikes): "
           + "; ".join(f"{t} {_number(float(master['network stock'][t]))}" for t in T) + ".")
 
