@@ -31,10 +31,13 @@ The notebook calls one function per step: ``show_orders``, ``show_master_plan``,
 from __future__ import annotations
 
 import functools
+import json
 import math
 from fractions import Fraction
+from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, Polygon, Rectangle
 import pandas as pd
 import pulp
 
@@ -42,7 +45,7 @@ from . import retailers
 from .data import (ARCS_M4, ASSEMBLY_TIME, AVERAGE_ORDERS, BACKORDER_SHARE, CENTRAL, CREW_COST, FIRST_BIKE_CHECK,
                    HOLIDAYS, HOURS_PER_DAY, LOCAL, MODELS, MONTH_DAYS, NODES, PLACES_M4, PLANT_STOCK_0, PRODUCT_MIX,
                    RAIL_TERMINAL, REGIONAL, RETAILERS, SEASONAL_INDEX, SETUP_TIME, VALUE_FACTOR, WEEK_FACTOR, WEEKS,
-                   F, K_h, K_h_node_m4, K_n, T, c_b, c_h, c_h_node_m4, c_l)
+                   F, K, K_h, K_h_node_m4, K_n, T, c, c_b, c_h, c_h_node_m4, c_l)
 from .model import _optimal
 from .show import COLOURS, SHORT, _display, _light, _number
 
@@ -713,20 +716,19 @@ def master_plan_table(master: dict, least: dict) -> pd.DataFrame:
     return pd.DataFrame(rows).T.rename_axis(["Plant", "Month"])
 
 
-def show_master_plan() -> None:
-    """The data of M4 at the warehouses, on the arcs and at the retailers; and M4
-    solved with the orders of Table 4: its cost, Table 7 and the stock of the
-    network."""
-    warehouses, arcs, retailers_ = network_tables()
-    print(f"Warehouses. The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every "
-          "warehouse starts and ends the six months with no stock. Node capacity: the bikes that the warehouse "
-          "can receive in a month.")
-    _display(warehouses)
-    print("Arcs of the network.")
-    _display(arcs)
-    print(f"Retailers. Backorder share: of the orders that a retailer does not receive in their month, the share "
-          f"that is backordered; the rest is lost sales. Backorder cost: {_number(c_b)} €/(bike·month).")
-    _display(retailers_)
+def show_master_plan(show_tables: bool = False) -> None:
+    """The data of M4 on the figure of the network and, with ``show_tables``, in
+    three tables; and M4 solved with the orders of Table 4: its cost, Table 7 and
+    the stock of the network."""
+    print(f"The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every warehouse starts and "
+          "ends the six months with no stock. Node capacity: the bikes that the warehouse can receive in a month. "
+          "Backorder share: of the orders that a retailer does not receive in their month, the share that is "
+          f"backordered; the rest is lost sales. Backorder cost: {_number(c_b)} €/(bike·month); lost-sale cost: "
+          f"{_number(c_l[RETAILERS[0]])} €/bike at every retailer.")
+    _network_figure()
+    if show_tables:
+        for table in network_tables():
+            _display(table)
     data = _base()
     master = data["master"]
     print(f"M4 with the orders of the retailers: cost {_number(master['cost'], 2)} €; backorders "
@@ -735,6 +737,85 @@ def show_master_plan() -> None:
     _display(master_plan_table(master, data["least stock"]))
     print("Stock of the network, plants and warehouses, at the end of each month (bikes): "
           + "; ".join(f"{t} {_number(float(master['network stock'][t]))}" for t in T) + ".")
+
+
+# The geometry of the figure of the network of M4 in the statement (figure CS-F1):
+# the position, shape and label of each node and the route of each arc. It is
+# written by web/T3.Planning/lot_sizing/dump_geometry.py of the lecturer repository;
+# copy it again here when that figure changes
+NETWORK_FIGURE = Path(__file__).with_name("network_m4.json")
+INK, TEXT, FILL = "#034854", "#444444", "#F2F6F6"
+
+
+def _node_data(node: str) -> str:
+    """The data of M4 at a node, as written under its label."""
+    if node in F:
+        return (f"{_number(c[node])} €/bike · {_number(K[node][T[0]])} bikes/month\n"
+                f"{_number(c_h[node])} €/(bike·month) · {_number(K_h[node])} bikes")
+    if node in RETAILERS:
+        return f"backorder share {_number(BACKORDER_SHARE[node], 1)}"
+    if node == RAIL_TERMINAL:
+        return ""
+    text = f"{_number(c_h_node_m4[node])} €/(bike·month) · {_number(K_h_node_m4[node])} bikes"
+    return text + (f"\nnode capacity {_number(K_n[node])} bikes/month" if node in K_n else "")
+
+
+@_light
+def _network_figure() -> None:
+    """The network of M4 as in the statement, with the data of each node under its
+    label and the transport cost and the arc capacity on each arc."""
+    g = json.loads(NETWORK_FIGURE.read_text(encoding="utf-8"))
+    fig, ax = plt.subplots(figsize=(16.6, 7.6))
+    for d in g["nodes"].values():
+        x0, y0, x1, y1 = d["bbox"]
+        cx, cy = d["pos"]
+        shape = {"transform": lambda: Rectangle((x0, y0), x1 - x0, y1 - y0),
+                 "stock": lambda: Polygon([(cx, y0), (x1, y1), (x0, y1)]),
+                 "transit": lambda: Circle((cx, cy), (x1 - x0) / 2),
+                 "demand": lambda: Polygon([(cx, y0), (x1, cy), (cx, y1), (x0, cy)])}[d["kind"]]()
+        shape.set(facecolor=FILL, edgecolor=INK, linewidth=1.4, zorder=3)
+        ax.add_patch(shape)
+    for route, arc in zip(g["arcs"], ARCS_M4):
+        assert (route["from"], route["to"]) == (arc["origin"], arc["destination"])
+        points = route["pts"]
+        xs, ys = zip(*points)
+        ax.plot(xs, ys, color=INK, lw=1.2, ls=(0, (5, 3)) if arc["mode"] == "Rail" else "-", zorder=2)
+        ax.annotate("", xy=points[-1], xytext=points[-2], arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.2))
+        if arc["destination"] in RETAILERS:
+            # on the last stretch, next to the head: the stretches before it can be shared
+            (x0, y0), (x1, y1) = points[-2], points[-1]
+            where, label = (x1 - 48, y1), _number(arc["cost"], 2)
+        else:
+            (x0, y0), (x1, y1) = max(zip(points[:-1], points[1:]),
+                                     key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
+            where = ((x0 + x1) / 2, (y0 + y1) / 2)
+            label = f"{_number(arc['cost'], 2)} · {_number(arc['capacity'])}"
+        ax.text(*where, label, fontsize=7.5, ha="center", va="center", color=SHORT, zorder=4,
+                bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none"))
+    for x, y in g["dots"]:
+        ax.add_patch(Circle((x, y), 3, color=INK, zorder=3))
+    align = {"end": "right", "start": "left", "middle": "center", None: "left"}
+    for label in g["labels"]:
+        ax.text(label["x"], label["y"], label["s"], fontsize=9.5, ha=align[label["anchor"]], va="baseline",
+                style="italic" if label["italic"] else "normal", color=TEXT)
+    for node, d in g["nodes"].items():
+        name, place = (next(L for L in g["labels"] if L["s"] == s) for s in (node, d["place"]))
+        if node == CENTRAL:                    # its label is above the node: the data go above its name
+            where, va = (name["x"], name["y"] - 22), "bottom"
+        else:
+            where, va = (place["x"], place["y"] + 12), "top"
+        ax.text(*where, _node_data(node), fontsize=8, color=SHORT, ha=align[place["anchor"]], va=va,
+                linespacing=1.15)
+    ax.set_xlim(0, 1664)
+    ax.set_ylim(650, -40)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.set_title("Data of M4. Plants: unit assembly cost · capacity; holding cost · storage capacity. Warehouses: "
+                 "holding cost · storage capacity.\nArcs: transport cost (€/bike) · arc capacity (bikes/month); "
+                 f"the arcs to the retailers have an arc capacity of {_number(ARCS_M4[-1]['capacity'])} bikes/month.",
+                 fontsize=10, color=TEXT)
+    fig.tight_layout()
+    plt.show()
 
 
 def mix_table(mix: dict, split: dict, master: dict) -> pd.DataFrame:
