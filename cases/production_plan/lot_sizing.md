@@ -415,8 +415,8 @@ Table 13. Hours of the line of each plant, by month. Capacity overload (%): shar
 **What is checked.** M4 does not see the weeks, the models or the setups: for M4, each plant can assemble a fixed number of bikes a month, 250, 200 and 150. These capacities rest on three assumptions:
 
 1. every month has 20 working days, 160 h;
-2. a bike takes the same assembly time in every month: the average of the four models, weighted by the product mix of the orders of the six months;
-3. the 23 h a month that the assembly does not use are left for the setups, the same in every month and at every plant.
+2. the 23 h a month that the assembly does not use are left for the setups, the same in every month and at every plant;
+3. a bike takes the same assembly time in every month: the average of the four models, weighted by the product mix of the orders of the six months.
 
 The weekly plans of plants 1 and 2 have a capacity overload in every month (§4), so at least one of these assumptions fails.
 
