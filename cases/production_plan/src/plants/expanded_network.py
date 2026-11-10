@@ -18,7 +18,7 @@ The notebook expanded_network.ipynb calls one function per step:
    warehouse changed;
 3. ``covering``: the regional warehouses for a maximum travel time, with "at least
    one" or "exactly one";
-4. ``routes``: the weekly routes for a van capacity, from the full list of
+4. ``routes``: the weekly routes for a truck capacity, from the full list of
    candidate routes or from the short list.
 
 M0 to M4 are the network before the expansion; this module does not use them.
@@ -34,7 +34,7 @@ import pulp
 
 from .data import (LOCAL_EXP, MAX_ROUTE_KM, MAX_TRAVEL_TIME, NODE_CAPACITY_YEAR, PLACES_EXP, RETAILERS_EXP, ROAD,
                    ROAD_KM_EXP, ROUTE_FIXED_COST, ROUTE_KM, ROUTE_KM_COST, ROUTE_NODES, ROUTE_RETAILERS,
-                   ROUTE_WAREHOUSE, SITE_COST, SITES, TRANSPORT_RATE, TRAVEL_TIME, VAN_CAPACITY, WEEKLY_ORDERS,
+                   ROUTE_WAREHOUSE, SITE_COST, SITES, TRANSPORT_RATE, TRAVEL_TIME, TRUCK_CAPACITY, WEEKLY_ORDERS,
                    YEARLY_ORDERS)
 from .model import TOL, _optimal
 from .show import SHORT, _display, _light, _number
@@ -232,12 +232,12 @@ def only_covering(times: dict = TRAVEL_TIME, max_time: float = MAX_TRAVEL_TIME, 
 # The weekly routes of local warehouse 2: set partitioning
 # ---------------------------------------------------------------------------
 
-def candidate_routes(weekly: dict = WEEKLY_ORDERS, van: float = VAN_CAPACITY, max_km: float = MAX_ROUTE_KM,
+def candidate_routes(weekly: dict = WEEKLY_ORDERS, truck: float = TRUCK_CAPACITY, max_km: float = MAX_ROUTE_KM,
                      fixed: float = ROUTE_FIXED_COST, per_km: float = ROUTE_KM_COST, km: list = ROUTE_KM,
                      nodes: list = ROUTE_NODES, max_stops: int | None = None) -> list[dict]:
     """Every candidate route: it leaves the local warehouse, visits one or more of its
     retailers and returns, carries their weekly orders within the capacity of the
-    van and drives at most the longest distance of a working day. Each route visits
+    small truck and drives at most the longest distance of a working day. Each route visits
     its retailers in the order of least distance, found by trying every order; of
     two orders with the same distance, the first one tried. Its cost is the fixed
     cost of a route plus the cost of its kilometres, rounded to the cent. With
@@ -248,7 +248,7 @@ def candidate_routes(weekly: dict = WEEKLY_ORDERS, van: float = VAN_CAPACITY, ma
     for size in range(1, (max_stops or len(retailers)) + 1):
         for group in itertools.combinations(retailers, size):
             load = sum(weekly[r] for r in group)
-            if load > van:
+            if load > truck:
                 continue
             best = None
             for order in itertools.permutations(group):
@@ -436,7 +436,7 @@ def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None) 
     print("Retailers that are not at their cheapest local warehouse in some plan:")
     _display(_assignment_table(plans, {r: YEARLY_ORDERS[r] for r in changed}))
     loads = pd.DataFrame({place(l): {"Node capacity": capacities[l],
-                                     **{label: (plan["load"][l] if plan else None) for label, plan in plans.items()}}
+                                     **{label: (plan["load"][l] if plan else "—") for label, plan in plans.items()}}
                           for l in LOCAL_EXP}).T
     _display(loads.round(1).rename_axis("Load of each local warehouse (bikes/year)"))
     _assignment_figure(model_plan, cheapest)
@@ -534,24 +534,24 @@ def _routes_figure(plan: dict) -> None:
     plt.show()
 
 
-def routes(van: float = VAN_CAPACITY, full_list: bool = True) -> dict | None:
-    """The candidate routes for a van capacity, from the full list or from the short
+def routes(truck: float = TRUCK_CAPACITY, full_list: bool = True) -> dict | None:
+    """The candidate routes for a truck capacity, from the full list or from the short
     list, and the weekly routes of least cost with "exactly one" (set partitioning)
     and with "at least one" (set covering)."""
-    candidates = candidate_routes(van=van)
+    candidates = candidate_routes(truck=truck)
     if not full_list:
         candidates = short_list(candidates)
     which = "full list" if full_list else f"short list (routes of at most {SHORT_LIST_STOPS} retailers)"
-    print(f"Van capacity {_number(van)} bikes; longest route {_number(MAX_ROUTE_KM)} km; cost of a route "
+    print(f"Truck capacity {_number(truck)} bikes; longest route {_number(MAX_ROUTE_KM)} km; cost of a route "
           f"{_number(ROUTE_FIXED_COST)} € plus {_number(ROUTE_KM_COST, 2)} €/km. {which.capitalize()}: "
           f"{len(candidates)} candidate routes.")
     _display(_route_table(candidates))
     plan = route_plan(candidates)
     if plan is None:
         print("Set partitioning (each retailer on exactly one route): the model has no solution.")
-        too_big = [place(r) for r in ROUTE_RETAILERS if WEEKLY_ORDERS[r] > van]
+        too_big = [place(r) for r in ROUTE_RETAILERS if WEEKLY_ORDERS[r] > truck]
         if too_big:
-            print(f"Weekly orders larger than the van, on no candidate route: {', '.join(too_big)}.")
+            print(f"Weekly orders larger than the truck, on no candidate route: {', '.join(too_big)}.")
         return None
     print(f"Set partitioning (each retailer on exactly one route): routes "
           f"{', '.join(str(route['number']) for route in plan['routes'])}; {_number(plan['cost'], 2)} €/week, "

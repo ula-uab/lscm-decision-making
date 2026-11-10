@@ -409,19 +409,20 @@ POPULATION = dict(zip(RETAILERS_EXP, [
 
 def yearly_orders(population: dict = POPULATION) -> dict:
     """Expected orders d[r] of each retailer in a design year after the expansion
-    (bikes/year), invented: 600 bikes for a city of 150.000 inhabitants, times the
+    (bikes/year), invented: 1.300 bikes for a city of 150.000 inhabitants, times the
     square root of the population over 150.000, rounded to ten bikes. There is one
     retailer per city, and what a shop sells does not grow in proportion to the
     population of its city: a city with four times the population orders twice as
-    many bikes."""
-    return {r: int(10 * round(600 * (population[r] / 150000) ** 0.5 / 10)) for r in population}
+    many bikes. With 1.300, each retailer of M4 orders at least twice its orders of
+    January to June in M4, so that the expansion does not lower its orders."""
+    return {r: int(10 * round(1300 * (population[r] / 150000) ** 0.5 / 10)) for r in population}
 
 
 YEARLY_ORDERS = yearly_orders()
 
 # Node capacity K_n[l] of each local warehouse for a year (bikes it can receive
 # and send on in a year), invented
-NODE_CAPACITY_YEAR = dict(zip(LOCAL_EXP, [1000, 6000, 3000, 4500, 5500, 3000, 5500, 2500, 3000, 2000, 2000, 1500]))
+NODE_CAPACITY_YEAR = dict(zip(LOCAL_EXP, [2500, 13000, 7000, 10000, 12000, 6500, 12000, 5500, 6500, 4000, 4500, 3000]))
 
 # Road distance (km) from each local warehouse to each retailer, in the order of
 # RETAILERS_EXP: the fastest route of OSRM on OpenStreetMap data, consulted on
@@ -488,10 +489,10 @@ ROUTE_KM = [
     [208.9, 113.1, 254.0, 267.0, 208.9, 74.9, 0.0],
 ]
 
-# The van: its capacity (bikes), the longest distance it can drive in a working
-# day (km), and the cost of a route, a fixed cost for each route (EUR/route) plus
-# a cost for each kilometre (EUR/km). Invented
-VAN_CAPACITY = 40
+# The small truck: its capacity (bikes), the longest distance it can drive in a
+# working day (km), and the cost of a route, a fixed cost for each route
+# (EUR/route) plus a cost for each kilometre (EUR/km). Invented
+TRUCK_CAPACITY = 90
 MAX_ROUTE_KM = 600
 ROUTE_FIXED_COST = 150
 ROUTE_KM_COST = 0.60

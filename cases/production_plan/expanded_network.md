@@ -14,79 +14,79 @@ The assignment and the covering are long-term decisions, and they use the quanti
 
 Table 1 gives the retailers. Retailers 1 to 6 are those of M4, with the same numbers; the other 40 are in 40 more cities of the peninsula, one per city. Each place is the point that Nominatim, the search engine of OpenStreetMap, gives for its name: the places of M3 and M4 keep the points of those documents, consulted on 23 October 2026, and the other places were consulted on 10 November 2026. For Huesca, Guadalajara, Ciudad Real and León the search by name gives the province, and the point is that of the city.
 
-The orders of each retailer are its expected orders in the design year, $d_r$, in bikes a year. They are invented. There is one retailer per city, and what a shop sells does not grow in proportion to the population of its city; the orders therefore grow with the population, but less than in proportion: 600 bikes a year for a city of 150.000 inhabitants, times the square root of the population over 150.000, rounded to ten bikes. A city with four times the population orders twice as many bikes. The population is that of the official figures of the municipal register (Padrón) at 1 January 2025, published by the Spanish statistical office (INE, table 29005).
+The orders of each retailer are its expected orders in the design year, $d_r$, in bikes a year. They are invented. There is one retailer per city, and what a shop sells does not grow in proportion to the population of its city; the orders therefore grow with the population, but less than in proportion: 1.300 bikes a year for a city of 150.000 inhabitants, times the square root of the population over 150.000, rounded to ten bikes. A city with four times the population orders twice as many bikes. With this constant each of the six retailers of M4 orders in the design year at least twice its orders of January to June in M4 (Table 3 of `retailers.md`), so that the retailers the manufacturer already had do not order less after the expansion: Lleida 1.280 bikes a year (497 from January to June in M4), Sabadell 1.590 (781), Alicante 2.030 (639), Murcia 2.320 (568), Córdoba 1.910 (710) and Granada 1.620 (355). Sabadell sets the constant: the lowest that meets the condition is 1.280, rounded up to 1.300; with 1.270 Sabadell would order 1.560, less than twice 781. The population is that of the official figures of the municipal register (Padrón) at 1 January 2025, published by the Spanish statistical office (INE, table 29005).
 
 Table 1. Retailers
 
 | Retailer | Place | Population (inhabitants) | Orders $d_r$ (bikes/year) |
 |---|---|---|---|
-| 1 | Lleida | 146.266 | 590 |
-| 2 | Sabadell | 225.368 | 740 |
-| 3 | Alicante | 366.221 | 940 |
-| 4 | Murcia | 479.405 | 1.070 |
-| 5 | Córdoba | 323.262 | 880 |
-| 6 | Granada | 233.975 | 750 |
-| 7 | Barcelona | 1.731.649 | 2.040 |
-| 8 | Girona | 108.666 | 510 |
-| 9 | Tarragona | 143.649 | 590 |
-| 10 | Manresa | 80.974 | 440 |
-| 11 | Zaragoza | 693.091 | 1.290 |
-| 12 | Huesca | 55.454 | 360 |
-| 13 | Castellón de la Plana | 183.711 | 660 |
-| 14 | Valencia | 840.792 | 1.420 |
-| 15 | Gandía | 83.135 | 450 |
-| 16 | Elche | 245.557 | 770 |
-| 17 | Cartagena | 220.704 | 730 |
-| 18 | Albacete | 175.400 | 650 |
-| 19 | Almería | 205.468 | 700 |
-| 20 | Jaén | 112.235 | 520 |
-| 21 | Seville | 689.423 | 1.290 |
-| 22 | Málaga | 599.063 | 1.200 |
-| 23 | Marbella | 159.786 | 620 |
-| 24 | Huelva | 143.215 | 590 |
-| 25 | Cádiz | 109.950 | 510 |
-| 26 | Madrid | 3.506.730 | 2.900 |
-| 27 | Alcobendas | 123.342 | 540 |
-| 28 | Toledo | 87.216 | 460 |
-| 29 | Guadalajara | 92.834 | 470 |
-| 30 | Segovia | 52.375 | 350 |
-| 31 | Ciudad Real | 76.217 | 430 |
-| 32 | Cuenca | 53.600 | 360 |
-| 33 | Valladolid | 302.614 | 850 |
-| 34 | Burgos | 177.402 | 650 |
-| 35 | León | 123.446 | 540 |
-| 36 | Salamanca | 146.110 | 590 |
-| 37 | Bilbao | 351.124 | 920 |
-| 38 | San Sebastián | 189.866 | 680 |
-| 39 | Santander | 175.425 | 650 |
-| 40 | Logroño | 152.150 | 600 |
-| 41 | Oviedo | 223.968 | 730 |
-| 42 | Gijón | 269.894 | 800 |
-| 43 | A Coruña | 251.543 | 780 |
-| 44 | Vigo | 294.489 | 840 |
-| 45 | Badajoz | 150.209 | 600 |
-| 46 | Cáceres | 96.651 | 480 |
-| Total | | | 35.530 |
+| 1 | Lleida | 146.266 | 1.280 |
+| 2 | Sabadell | 225.368 | 1.590 |
+| 3 | Alicante | 366.221 | 2.030 |
+| 4 | Murcia | 479.405 | 2.320 |
+| 5 | Córdoba | 323.262 | 1.910 |
+| 6 | Granada | 233.975 | 1.620 |
+| 7 | Barcelona | 1.731.649 | 4.420 |
+| 8 | Girona | 108.666 | 1.110 |
+| 9 | Tarragona | 143.649 | 1.270 |
+| 10 | Manresa | 80.974 | 960 |
+| 11 | Zaragoza | 693.091 | 2.790 |
+| 12 | Huesca | 55.454 | 790 |
+| 13 | Castellón de la Plana | 183.711 | 1.440 |
+| 14 | Valencia | 840.792 | 3.080 |
+| 15 | Gandía | 83.135 | 970 |
+| 16 | Elche | 245.557 | 1.660 |
+| 17 | Cartagena | 220.704 | 1.580 |
+| 18 | Albacete | 175.400 | 1.410 |
+| 19 | Almería | 205.468 | 1.520 |
+| 20 | Jaén | 112.235 | 1.120 |
+| 21 | Seville | 689.423 | 2.790 |
+| 22 | Málaga | 599.063 | 2.600 |
+| 23 | Marbella | 159.786 | 1.340 |
+| 24 | Huelva | 143.215 | 1.270 |
+| 25 | Cádiz | 109.950 | 1.110 |
+| 26 | Madrid | 3.506.730 | 6.290 |
+| 27 | Alcobendas | 123.342 | 1.180 |
+| 28 | Toledo | 87.216 | 990 |
+| 29 | Guadalajara | 92.834 | 1.020 |
+| 30 | Segovia | 52.375 | 770 |
+| 31 | Ciudad Real | 76.217 | 930 |
+| 32 | Cuenca | 53.600 | 780 |
+| 33 | Valladolid | 302.614 | 1.850 |
+| 34 | Burgos | 177.402 | 1.410 |
+| 35 | León | 123.446 | 1.180 |
+| 36 | Salamanca | 146.110 | 1.280 |
+| 37 | Bilbao | 351.124 | 1.990 |
+| 38 | San Sebastián | 189.866 | 1.460 |
+| 39 | Santander | 175.425 | 1.410 |
+| 40 | Logroño | 152.150 | 1.310 |
+| 41 | Oviedo | 223.968 | 1.590 |
+| 42 | Gijón | 269.894 | 1.740 |
+| 43 | A Coruña | 251.543 | 1.680 |
+| 44 | Vigo | 294.489 | 1.820 |
+| 45 | Badajoz | 150.209 | 1.300 |
+| 46 | Cáceres | 96.651 | 1.040 |
+| Total | | | 77.000 |
 
-Table 2 gives the local warehouses. Local warehouses 1 to 4 are those of M3, with the same numbers. The node capacity of a local warehouse, $K^n_l$, is the number of bikes it can receive and send on in a year: what it can move, not what it can hold. The capacities are invented. Together they exceed the orders of all the retailers by 11,2 %.
+Table 2 gives the local warehouses. Local warehouses 1 to 4 are those of M3, with the same numbers. The node capacity of a local warehouse, $K^n_l$, is the number of bikes it can receive and send on in a year: what it can move, not what it can hold. The capacities are invented. Together they exceed the orders of all the retailers by 12,3 %.
 
 Table 2. Local warehouses
 
 | Local warehouse | Place | Node capacity $K^n_l$ (bikes/year) |
 |---|---|---|
-| 1 | Girona | 1.000 |
-| 2 | Tarragona | 6.000 |
-| 3 | Valencia | 3.000 |
-| 4 | Seville | 4.500 |
-| 5 | Murcia | 5.500 |
-| 6 | Málaga | 3.000 |
-| 7 | Alcalá de Henares | 5.500 |
-| 8 | Valladolid | 2.500 |
-| 9 | Bilbao | 3.000 |
-| 10 | Oviedo | 2.000 |
-| 11 | Santiago de Compostela | 2.000 |
-| 12 | Badajoz | 1.500 |
-| Total | | 39.500 |
+| 1 | Girona | 2.500 |
+| 2 | Tarragona | 13.000 |
+| 3 | Valencia | 7.000 |
+| 4 | Seville | 10.000 |
+| 5 | Murcia | 12.000 |
+| 6 | Málaga | 6.500 |
+| 7 | Alcalá de Henares | 12.000 |
+| 8 | Valladolid | 5.500 |
+| 9 | Bilbao | 6.500 |
+| 10 | Oviedo | 4.000 |
+| 11 | Santiago de Compostela | 4.500 |
+| 12 | Badajoz | 3.000 |
+| Total | | 86.500 |
 
 Table 3 gives the road distance from each local warehouse to each retailer: the fastest road route computed with OSRM on OpenStreetMap data, consulted on 10 November 2026. The twelve arcs of M4 (Table 2 of `retailers.md`) keep their distances. The transport cost of serving one bike of retailer $r$ from local warehouse $l$, $c^x_{lr}$, is the distance times the transport rate of road of M3, 0,010 €/(bike·km), rounded to the cent: in euros, the distance in kilometres divided by 100. A local warehouse is not at the same point as the shop it serves: for a retailer in the same city as a local warehouse, the road distance between them is taken as a fixed urban distance of 10 km, and its distances to the other places are those of OSRM.
 
@@ -186,8 +186,8 @@ $$
 The objective is the yearly transport cost: each retailer pays the transport cost of its warehouse for each of its bikes. The model forms the group of retailers of each local warehouse. The classical assignment problem pairs each object of one set with exactly one object of another set of the same size; in the generalized assignment problem a local warehouse serves several retailers, within its capacity.
 
 - **One local warehouse for each retailer.** Exactly one of the variables of each retailer is 1. Without this constraint, serving no retailer would cost 0 and would be the optimum.
-- **Node capacity.** The orders of the retailers that a local warehouse serves add up to at most its node capacity. Without it, each retailer goes to its cheapest local warehouse: the first plan of §3.2, which costs 28.397,90 €/year and exceeds the capacity of three warehouses.
-- **Binary variables.** $x_{lr}$ is 1 or 0: a local warehouse serves all the orders of a retailer or none of them. With continuous variables between 0 and 1, $x_{lr}$ is the share of the orders of retailer $r$ that local warehouse $l$ serves, and the model is the transportation problem on the same data: the last plan of §3.2, which splits four retailers and costs 28.502,70 €/year.
+- **Node capacity.** The orders of the retailers that a local warehouse serves add up to at most its node capacity. Without it, each retailer goes to its cheapest local warehouse: the first plan of §3.2, which costs 61.542,10 €/year and exceeds the capacity of three warehouses.
+- **Binary variables.** $x_{lr}$ is 1 or 0: a local warehouse serves all the orders of a retailer or none of them. With continuous variables between 0 and 1, $x_{lr}$ is the share of the orders of retailer $r$ that local warehouse $l$ serves, and the model is the transportation problem on the same data: the last plan of §3.2, which splits four retailers and costs 61.822,90 €/year.
 
 ### 3.2 Four plans
 
@@ -197,52 +197,52 @@ Table 5. Cost of each plan
 
 | Plan | Cost (€/year) | Against the generalized assignment | Valid |
 |---|---|---|---|
-| Each retailer at its cheapest local warehouse | 28.397,90 | −4,7 % | No: local warehouses 1, 6 and 10 exceed their node capacity |
-| Rule, in the order of the list | 37.042,90 | +24,4 % | Yes |
-| Generalized assignment | 29.784,60 | — | Yes |
-| Transportation problem | 28.502,70 | −4,3 % | Yes, with four retailers split between two local warehouses |
+| Each retailer at its cheapest local warehouse | 61.542,10 | −4,7 % | No: local warehouses 1, 6 and 10 exceed their node capacity |
+| Rule, in the order of the list | 81.086,90 | +25,6 % | Yes |
+| Generalized assignment | 64.544,30 | — | Yes |
+| Transportation problem | 61.822,90 | −4,2 % | Yes, with four retailers split between two local warehouses |
 
 Table 6. Load of each local warehouse in each plan (bikes/year); in bold, a load above the node capacity
 
 | Local warehouse | Node capacity | Cheapest | Rule | Generalized assignment | Transportation problem |
 |---|---|---|---|---|---|
-| 1 (Girona) | 1.000 | **1.250** | 740 | 950 | 1.000 |
-| 2 (Tarragona) | 6.000 | 5.310 | 5.820 | 5.610 | 5.560 |
-| 3 (Valencia) | 3.000 | 2.530 | 2.530 | 2.890 | 2.530 |
-| 4 (Seville) | 4.500 | 3.270 | 4.370 | 3.790 | 3.360 |
-| 5 (Murcia) | 5.500 | 4.860 | 4.860 | 4.860 | 4.860 |
-| 6 (Málaga) | 3.000 | **3.090** | 2.470 | 2.570 | 3.000 |
-| 7 (Alcalá de Henares) | 5.500 | 5.160 | 5.160 | 5.450 | 5.170 |
-| 8 (Valladolid) | 2.500 | 2.440 | 2.440 | 2.330 | 2.500 |
-| 9 (Bilbao) | 3.000 | 2.850 | 2.850 | 2.850 | 2.850 |
-| 10 (Oviedo) | 2.000 | **2.070** | 1.270 | 1.530 | 2.000 |
-| 11 (Santiago de Compostela) | 2.000 | 1.620 | 1.580 | 1.620 | 1.620 |
-| 12 (Badajoz) | 1.500 | 1.080 | 1.440 | 1.080 | 1.080 |
+| 1 (Girona) | 2.500 | **2.700** | 1.590 | 2.070 | 2.500 |
+| 2 (Tarragona) | 13.000 | 11.510 | 12.620 | 12.140 | 11.710 |
+| 3 (Valencia) | 7.000 | 5.490 | 5.490 | 6.270 | 5.490 |
+| 4 (Seville) | 10.000 | 7.080 | 9.720 | 8.200 | 7.260 |
+| 5 (Murcia) | 12.000 | 10.520 | 10.520 | 10.520 | 10.520 |
+| 6 (Málaga) | 6.500 | **6.680** | 5.340 | 5.560 | 6.500 |
+| 7 (Alcalá de Henares) | 12.000 | 11.190 | 11.190 | 11.820 | 11.510 |
+| 8 (Valladolid) | 5.500 | 5.310 | 5.310 | 5.080 | 5.500 |
+| 9 (Bilbao) | 6.500 | 6.170 | 6.170 | 6.170 | 6.170 |
+| 10 (Oviedo) | 4.000 | **4.510** | 2.770 | 3.330 | 4.000 |
+| 11 (Santiago de Compostela) | 4.500 | 3.500 | 3.420 | 3.500 | 3.500 |
+| 12 (Badajoz) | 3.000 | 2.340 | 2.860 | 2.340 | 2.340 |
 
 Table 7. Retailers not served by their cheapest local warehouse in some plan
 
 | Retailer | Orders (bikes/year) | Cheapest | Rule | Generalized assignment | Transportation problem |
 |---|---|---|---|---|---|
-| 2 (Sabadell) | 740 | Girona | Girona | Tarragona | Girona 66,2 %; Tarragona 33,8 % |
-| 8 (Girona) | 510 | Girona | Tarragona | Girona | Girona |
-| 10 (Manresa) | 440 | Tarragona | Tarragona | Girona | Tarragona |
-| 20 (Jaén) | 520 | Málaga | Málaga | Seville | Seville 17,3 %; Málaga 82,7 % |
-| 23 (Marbella) | 620 | Málaga | Seville | Málaga | Málaga |
-| 30 (Segovia) | 350 | Valladolid | Valladolid | Valladolid | Alcalá de Henares 2,9 %; Valladolid 97,1 % |
-| 32 (Cuenca) | 360 | Alcalá de Henares | Alcalá de Henares | Valencia | Alcalá de Henares |
-| 34 (Burgos) | 650 | Valladolid | Valladolid | Alcalá de Henares | Valladolid |
-| 35 (León) | 540 | Oviedo | Oviedo | Valladolid | Valladolid 13,0 %; Oviedo 87,0 % |
-| 42 (Gijón) | 800 | Oviedo | Santiago de Compostela | Oviedo | Oviedo |
-| 44 (Vigo) | 840 | Santiago de Compostela | Badajoz | Santiago de Compostela | Santiago de Compostela |
-| 46 (Cáceres) | 480 | Badajoz | Seville | Badajoz | Badajoz |
+| 2 (Sabadell) | 1.590 | Girona | Girona | Tarragona | Girona 87,4 %; Tarragona 12,6 % |
+| 8 (Girona) | 1.110 | Girona | Tarragona | Girona | Girona |
+| 10 (Manresa) | 960 | Tarragona | Tarragona | Girona | Tarragona |
+| 20 (Jaén) | 1.120 | Málaga | Málaga | Seville | Seville 16,1 %; Málaga 83,9 % |
+| 23 (Marbella) | 1.340 | Málaga | Seville | Málaga | Málaga |
+| 30 (Segovia) | 770 | Valladolid | Valladolid | Valladolid | Alcalá de Henares 41,6 %; Valladolid 58,4 % |
+| 32 (Cuenca) | 780 | Alcalá de Henares | Alcalá de Henares | Valencia | Alcalá de Henares |
+| 34 (Burgos) | 1.410 | Valladolid | Valladolid | Alcalá de Henares | Valladolid |
+| 35 (León) | 1.180 | Oviedo | Oviedo | Valladolid | Valladolid 43,2 %; Oviedo 56,8 % |
+| 42 (Gijón) | 1.740 | Oviedo | Santiago de Compostela | Oviedo | Oviedo |
+| 44 (Vigo) | 1.820 | Santiago de Compostela | Badajoz | Santiago de Compostela | Santiago de Compostela |
+| 45 (Badajoz) | 1.300 | Badajoz | Seville | Badajoz | Badajoz |
 
-Serving each retailer from its cheapest local warehouse exceeds the capacity of Girona (1.250 bikes for 1.000), Málaga (3.090 for 3.000) and Oviedo (2.070 for 2.000).
+Serving each retailer from its cheapest local warehouse exceeds the capacity of Girona (2.700 bikes for 2.500), Málaga (6.680 for 6.500) and Oviedo (4.510 for 4.000).
 
-The rule gives a valid plan, 24,4 % dearer than that of the model. Taking the retailers in a fixed order, a retailer early in the list can take the room that a later one needed, and the later one then goes to a dearer local warehouse. Sabadell, second in the list, takes 740 of the 1.000 bikes of Girona, and the retailer of Girona, eighth, no longer fits there and goes to Tarragona. In the north-west the effect passes from one warehouse to the next: Gijón finds no room left at Oviedo and goes to Santiago de Compostela, the cheapest local warehouse with room; Vigo, which then finds no room at Santiago de Compostela, goes to Badajoz, 497,7 km away; and Cáceres, which then finds no room at Badajoz, goes to Seville.
+The rule gives a valid plan, 25,6 % dearer than that of the model. Taking the retailers in a fixed order, a retailer early in the list can take the room that a later one needed, and the later one then goes to a dearer local warehouse. Sabadell, second in the list, takes 1.590 of the 2.500 bikes of Girona, and the retailer of Girona, eighth, no longer fits there and goes to Tarragona. In the north-west the effect passes from one warehouse to the next: Gijón finds no room left at Oviedo and goes to Santiago de Compostela, the cheapest local warehouse with room; Vigo, which then finds no room at Santiago de Compostela, goes to Badajoz, 497,7 km away; and the retailer of Badajoz, which then finds no room in its own city, goes to Seville.
 
-The model gives the only optimal plan, which costs 29.784,60 €/year, 1.386,70 € more than the plan that exceeds the capacities. Six retailers are not served by their cheapest local warehouse, and several of them move to make room for another. Sabadell moves from Girona to Tarragona, and Manresa moves from Tarragona to Girona to make room for it: with Sabadell, Tarragona would have 6.050 bikes for 6.000. León moves from Oviedo to Valladolid; Valladolid would then have 2.980 bikes for 2.500, and Burgos moves to Alcalá de Henares; Alcalá de Henares would then have 5.810 for 5.500, and Cuenca moves to Valencia. Jaén moves from Málaga to Seville. The model moves the retailers whose moves cost least in total, not those that a rule would move one by one: Burgos costs 1,13 €/bike more from Alcalá de Henares than from Valladolid, and moving it costs 734,50 € a year, but every plan that keeps Burgos at Valladolid costs more.
+The model gives the only optimal plan, which costs 64.544,30 €/year, 3.002,20 € more than the plan that exceeds the capacities. Six retailers are not served by their cheapest local warehouse, and several of them move to make room for another. Sabadell moves from Girona to Tarragona, and Manresa moves from Tarragona to Girona to make room for it: with Sabadell, Tarragona would have 13.100 bikes for 13.000. León moves from Oviedo to Valladolid; Valladolid would then have 6.490 bikes for 5.500, and Burgos moves to Alcalá de Henares; Alcalá de Henares would then have 12.600 for 12.000, and Cuenca moves to Valencia. Jaén moves from Málaga to Seville. The model moves the retailers whose moves cost least in total, not those that a rule would move one by one: Burgos costs 1,13 €/bike more from Alcalá de Henares than from Valladolid, and moving it costs 1.593,30 € a year, but every plan that keeps Burgos at Valladolid costs more.
 
-The transportation problem splits four retailers between two local warehouses, Sabadell, Jaén, Segovia and León, and costs 28.502,70 €/year, 1.281,90 € (4,3 %) less than the assignment. Girona, Málaga, Valladolid and Oviedo are full. Requiring each retailer to be served from one local warehouse makes the model integer and the plan dearer. M4 lets each retailer receive from two local warehouses: with several sources, the quantities of the master plan are the share of the demand of each customer that each site serves (Fleischmann, Kopfer and Sürie, 2015, §12.1.2, p. 229). The generalized assignment fixes one local warehouse for each retailer, a decision of network design that the master plan then takes as data.
+The transportation problem splits four retailers between two local warehouses, Sabadell, Jaén, Segovia and León, and costs 61.822,90 €/year, 2.721,40 € (4,2 %) less than the assignment. Girona, Málaga, Valladolid and Oviedo are full. Requiring each retailer to be served from one local warehouse makes the model integer and the plan dearer. M4 lets each retailer receive from two local warehouses: with several sources, the quantities of the master plan are the share of the demand of each customer that each site serves (Fleischmann, Kopfer and Sürie, 2015, §12.1.2, p. 229). The generalized assignment fixes one local warehouse for each retailer, a decision of network design that the master plan then takes as data.
 
 Local warehouse 2 (Tarragona) receives six retailers from the assignment: Lleida, Sabadell, Barcelona, Tarragona, Zaragoza and Huesca. Its weekly routes are the problem of §5.
 
@@ -322,18 +322,18 @@ The model does not say which regional warehouse supplies each local warehouse: t
 
 ### 5.1 Data and candidate routes
 
-Local warehouse 2, in Tarragona, delivers each week the orders of the six retailers that the assignment gives it. A van leaves the local warehouse, visits some of the retailers and returns. The van carries 40 bikes and can drive at most 600 km in a working day. A route costs 150 € (the driver and the van for the day) plus 0,60 €/km. Each retailer receives its weekly order in one delivery. Table 10 gives the weekly orders, $d^{\text{w}}_r$: the yearly orders of Table 1 divided by 52, rounded to a whole bike. Each fits in the van. The van, the working day and the costs are invented.
+Local warehouse 2, in Tarragona, delivers each week the orders of the six retailers that the assignment gives it. A small truck leaves the local warehouse, visits some of the retailers and returns. The truck carries 90 bikes and can drive at most 600 km in a working day. A route costs 150 € (the driver and the truck for the day) plus 0,60 €/km. Each retailer receives its weekly order in one delivery. Table 10 gives the weekly orders, $d^{\text{w}}_r$: the yearly orders of Table 1 divided by 52, rounded to a whole bike. Each fits in the truck. The truck, the working day and the costs are invented.
 
 Table 10. Weekly orders of the retailers of local warehouse 2
 
 | Retailer | Weekly orders $d^{\text{w}}_r$ (bikes) |
 |---|---|
-| 1 (Lleida) | 11 |
-| 2 (Sabadell) | 14 |
-| 7 (Barcelona) | 39 |
-| 9 (Tarragona) | 11 |
-| 11 (Zaragoza) | 25 |
-| 12 (Huesca) | 7 |
+| 1 (Lleida) | 25 |
+| 2 (Sabadell) | 31 |
+| 7 (Barcelona) | 85 |
+| 9 (Tarragona) | 24 |
+| 11 (Zaragoza) | 54 |
+| 12 (Huesca) | 15 |
 
 Table 11 gives the road distances between local warehouse 2 and its retailers, from the node of each row to the node of each column (OSRM, consulted on 10 November 2026). A distance and its return can differ, because the fastest route is not the same in each direction. Retailer 9 is in Tarragona: between it and the local warehouse the distance is the urban distance of 10 km of §2, and from it to the other retailers that of OSRM.
 
@@ -349,31 +349,31 @@ Table 11. Road distance between local warehouse 2 and its retailers (km)
 | Retailer 11 (Zaragoza) | 235,6 | 154,4 | 293,5 | 311,3 | 235,6 | 0,0 | 74,6 |
 | Retailer 12 (Huesca) | 208,9 | 113,1 | 254,0 | 267,0 | 208,9 | 74,9 | 0,0 |
 
-A candidate route visits one or more of the six retailers, carries their weekly orders within the 40 bikes of the van, and drives at most 600 km. Each route visits its retailers in the order of least distance, found by trying every order; its cost, $c_j$, is 150 € plus 0,60 €/km times its distance, rounded to the cent. Table 12 gives the 19 candidate routes. Retailer 9 adds 10 km to a route whether it is visited first or last, so both orders give the same distance; Table 12 gives the first found.
+A candidate route visits one or more of the six retailers, carries their weekly orders within the 90 bikes of the truck, and drives at most 600 km. Each route visits its retailers in the order of least distance, found by trying every order; its cost, $c_j$, is 150 € plus 0,60 €/km times its distance, rounded to the cent. Table 12 gives the 19 candidate routes. Retailer 9 adds 10 km to a route whether it is visited first or last, so both orders give the same distance; Table 12 gives the first found.
 
 Table 12. Candidate routes of local warehouse 2
 
 | Route | Retailers, in the order of visits | Load (bikes) | Distance (km) | Cost $c_j$ (€) |
 |---|---|---|---|---|
-| 1 | Lleida | 11 | 194,5 | 266,70 |
-| 2 | Sabadell | 14 | 210,3 | 276,18 |
-| 3 | Barcelona | 39 | 193,5 | 266,10 |
-| 4 | Tarragona | 11 | 20,0 | 162,00 |
-| 5 | Zaragoza | 25 | 470,3 | 432,18 |
-| 6 | Huesca | 7 | 422,2 | 403,32 |
-| 7 | Sabadell, Lleida | 25 | 344,2 | 356,52 |
-| 8 | Lleida, Tarragona | 22 | 204,5 | 272,70 |
-| 9 | Lleida, Zaragoza | 36 | 485,6 | 441,36 |
-| 10 | Lleida, Huesca | 18 | 423,5 | 404,10 |
-| 11 | Sabadell, Tarragona | 25 | 220,3 | 282,18 |
-| 12 | Sabadell, Huesca | 21 | 572,4 | 493,44 |
-| 13 | Tarragona, Zaragoza | 36 | 480,3 | 438,18 |
-| 14 | Tarragona, Huesca | 18 | 432,2 | 409,32 |
-| 15 | Zaragoza, Huesca | 32 | 518,2 | 460,92 |
-| 16 | Sabadell, Lleida, Tarragona | 36 | 354,2 | 362,52 |
-| 17 | Sabadell, Lleida, Huesca | 32 | 573,2 | 493,92 |
-| 18 | Lleida, Huesca, Tarragona | 29 | 433,5 | 410,10 |
-| 19 | Sabadell, Huesca, Tarragona | 32 | 582,4 | 499,44 |
+| 1 | Lleida | 25 | 194,5 | 266,70 |
+| 2 | Sabadell | 31 | 210,3 | 276,18 |
+| 3 | Barcelona | 85 | 193,5 | 266,10 |
+| 4 | Tarragona | 24 | 20,0 | 162,00 |
+| 5 | Zaragoza | 54 | 470,3 | 432,18 |
+| 6 | Huesca | 15 | 422,2 | 403,32 |
+| 7 | Sabadell, Lleida | 56 | 344,2 | 356,52 |
+| 8 | Lleida, Tarragona | 49 | 204,5 | 272,70 |
+| 9 | Lleida, Zaragoza | 79 | 485,6 | 441,36 |
+| 10 | Lleida, Huesca | 40 | 423,5 | 404,10 |
+| 11 | Sabadell, Tarragona | 55 | 220,3 | 282,18 |
+| 12 | Sabadell, Huesca | 46 | 572,4 | 493,44 |
+| 13 | Tarragona, Zaragoza | 78 | 480,3 | 438,18 |
+| 14 | Tarragona, Huesca | 39 | 432,2 | 409,32 |
+| 15 | Zaragoza, Huesca | 69 | 518,2 | 460,92 |
+| 16 | Sabadell, Lleida, Tarragona | 80 | 354,2 | 362,52 |
+| 17 | Sabadell, Lleida, Huesca | 71 | 573,2 | 493,92 |
+| 18 | Lleida, Huesca, Tarragona | 64 | 433,5 | 410,10 |
+| 19 | Sabadell, Huesca, Tarragona | 70 | 582,4 | 499,44 |
 
 The cost of a route is not the sum of costs of its retailers: it depends on which retailers travel together and in which order they are visited. The generalized assignment adds up a cost for each pair of retailer and local warehouse; with routes there is no such cost to add up. The candidate routes are therefore listed before the model is solved, each feasible on its own and with its cost, and the model chooses among them.
 
@@ -402,23 +402,23 @@ Table 13. Weekly routes of least cost
 | Full list (19 routes) | At least one (set covering) | 3; 15; 16 | 1.065,9 | 1.089,54 |
 | Short list (15 routes) | Exactly one | 3 (Barcelona); 4 (Tarragona); 7 (Sabadell, Lleida); 15 (Zaragoza, Huesca) | 1.075,9 | 1.245,54 |
 
-With the full list, the only optimal plan drives three routes, two of them with more than one retailer: Barcelona alone, because its 39 bikes leave no room in the van for another retailer, the smallest of which orders 7; Zaragoza and Huesca, 74,6 km apart; and Sabadell, Lleida and Tarragona. The plan is the best among the listed routes; here the list contains every feasible route, and the plan is the best of all.
+With the full list, the only optimal plan drives three routes, two of them with more than one retailer: Barcelona alone, because its 85 bikes leave no room in the truck for another retailer, the smallest of which orders 15; Zaragoza and Huesca, 74,6 km apart; and Sabadell, Lleida and Tarragona. The plan is the best among the listed routes; here the list contains every feasible route, and the plan is the best of all.
 
 With the short list the only optimal plan costs 1.245,54 €/week, 156 € more: route 16 is missing, and Tarragona needs a route of its own, route 4, with 10 km more and one more fixed cost. A route missing from the list can make the plan dearer, or the model infeasible when a retailer is on no listed route that fits with the others. The number of possible routes grows so fast with the number of customers that, in practice, only a selection can be listed, or routes are generated as the model needs them: a distribution company with 140 vehicles and up to 200 customers a day writes its daily route plan as a set partitioning problem whose routes are generated in that way (Ruinelli, Salani and Gambardella, 2012, §3–§5).
 
-Written as a covering, the full list gives the same plan, also the only optimal one. A retailer on two chosen routes would receive two deliveries; the covering form allows it, but in this plan no retailer is on two routes. When serving a retailer twice costs nothing extra, the covering gives a plan of the same cost as the partition: a van can skip a retailer already served by another route without its route becoming longer. When this does not hold, for example when the costs do not satisfy the triangle inequality, the partitioning constraints are kept (Ruinelli et al., 2012, §4).
+Written as a covering, the full list gives the same plan, also the only optimal one. A retailer on two chosen routes would receive two deliveries; the covering form allows it, but in this plan no retailer is on two routes. When serving a retailer twice costs nothing extra, the covering gives a plan of the same cost as the partition: a truck can skip a retailer already served by another route without its route becoming longer. When this does not hold, for example when the costs do not satisfy the triangle inequality, the partitioning constraints are kept (Ruinelli et al., 2012, §4).
 
 Its assumptions:
 
 1. The plan is the best among the listed routes.
-2. Each retailer receives its weekly order in one delivery, which fits in the van.
+2. Each retailer receives its weekly order in one delivery, which fits in the truck.
 3. The cost of a route is a fixed cost plus a cost for each kilometre; the time spent at each retailer and the delivery windows are not represented.
 
 ## 6. Reproducing the numbers
 
 The Python script `expanded_network_solver.py`, in this folder, prints every table of this document except Table 4, and checks that each optimal plan is the only one. It writes the models with the library PuLP and solves them with the solver HiGHS to their exact optimum (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
-The notebook [`notebooks/expanded_network.ipynb`](notebooks/expanded_network.ipynb) solves the three problems and lets the reader change one datum in each: the node capacity of a local warehouse in the assignment; the maximum travel time, and «at least one» or «exactly one», in the covering; and the capacity of the van, and the full or the short list, in the partition. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/expanded_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/expanded_network.py`), which reads the data from `src/plants/data.py`.
+The notebook [`notebooks/expanded_network.ipynb`](notebooks/expanded_network.ipynb) solves the three problems and lets the reader change one datum in each: the node capacity of a local warehouse in the assignment; the maximum travel time, and «at least one» or «exactly one», in the covering; and the capacity of the truck, and the full or the short list, in the partition. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/expanded_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/expanded_network.py`), which reads the data from `src/plants/data.py`.
 
 ## Sources
 

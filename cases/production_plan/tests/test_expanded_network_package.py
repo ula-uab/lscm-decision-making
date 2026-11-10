@@ -12,8 +12,8 @@ import pytest
 matplotlib.use("Agg")
 
 from plants import expanded_network as en  # noqa: E402
-from plants.data import (LOCAL_EXP, NODE_CAPACITY_YEAR, PLACES_EXP, PLACES_M4, RETAILER_NETWORK,  # noqa: E402
-                         RETAILERS_EXP, ROAD_KM_EXP, ROUTE_RETAILERS, WEEKLY_ORDERS, YEARLY_ORDERS)
+from plants.data import (LOCAL_EXP, NODE_CAPACITY_YEAR, PLACES_EXP, PLACES_M4, POPULATION,  # noqa: E402
+                         RETAILER_NETWORK, RETAILERS_EXP, ROAD_KM_EXP, ROUTE_RETAILERS, WEEKLY_ORDERS, YEARLY_ORDERS)
 
 CASE = Path(__file__).resolve().parents[1]
 NOTEBOOK = CASE / "notebooks" / "expanded_network.ipynb"
@@ -35,40 +35,50 @@ def test_data_of_the_expanded_network():
     # The twelve arcs of M4 keep their distances
     for origin, destination, _, km, _ in RETAILER_NETWORK:
         assert ROAD_KM_EXP[origin][RETAILERS_EXP.index(destination)] == km
-    assert YEARLY_ORDERS["Retailer 26"] == 2900 and YEARLY_ORDERS["Retailer 30"] == 350
-    assert sum(YEARLY_ORDERS.values()) == 35530 and sum(NODE_CAPACITY_YEAR.values()) == 39500
-    assert WEEKLY_ORDERS == {"Retailer 1": 11, "Retailer 2": 14, "Retailer 7": 39, "Retailer 9": 11,
-                             "Retailer 11": 25, "Retailer 12": 7}
+    assert YEARLY_ORDERS["Retailer 26"] == 6290 and YEARLY_ORDERS["Retailer 30"] == 770
+    assert sum(YEARLY_ORDERS.values()) == 77000 and sum(NODE_CAPACITY_YEAR.values()) == 86500
+    assert WEEKLY_ORDERS == {"Retailer 1": 25, "Retailer 2": 31, "Retailer 7": 85, "Retailer 9": 24,
+                             "Retailer 11": 54, "Retailer 12": 15}
 
 
 def test_tables5_to_7_four_plans_of_the_assignment():
     cheapest = en.cheapest_plan()
-    assert cheapest["cost"] == pytest.approx(28397.90)
+    assert cheapest["cost"] == pytest.approx(61542.10)
     assert cheapest["over"] == ["Local warehouse 1", "Local warehouse 6", "Local warehouse 10"]
-    assert [cheapest["load"][l] for l in cheapest["over"]] == [1250, 3090, 2070]
+    assert [cheapest["load"][l] for l in cheapest["over"]] == [2700, 6680, 4510]
     rule = en.rule_plan()
-    assert rule["cost"] == pytest.approx(37042.90) and not rule["over"]
+    assert rule["cost"] == pytest.approx(81086.90) and not rule["over"]
     assert {city(r): city(rule["warehouse"][r]) for r in RETAILERS_EXP
             if rule["warehouse"][r] != cheapest["warehouse"][r]} == {
         "Girona": "Tarragona", "Marbella": "Seville", "Gijón": "Santiago de Compostela", "Vigo": "Badajoz",
-        "Cáceres": "Seville"}
+        "Badajoz": "Seville"}
     model = en.assignment_plan()
-    assert model["cost"] == pytest.approx(29784.60)
+    assert model["cost"] == pytest.approx(64544.30)
     assert {city(r): city(model["warehouse"][r]) for r in RETAILERS_EXP
             if model["warehouse"][r] != cheapest["warehouse"][r]} == {
         "Sabadell": "Tarragona", "Manresa": "Girona", "Jaén": "Seville", "Cuenca": "Valencia",
         "Burgos": "Alcalá de Henares", "León": "Valladolid"}
     assert [model["load"][l] for l in LOCAL_EXP] == pytest.approx(
-        [950, 5610, 2890, 3790, 4860, 2570, 5450, 2330, 2850, 1530, 1620, 1080])
+        [2070, 12140, 6270, 8200, 10520, 5560, 11820, 5080, 6170, 3330, 3500, 2340])
     split = en.assignment_plan(split=True)
-    assert split["cost"] == pytest.approx(28502.70)
+    assert split["cost"] == pytest.approx(61822.90)
     shared = {city(r): {city(l): round(100 * split["share"][l, r], 1) for l in LOCAL_EXP if split["share"][l, r] > 0}
               for r in RETAILERS_EXP if r not in split["warehouse"]}
-    assert shared == {"Sabadell": {"Girona": 66.2, "Tarragona": 33.8}, "Jaén": {"Seville": 17.3, "Málaga": 82.7},
-                      "Segovia": {"Alcalá de Henares": 2.9, "Valladolid": 97.1},
-                      "León": {"Valladolid": 13.0, "Oviedo": 87.0}}
-    assert rule["cost"] / model["cost"] - 1 == pytest.approx(0.244, abs=5e-4)
-    assert 1 - split["cost"] / model["cost"] == pytest.approx(0.043, abs=5e-4)
+    assert shared == {"Sabadell": {"Girona": 87.4, "Tarragona": 12.6}, "Jaén": {"Seville": 16.1, "Málaga": 83.9},
+                      "Segovia": {"Alcalá de Henares": 41.6, "Valladolid": 58.4},
+                      "León": {"Valladolid": 43.2, "Oviedo": 56.8}}
+    assert rule["cost"] / model["cost"] - 1 == pytest.approx(0.256, abs=5e-4)
+    assert 1 - split["cost"] / model["cost"] == pytest.approx(0.042, abs=5e-4)
+
+
+def test_orders_of_the_retailers_of_m4():
+    # Each retailer of M4 orders in the design year at least twice its orders of
+    # January to June in M4 (retailers.md, Table 3)
+    semester = dict(zip(RETAILERS_EXP[:6], [497, 781, 639, 568, 710, 355]))
+    assert all(YEARLY_ORDERS[r] >= 2 * semester[r] for r in semester)
+    # 1.280 is the lowest constant that does it; Sabadell sets it
+    lower = {r: int(10 * round(1270 * (POPULATION[r] / 150000) ** 0.5 / 10)) for r in semester}
+    assert [r for r in semester if lower[r] < 2 * semester[r]] == ["Retailer 2"]
 
 
 def test_the_retailers_of_local_warehouse_2():
@@ -79,11 +89,11 @@ def test_the_retailers_of_local_warehouse_2():
 def test_moves_to_make_room():
     # Sentences of §3.2: the loads that each move avoids
     cheapest = en.cheapest_plan()
-    assert cheapest["load"]["Local warehouse 2"] + YEARLY_ORDERS["Retailer 2"] == 6050
-    assert cheapest["load"]["Local warehouse 8"] + YEARLY_ORDERS["Retailer 35"] == 2980
-    assert cheapest["load"]["Local warehouse 7"] + YEARLY_ORDERS["Retailer 34"] == 5810
+    assert cheapest["load"]["Local warehouse 2"] + YEARLY_ORDERS["Retailer 2"] == 13100
+    assert cheapest["load"]["Local warehouse 8"] + YEARLY_ORDERS["Retailer 35"] == 6490
+    assert cheapest["load"]["Local warehouse 7"] + YEARLY_ORDERS["Retailer 34"] == 12600
     model = en.assignment_plan()
-    assert model["cost"] - cheapest["cost"] == pytest.approx(1386.70)
+    assert model["cost"] - cheapest["cost"] == pytest.approx(3002.20)
     # Every plan that keeps Burgos at Valladolid costs more
     model_, x, _ = en.build_assignment()
     model_ += x["Local warehouse 8", "Retailer 34"] == 1
@@ -140,8 +150,8 @@ def test_plans_without_a_constraint():
 
 def test_script_agrees_with_the_package():
     out = subprocess.run([sys.executable, str(SCRIPT)], capture_output=True, text=True, check=True, cwd=CASE).stdout
-    for text in ["28.397,90", "37.042,90", "29.784,60", "28.502,70", "2.220 thousand", "no feasible solution",
-                 "routes 3; 15; 16", "1.089,54", "routes 3; 4; 7; 15", "1.245,54", "35.530", "11,2 %"]:
+    for text in ["61.542,10", "81.086,90", "64.544,30", "61.822,90", "2.220 thousand", "no feasible solution",
+                 "routes 3; 15; 16", "1.089,54", "routes 3; 4; 7; 15", "1.245,54", "77.000", "12,3 %"]:
         assert text in out
     assert "False" not in out
 

@@ -91,18 +91,18 @@ RETAILERS = [
 # Local warehouses 1 to 12 and their node capacity (bikes/year), invented.
 # Local warehouses 1 to 4 are those of M3
 LOCAL = [
-    ("Girona", 1000),
-    ("Tarragona", 6000),
-    ("Valencia", 3000),
-    ("Seville", 4500),
-    ("Murcia", 5500),
-    ("Málaga", 3000),
-    ("Alcalá de Henares", 5500),
-    ("Valladolid", 2500),
-    ("Bilbao", 3000),
-    ("Oviedo", 2000),
-    ("Santiago de Compostela", 2000),
-    ("Badajoz", 1500),
+    ("Girona", 2500),
+    ("Tarragona", 13000),
+    ("Valencia", 7000),
+    ("Seville", 10000),
+    ("Murcia", 12000),
+    ("Málaga", 6500),
+    ("Alcalá de Henares", 12000),
+    ("Valladolid", 5500),
+    ("Bilbao", 6500),
+    ("Oviedo", 4000),
+    ("Santiago de Compostela", 4500),
+    ("Badajoz", 3000),
 ]
 # Road distance (km) from each local warehouse (row) to retailers 1 to 46 (OSRM,
 # 10/11/2026; the twelve arcs of M4 keep the distances of retailers.md; a retailer
@@ -150,7 +150,7 @@ ROUTE_KM = [
 ROAD_RATE = 0.010          # transport rate of road of M3 (EUR/(bike*km))
 MAX_TIME = 4               # maximum travel time from a regional to a local warehouse (h)
 WEEKS = 52                 # weekly orders: the yearly orders divided by 52, rounded
-VAN = 40                   # capacity of the van (bikes)
+TRUCK = 90                 # capacity of the small truck (bikes)
 MAX_KM = 600               # longest distance of a route, a working day (km)
 FIXED, PER_KM = 150, 0.60  # cost of a route: EUR per route plus EUR per km
 
@@ -159,9 +159,9 @@ L = range(1, len(LOCAL) + 1)              # local warehouse numbers
 
 
 def orders(population):
-    """Yearly orders (bikes/year): 600 for a city of 150.000 inhabitants, times the
+    """Yearly orders (bikes/year): 1.300 for a city of 150.000 inhabitants, times the
     square root of the population over 150.000, rounded to ten bikes."""
-    return int(10 * round(600 * (population / 150000) ** 0.5 / 10))
+    return int(10 * round(1300 * (population / 150000) ** 0.5 / 10))
 
 
 d = {r: orders(RETAILERS[r - 1][1]) for r in R}
@@ -286,13 +286,13 @@ def covering(exactly_one=False, max_time=MAX_TIME):
 week = {r: round(d[r] / WEEKS) for r in ROUTE_NODES[1:]}
 
 
-def candidate_routes(van=VAN, max_stops=None):
+def candidate_routes(truck=TRUCK, max_stops=None):
     where = {node: k for k, node in enumerate(ROUTE_NODES)}
     routes = []
     for size in range(1, (max_stops or len(week)) + 1):
         for group in itertools.combinations(ROUTE_NODES[1:], size):
             load = sum(week[r] for r in group)
-            if load > van:
+            if load > truck:
                 continue
             best = None
             for order in itertools.permutations(group):        # every order of visits
