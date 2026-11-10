@@ -74,7 +74,7 @@ $$
 x_{wc} \in \{0, 1\} \qquad \forall w \in W,\ \forall c \in C
 $$
 
-This is an assignment problem with capacities. It is related to the transport problem of T3-T; the difference is that in the transport problem a customer's demand may be split between several warehouses.
+This is a generalized assignment problem: each customer is assigned to exactly one warehouse, and the customers assigned to a warehouse cannot exceed its capacity (Ahuja, Magnanti and Orlin, 1993, exercise 16.8). It is related to the transport problem of T3-T; the difference is that in the transport problem a customer's demand may be split between several warehouses.
 
 ## 3. Deciding from experience versus deciding with the model
 
