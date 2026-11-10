@@ -494,5 +494,5 @@ ROUTE_KM = [
 # (EUR/route) plus a cost for each kilometre (EUR/km). Invented
 TRUCK_CAPACITY = 90
 MAX_ROUTE_KM = 600
-ROUTE_FIXED_COST = 150
-ROUTE_KM_COST = 0.60
+ROUTE_FIXED_COST = 200
+ROUTE_KM_COST = 0.80

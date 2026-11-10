@@ -322,7 +322,7 @@ The model does not say which regional warehouse supplies each local warehouse: t
 
 ### 5.1 Data and candidate routes
 
-Local warehouse 2, in Tarragona, delivers each week the orders of the six retailers that the assignment gives it. A small truck leaves the local warehouse, visits some of the retailers and returns. The truck carries 90 bikes and can drive at most 600 km in a working day. A route costs 150 € (the driver and the truck for the day) plus 0,60 €/km. Each retailer receives its weekly order in one delivery. Table 10 gives the weekly orders, $d^{\text{w}}_r$: the yearly orders of Table 1 divided by 52, rounded to a whole bike. Each fits in the truck. The truck, the working day and the costs are invented.
+Local warehouse 2, in Tarragona, delivers each week the orders of the six retailers that the assignment gives it. A small truck leaves the local warehouse, visits some of the retailers and returns. The truck carries 90 bikes and can drive at most 600 km in a working day. A route costs 200 € (the driver and the truck for the day) plus 0,80 €/km. Each retailer receives its weekly order in one delivery. Table 10 gives the weekly orders, $d^{\text{w}}_r$: the yearly orders of Table 1 divided by 52, rounded to a whole bike. Each fits in the truck. The truck, the working day and the costs are invented.
 
 Table 10. Weekly orders of the retailers of local warehouse 2
 
@@ -349,31 +349,31 @@ Table 11. Road distance between local warehouse 2 and its retailers (km)
 | Retailer 11 (Zaragoza) | 235,6 | 154,4 | 293,5 | 311,3 | 235,6 | 0,0 | 74,6 |
 | Retailer 12 (Huesca) | 208,9 | 113,1 | 254,0 | 267,0 | 208,9 | 74,9 | 0,0 |
 
-A candidate route visits one or more of the six retailers, carries their weekly orders within the 90 bikes of the truck, and drives at most 600 km. Each route visits its retailers in the order of least distance, found by trying every order; its cost, $c_j$, is 150 € plus 0,60 €/km times its distance, rounded to the cent. Table 12 gives the 19 candidate routes. Retailer 9 adds 10 km to a route whether it is visited first or last, so both orders give the same distance; Table 12 gives the first found.
+A candidate route visits one or more of the six retailers, carries their weekly orders within the 90 bikes of the truck, and drives at most 600 km. Each route visits its retailers in the order of least distance, found by trying every order; its cost, $c_j$, is 200 € plus 0,80 €/km times its distance, rounded to the cent. Table 12 gives the 19 candidate routes. Retailer 9 adds 10 km to a route whether it is visited first or last, so both orders give the same distance; Table 12 gives the first found.
 
 Table 12. Candidate routes of local warehouse 2
 
 | Route | Retailers, in the order of visits | Load (bikes) | Distance (km) | Cost $c_j$ (€) |
 |---|---|---|---|---|
-| 1 | Lleida | 25 | 194,5 | 266,70 |
-| 2 | Sabadell | 31 | 210,3 | 276,18 |
-| 3 | Barcelona | 85 | 193,5 | 266,10 |
-| 4 | Tarragona | 24 | 20,0 | 162,00 |
-| 5 | Zaragoza | 54 | 470,3 | 432,18 |
-| 6 | Huesca | 15 | 422,2 | 403,32 |
-| 7 | Sabadell, Lleida | 56 | 344,2 | 356,52 |
-| 8 | Lleida, Tarragona | 49 | 204,5 | 272,70 |
-| 9 | Lleida, Zaragoza | 79 | 485,6 | 441,36 |
-| 10 | Lleida, Huesca | 40 | 423,5 | 404,10 |
-| 11 | Sabadell, Tarragona | 55 | 220,3 | 282,18 |
-| 12 | Sabadell, Huesca | 46 | 572,4 | 493,44 |
-| 13 | Tarragona, Zaragoza | 78 | 480,3 | 438,18 |
-| 14 | Tarragona, Huesca | 39 | 432,2 | 409,32 |
-| 15 | Zaragoza, Huesca | 69 | 518,2 | 460,92 |
-| 16 | Sabadell, Lleida, Tarragona | 80 | 354,2 | 362,52 |
-| 17 | Sabadell, Lleida, Huesca | 71 | 573,2 | 493,92 |
-| 18 | Lleida, Huesca, Tarragona | 64 | 433,5 | 410,10 |
-| 19 | Sabadell, Huesca, Tarragona | 70 | 582,4 | 499,44 |
+| 1 | Lleida | 25 | 194,5 | 355,60 |
+| 2 | Sabadell | 31 | 210,3 | 368,24 |
+| 3 | Barcelona | 85 | 193,5 | 354,80 |
+| 4 | Tarragona | 24 | 20,0 | 216,00 |
+| 5 | Zaragoza | 54 | 470,3 | 576,24 |
+| 6 | Huesca | 15 | 422,2 | 537,76 |
+| 7 | Sabadell, Lleida | 56 | 344,2 | 475,36 |
+| 8 | Lleida, Tarragona | 49 | 204,5 | 363,60 |
+| 9 | Lleida, Zaragoza | 79 | 485,6 | 588,48 |
+| 10 | Lleida, Huesca | 40 | 423,5 | 538,80 |
+| 11 | Sabadell, Tarragona | 55 | 220,3 | 376,24 |
+| 12 | Sabadell, Huesca | 46 | 572,4 | 657,92 |
+| 13 | Tarragona, Zaragoza | 78 | 480,3 | 584,24 |
+| 14 | Tarragona, Huesca | 39 | 432,2 | 545,76 |
+| 15 | Zaragoza, Huesca | 69 | 518,2 | 614,56 |
+| 16 | Sabadell, Lleida, Tarragona | 80 | 354,2 | 483,36 |
+| 17 | Sabadell, Lleida, Huesca | 71 | 573,2 | 658,56 |
+| 18 | Lleida, Huesca, Tarragona | 64 | 433,5 | 546,80 |
+| 19 | Sabadell, Huesca, Tarragona | 70 | 582,4 | 665,92 |
 
 The cost of a route is not the sum of costs of its retailers: it depends on which retailers travel together and in which order they are visited. The generalized assignment adds up a cost for each pair of retailer and local warehouse; with routes there is no such cost to add up. The candidate routes are therefore listed before the model is solved, each feasible on its own and with its cost, and the model chooses among them.
 
@@ -398,13 +398,13 @@ Table 13. Weekly routes of least cost
 
 | List of routes | Constraint on each retailer | Routes chosen | Distance (km/week) | Cost (€/week) |
 |---|---|---|---|---|
-| Full list (19 routes) | Exactly one (set partitioning) | 3 (Barcelona); 15 (Zaragoza, Huesca); 16 (Sabadell, Lleida, Tarragona) | 1.065,9 | 1.089,54 |
-| Full list (19 routes) | At least one (set covering) | 3; 15; 16 | 1.065,9 | 1.089,54 |
-| Short list (15 routes) | Exactly one | 3 (Barcelona); 4 (Tarragona); 7 (Sabadell, Lleida); 15 (Zaragoza, Huesca) | 1.075,9 | 1.245,54 |
+| Full list (19 routes) | Exactly one (set partitioning) | 3 (Barcelona); 15 (Zaragoza, Huesca); 16 (Sabadell, Lleida, Tarragona) | 1.065,9 | 1.452,72 |
+| Full list (19 routes) | At least one (set covering) | 3; 15; 16 | 1.065,9 | 1.452,72 |
+| Short list (15 routes) | Exactly one | 3 (Barcelona); 4 (Tarragona); 7 (Sabadell, Lleida); 15 (Zaragoza, Huesca) | 1.075,9 | 1.660,72 |
 
 With the full list, the only optimal plan drives three routes, two of them with more than one retailer: Barcelona alone, because its 85 bikes leave no room in the truck for another retailer, the smallest of which orders 15; Zaragoza and Huesca, 74,6 km apart; and Sabadell, Lleida and Tarragona. The plan is the best among the listed routes; here the list contains every feasible route, and the plan is the best of all.
 
-With the short list the only optimal plan costs 1.245,54 €/week, 156 € more: route 16 is missing, and Tarragona needs a route of its own, route 4, with 10 km more and one more fixed cost. A route missing from the list can make the plan dearer, or the model infeasible when a retailer is on no listed route that fits with the others. The number of possible routes grows so fast with the number of customers that, in practice, only a selection can be listed, or routes are generated as the model needs them: a distribution company with 140 vehicles and up to 200 customers a day writes its daily route plan as a set partitioning problem whose routes are generated in that way (Ruinelli, Salani and Gambardella, 2012, §3–§5).
+With the short list the only optimal plan costs 1.660,72 €/week, 208 € more: route 16 is missing, and Tarragona needs a route of its own, route 4, with 10 km more and one more fixed cost. A route missing from the list can make the plan dearer, or the model infeasible when a retailer is on no listed route that fits with the others. The number of possible routes grows so fast with the number of customers that, in practice, only a selection can be listed, or routes are generated as the model needs them: a distribution company with 140 vehicles and up to 200 customers a day writes its daily route plan as a set partitioning problem whose routes are generated in that way (Ruinelli, Salani and Gambardella, 2012, §3–§5).
 
 Written as a covering, the full list gives the same plan, also the only optimal one. A retailer on two chosen routes would receive two deliveries; the covering form allows it, but in this plan no retailer is on two routes. When serving a retailer twice costs nothing extra, the covering gives a plan of the same cost as the partition: a truck can skip a retailer already served by another route without its route becoming longer. When this does not hold, for example when the costs do not satisfy the triangle inequality, the partitioning constraints are kept (Ruinelli et al., 2012, §4).
 

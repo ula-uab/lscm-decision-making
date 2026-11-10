@@ -130,16 +130,16 @@ def test_tables12_and_13_weekly_routes():
     assert len(routes) == 19 and len(en.short_list(routes)) == 15
     by_number = {route["number"]: route for route in routes}
     assert [city(r) for r in by_number[16]["stops"]] == ["Sabadell", "Lleida", "Tarragona"]
-    assert (by_number[16]["km"], by_number[16]["cost"]) == (354.2, 362.52)
-    assert (by_number[4]["km"], by_number[4]["cost"]) == (20.0, 162.0)
-    assert (by_number[15]["km"], by_number[15]["cost"]) == (518.2, 460.92)
+    assert (by_number[16]["km"], by_number[16]["cost"]) == (354.2, 483.36)
+    assert (by_number[4]["km"], by_number[4]["cost"]) == (20.0, 216.0)
+    assert (by_number[15]["km"], by_number[15]["cost"]) == (518.2, 614.56)
     for exactly_one in (True, False):
         plan = en.route_plan(routes, exactly_one=exactly_one)
         assert [route["number"] for route in plan["routes"]] == [3, 15, 16]
-        assert plan["cost"] == pytest.approx(1089.54) and plan["km"] == pytest.approx(1065.9)
+        assert plan["cost"] == pytest.approx(1452.72) and plan["km"] == pytest.approx(1065.9)
     short = en.route_plan(en.short_list(routes))
     assert [route["number"] for route in short["routes"]] == [3, 4, 7, 15]
-    assert short["cost"] == pytest.approx(1245.54)
+    assert short["cost"] == pytest.approx(1660.72)
 
 
 def test_plans_without_a_constraint():
@@ -151,7 +151,7 @@ def test_plans_without_a_constraint():
 def test_script_agrees_with_the_package():
     out = subprocess.run([sys.executable, str(SCRIPT)], capture_output=True, text=True, check=True, cwd=CASE).stdout
     for text in ["61.542,10", "81.086,90", "64.544,30", "61.822,90", "2.220 thousand", "no feasible solution",
-                 "routes 3; 15; 16", "1.089,54", "routes 3; 4; 7; 15", "1.245,54", "77.000", "12,3 %"]:
+                 "routes 3; 15; 16", "1.452,72", "routes 3; 4; 7; 15", "1.660,72", "77.000", "12,3 %"]:
         assert text in out
     assert "False" not in out
 

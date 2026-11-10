@@ -152,7 +152,7 @@ MAX_TIME = 4               # maximum travel time from a regional to a local ware
 WEEKS = 52                 # weekly orders: the yearly orders divided by 52, rounded
 TRUCK = 90                 # capacity of the small truck (bikes)
 MAX_KM = 600               # longest distance of a route, a working day (km)
-FIXED, PER_KM = 150, 0.60  # cost of a route: EUR per route plus EUR per km
+FIXED, PER_KM = 200, 0.80  # cost of a route: EUR per route plus EUR per km
 
 R = range(1, len(RETAILERS) + 1)          # retailer numbers
 L = range(1, len(LOCAL) + 1)              # local warehouse numbers
