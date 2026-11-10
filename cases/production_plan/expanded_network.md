@@ -258,7 +258,7 @@ Local warehouse 2 (Tarragona) receives six retailers from the assignment: Lleida
 
 ### 4.1 Data and candidate sets
 
-The manufacturer considers eight candidate sites where it can contract capacity for a regional warehouse: Barcelona and Getafe, the regional warehouses of M3, and Zaragoza, Valencia, Seville, Antequera, Valladolid and León. Every local warehouse must be within 4 hours by road of at least one regional warehouse. Table 8 gives the fixed cost of contracting capacity at each site for a year, $c^F_n$, invented and different at each site, and the road travel time from each site to each local warehouse, $\theta_{nl}$: the fastest road route computed with OSRM, consulted on 10 November 2026.
+The manufacturer considers eight candidate sites where it can contract capacity for a regional warehouse: Barcelona and Getafe, the regional warehouses of M3, and Zaragoza, Valencia, Seville, Antequera, Valladolid and León. Every local warehouse must be within 4 hours by road of at least one regional warehouse. Table 8 gives the fixed cost of contracting capacity at each site for a year, $c^F_n$, invented and different at each site, and the road travel time from each site to each local warehouse, $\theta_{nl}$: the fastest road route computed with OSRM, consulted on 10 November 2026. The 4 hours are measured in these travel times, those of a car. Three pairs are just above the limit and are therefore not within reach: the site of Getafe and the local warehouse of Valencia, 4,01 h; the site of Barcelona and the local warehouse of Valencia, 4,03 h; and the site of Valencia and the local warehouse of Alcalá de Henares, 4,07 h.
 
 Table 8. Candidate sites: fixed cost and road travel time to each local warehouse (h)
 
@@ -426,7 +426,13 @@ Fleischmann, B., & Koberstein, A. (2015). Strategic network design. In H. Stadtl
 
 Fleischmann, B., Kopfer, H., & Sürie, C. (2015). Transport planning for procurement and distribution. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 225–240). Springer. https://doi.org/10.1007/978-3-642-55309-7_12 (§12.1.2, pp. 228–229; §12.1.3, pp. 229–231)
 
-Fleischmann, B., Meyr, H., & Wagner, M. (2015). Advanced planning. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 71–95). Springer. https://doi.org/10.1007/978-3-642-55309-7_4 (Fig. 4.3, p. 77; §4.2.2, p. 78; §4.2.4, p. 81)
+Fleischmann, B., Meyr, H., & Wagner, M. (2015). Advanced planning. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 71–95). Springer. https://doi.org/10.1007/978-3-642-55309-7_4 (§4.2.2, p. 78; §4.2.4, p. 81)
+
+Instituto Nacional de Estadística (INE). (2026). *Cifras oficiales de población resultantes de la revisión del Padrón municipal a 1 de enero de 2025* [Official population figures of the municipalities, table 29005]. Retrieved November 10, 2026, from https://www.ine.es/jaxiT3/Tabla.htm?t=29005
+
+Open Source Routing Machine (OSRM). (2026). *OSRM demo server* [Road routing on OpenStreetMap data]. Retrieved November 10, 2026, from https://project-osrm.org
+
+OpenStreetMap contributors. (2026). *Nominatim* [Search engine for OpenStreetMap data]. Retrieved October 23 and November 10, 2026, from https://nominatim.openstreetmap.org
 
 Ruinelli, L., Salani, M., & Gambardella, L. M. (2012). Hybrid column generation-based approach for VRP with simultaneous distribution, collection, pickup-and-delivery and real-world side constraints. In *Proceedings of the 1st International Conference on Operations Research and Enterprise Systems (ICORES 2012)* (pp. 247–255). SciTePress. https://scitepress.org/Papers/2012/37137/pdf/index.html (§3–§5)
 

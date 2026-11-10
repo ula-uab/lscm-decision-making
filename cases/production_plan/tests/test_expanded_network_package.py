@@ -148,6 +148,16 @@ def test_plans_without_a_constraint():
     assert en.assignment_plan(capacity=big)["cost"] == pytest.approx(en.cheapest_plan()["cost"])
 
 
+def test_question_of_the_notebook_on_the_assignment():
+    # Girona at 2.700 and Tarragona at 12.000: the model has a solution, alone or together
+    girona, tarragona = {"Local warehouse 1": 2700}, {"Local warehouse 2": 12000}
+    for change in (girona, tarragona, {**girona, **tarragona}):
+        assert en.assignment_plan(capacity={**NODE_CAPACITY_YEAR, **change}) is not None
+    # With Tarragona at 12.000 alone the rule finds no valid plan
+    assert en.rule_plan(capacity={**NODE_CAPACITY_YEAR, **girona}) is not None
+    assert en.rule_plan(capacity={**NODE_CAPACITY_YEAR, **tarragona}) is None
+
+
 def test_script_agrees_with_the_package():
     out = subprocess.run([sys.executable, str(SCRIPT)], capture_output=True, text=True, check=True, cwd=CASE).stdout
     for text in ["61.542,10", "81.086,90", "64.544,30", "61.822,90", "2.220 thousand", "no feasible solution",
