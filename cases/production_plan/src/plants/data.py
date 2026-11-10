@@ -305,3 +305,191 @@ FIRST_BIKE_CHECK = 20
 # Holding cost at a plant: c_h of M1 times 12/52, a week, times a factor of each
 # model about the value of the bike, rounded to the cent (EUR/(bike·week))
 VALUE_FACTOR = dict(zip(MODELS, [0.8, 1.0, 1.2, 1.4]))
+
+# ---------------------------------------------------------------------------
+# Expanded network, Tables 1 to 3, 8, 10 and 11 of expanded_network.md. After an expansion the
+# manufacturer serves 46 retailers from 12 local warehouses and considers 8
+# candidate sites for regional warehouses. Three problems on that network: which
+# local warehouse serves each retailer (generalized assignment), which sites act
+# as regional warehouses (set covering) and the weekly routes of one local
+# warehouse (set partitioning). M0 to M4 are the network before the expansion and
+# do not use these data
+# ---------------------------------------------------------------------------
+
+# Retailers 1 to 6 are those of M4, and local warehouses 1 to 4 those of M3, with
+# the same numbers; regional warehouses 1 and 2 of M3 are the candidate sites
+# Barcelona and Getafe
+RETAILERS_EXP = [f"Retailer {k}" for k in range(1, 47)]
+LOCAL_EXP = [f"Local warehouse {k}" for k in range(1, 13)]
+SITES = ["Barcelona", "Getafe", "Zaragoza", "Valencia", "Seville", "Antequera", "Valladolid", "León"]
+
+# Place of each retailer, local warehouse and candidate site, and its latitude and
+# longitude as given by Nominatim (OpenStreetMap). The places of M3 and M4 keep
+# their points (consulted on 23/10/2026); the others were consulted on 10/11/2026.
+# For Huesca, Guadalajara, Ciudad Real and León the search by name gives the
+# province, and the point is that of the city (search by city)
+PLACES_EXP = {
+    "Retailer 1": ("Lleida", 41.6148, 0.6268),
+    "Retailer 2": ("Sabadell", 41.5461, 2.1083),
+    "Retailer 3": ("Alicante", 38.3436, -0.4882),
+    "Retailer 4": ("Murcia", 37.9348, -1.1131),
+    "Retailer 5": ("Córdoba", 37.8846, -4.776),
+    "Retailer 6": ("Granada", 37.1735, -3.5995),
+    "Retailer 7": ("Barcelona", 41.3826, 2.1771),
+    "Retailer 8": ("Girona", 41.9793, 2.8199),
+    "Retailer 9": ("Tarragona", 41.1172, 1.2546),
+    "Retailer 10": ("Manresa", 41.7289, 1.8287),
+    "Retailer 11": ("Zaragoza", 41.6916, -0.9101),
+    "Retailer 12": ("Huesca", 42.1383, -0.4081),
+    "Retailer 13": ("Castellón de la Plana", 39.986, -0.0377),
+    "Retailer 14": ("Valencia", 39.4697, -0.3763),
+    "Retailer 15": ("Gandía", 38.9676, -0.1803),
+    "Retailer 16": ("Elche", 38.2653, -0.6988),
+    "Retailer 17": ("Cartagena", 37.6155, -0.9875),
+    "Retailer 18": ("Albacete", 38.9951, -1.8559),
+    "Retailer 19": ("Almería", 36.8686, -2.312),
+    "Retailer 20": ("Jaén", 37.7729, -3.7883),
+    "Retailer 21": ("Seville", 37.3886, -5.9953),
+    "Retailer 22": ("Málaga", 36.7648, -4.4422),
+    "Retailer 23": ("Marbella", 36.5075, -4.8047),
+    "Retailer 24": ("Huelva", 37.2576, -6.9485),
+    "Retailer 25": ("Cádiz", 36.5297, -6.2929),
+    "Retailer 26": ("Madrid", 40.4168, -3.7035),
+    "Retailer 27": ("Alcobendas", 40.54, -3.6358),
+    "Retailer 28": ("Toledo", 39.8559, -4.0243),
+    "Retailer 29": ("Guadalajara", 40.6327, -3.1646),
+    "Retailer 30": ("Segovia", 40.9481, -4.1172),
+    "Retailer 31": ("Ciudad Real", 38.9854, -3.9285),
+    "Retailer 32": ("Cuenca", 40.0661, -2.1314),
+    "Retailer 33": ("Valladolid", 41.62, -4.726),
+    "Retailer 34": ("Burgos", 42.3448, -3.6812),
+    "Retailer 35": ("León", 42.5935, -5.5616),
+    "Retailer 36": ("Salamanca", 40.9652, -5.664),
+    "Retailer 37": ("Bilbao", 43.263, -2.935),
+    "Retailer 38": ("San Sebastián", 43.3224, -1.9839),
+    "Retailer 39": ("Santander", 43.4619, -3.81),
+    "Retailer 40": ("Logroño", 42.4661, -2.4397),
+    "Retailer 41": ("Oviedo", 43.3533, -5.8795),
+    "Retailer 42": ("Gijón", 43.5449, -5.6627),
+    "Retailer 43": ("A Coruña", 43.3455, -8.4139),
+    "Retailer 44": ("Vigo", 42.1986, -8.728),
+    "Retailer 45": ("Badajoz", 38.8782, -6.9701),
+    "Retailer 46": ("Cáceres", 39.4745, -6.3717),
+    "Local warehouse 1": ("Girona", 41.9793, 2.8199),
+    "Local warehouse 2": ("Tarragona", 41.1172, 1.2546),
+    "Local warehouse 3": ("Valencia", 39.4697, -0.3763),
+    "Local warehouse 4": ("Seville", 37.3886, -5.9953),
+    "Local warehouse 5": ("Murcia", 37.9348, -1.1131),
+    "Local warehouse 6": ("Málaga", 36.7648, -4.4422),
+    "Local warehouse 7": ("Alcalá de Henares", 40.482, -3.364),
+    "Local warehouse 8": ("Valladolid", 41.62, -4.726),
+    "Local warehouse 9": ("Bilbao", 43.263, -2.935),
+    "Local warehouse 10": ("Oviedo", 43.3533, -5.8795),
+    "Local warehouse 11": ("Santiago de Compostela", 42.9065, -8.5193),
+    "Local warehouse 12": ("Badajoz", 38.8782, -6.9701),
+    "Barcelona": ("Barcelona", 41.3826, 2.1771),
+    "Getafe": ("Getafe", 40.3071, -3.7332),
+    "Zaragoza": ("Zaragoza", 41.6916, -0.9101),
+    "Valencia": ("Valencia", 39.4697, -0.3763),
+    "Seville": ("Seville", 37.3886, -5.9953),
+    "Antequera": ("Antequera", 37.0184, -4.5597),
+    "Valladolid": ("Valladolid", 41.62, -4.726),
+    "León": ("León", 42.5935, -5.5616),
+}
+
+# Population of the city of each retailer (inhabitants): official figures of the
+# municipal register (Padrón) at 1 January 2025, INE, table 29005
+POPULATION = dict(zip(RETAILERS_EXP, [
+    146266, 225368, 366221, 479405, 323262, 233975, 1731649, 108666, 143649, 80974, 693091, 55454,
+    183711, 840792, 83135, 245557, 220704, 175400, 205468, 112235, 689423, 599063, 159786, 143215,
+    109950, 3506730, 123342, 87216, 92834, 52375, 76217, 53600, 302614, 177402, 123446, 146110,
+    351124, 189866, 175425, 152150, 223968, 269894, 251543, 294489, 150209, 96651
+]))
+
+
+def yearly_orders(population: dict = POPULATION) -> dict:
+    """Expected orders d[r] of each retailer in a design year after the expansion
+    (bikes/year), invented: 600 bikes for a city of 150.000 inhabitants, times the
+    square root of the population over 150.000, rounded to ten bikes. There is one
+    retailer per city, and what a shop sells does not grow in proportion to the
+    population of its city: a city with four times the population orders twice as
+    many bikes."""
+    return {r: int(10 * round(600 * (population[r] / 150000) ** 0.5 / 10)) for r in population}
+
+
+YEARLY_ORDERS = yearly_orders()
+
+# Node capacity K_n[l] of each local warehouse for a year (bikes it can receive
+# and send on in a year), invented
+NODE_CAPACITY_YEAR = dict(zip(LOCAL_EXP, [1000, 6000, 3000, 4500, 5500, 3000, 5500, 2500, 3000, 2000, 2000, 1500]))
+
+# Road distance (km) from each local warehouse to each retailer, in the order of
+# RETAILERS_EXP: the fastest route of OSRM on OpenStreetMap data, consulted on
+# 10/11/2026. The twelve arcs of M4 keep the distances of retailers.md (consulted
+# on 23/10/2026); two of them differ by 0,1 and 0,2 km from the new consult
+ROAD_KM_EXP = {
+    "Local warehouse 1": [225.9, 92.3, 627.8, 674.5, 954.1, 929.3, 102.7, 0.0, 189.0, 118.1, 380.7, 342.7, 372.0, 442.6, 520.5, 624.7, 715.3, 603.2, 858.5, 892.5, 1091.5, 1054.8, 1099.8, 1180.3, 1200.8, 687.5, 682.5, 760.3, 630.7, 785.0, 785.6, 631.8, 800.3, 672.5, 841.6, 912.1, 676.9, 637.5, 774.1, 544.2, 963.6, 940.1, 1148.2, 1214.9, 1087.4, 985.5],
+    "Local warehouse 2": [97.0, 104.7, 444.8, 491.5, 771.1, 746.3, 96.4, 188.1, 0.0, 113.2, 234.7, 213.3, 189.1, 259.6, 337.5, 441.7, 532.3, 420.2, 675.5, 709.5, 908.5, 871.8, 916.8, 997.3, 1017.8, 541.6, 536.5, 614.4, 484.8, 639.1, 602.6, 448.8, 654.4, 526.6, 695.7, 766.1, 531.0, 492.1, 628.2, 398.2, 817.7, 794.2, 1002.3, 1069.0, 941.5, 839.5],
+    "Local warehouse 3": [348.0, 358.9, 177.1, 223.7, 521.3, 478.4, 350.6, 442.3, 259.3, 367.4, 321.8, 388.1, 76.7, 0.0, 69.7, 173.8, 264.4, 186.4, 407.6, 459.8, 658.7, 604.0, 649.0, 747.5, 768.0, 356.1, 369.0, 373.7, 384.8, 452.9, 352.9, 199.1, 542.9, 587.4, 694.1, 572.9, 612.4, 573.5, 709.6, 479.6, 806.3, 824.6, 947.1, 952.9, 660.4, 629.2],
+    "Local warehouse 4": [989.0, 1007.6, 600.3, 531.2, 144.1, 254.3, 999.2, 1091.0, 907.9, 1016.0, 844.7, 912.6, 725.3, 657.4, 661.5, 577.5, 531.2, 487.5, 410.8, 253.7, 0.0, 212.9, 266.2, 90.9, 123.2, 531.8, 550.0, 493.3, 587.9, 605.8, 328.3, 567.6, 581.1, 704.9, 664.5, 459.1, 858.7, 913.9, 824.1, 834.0, 776.7, 795.1, 917.6, 737.4, 207.2, 261.7],
+    "Local warehouse 5": [579.7, 590.6, 89.1, 0.0, 439.4, 281.4, 582.2, 674.0, 491.0, 599.1, 529.3, 595.6, 308.3, 223.2, 197.5, 66.6, 48.9, 153.6, 210.6, 339.1, 531.5, 407.0, 452.0, 621.5, 571.5, 405.5, 418.4, 404.8, 434.2, 502.3, 365.6, 313.0, 592.3, 636.8, 743.5, 622.3, 790.7, 781.1, 788.9, 687.1, 855.7, 874.0, 996.5, 1002.3, 673.1, 663.0],
+    "Local warehouse 6": [960.5, 971.5, 474.8, 405.9, 161.6, 129.0, 963.1, 1054.9, 871.8, 979.9, 839.8, 907.7, 689.2, 604.1, 583.2, 452.2, 394.5, 457.3, 220.9, 188.2, 212.6, 0.0, 57.9, 302.5, 238.7, 531.9, 546.3, 481.3, 583.0, 626.0, 345.3, 567.9, 716.0, 771.1, 867.1, 667.8, 925.0, 980.3, 923.1, 850.6, 979.3, 997.6, 1120.1, 946.1, 416.0, 470.5],
+    "Local warehouse 7": [429.1, 568.2, 421.8, 408.2, 420.0, 445.1, 586.0, 653.4, 510.3, 538.1, 284.8, 352.7, 426.1, 358.2, 413.6, 418.6, 448.9, 258.3, 569.9, 358.4, 562.8, 557.9, 602.9, 647.1, 666.7, 33.3, 31.4, 106.1, 28.0, 130.0, 230.6, 170.0, 220.0, 246.1, 371.2, 250.0, 400.0, 455.3, 398.2, 295.6, 483.4, 501.7, 624.2, 630.0, 433.2, 331.2],
+    "Local warehouse 8": [575.3, 714.4, 608.9, 595.2, 580.6, 605.7, 732.2, 799.6, 656.6, 684.3, 431.0, 498.9, 613.2, 545.3, 600.7, 605.7, 636.0, 445.4, 730.6, 519.1, 583.6, 718.5, 763.5, 667.9, 702.6, 187.8, 196.2, 256.0, 243.2, 113.1, 371.8, 357.1, 0.0, 133.4, 140.8, 121.5, 287.1, 342.4, 252.6, 262.5, 296.5, 314.9, 437.4, 443.2, 415.4, 325.6],
+    "Local warehouse 9": [449.8, 588.9, 771.4, 791.1, 785.7, 810.8, 606.7, 674.1, 531.0, 558.8, 305.4, 318.0, 614.2, 611.2, 689.7, 768.3, 831.8, 641.2, 935.6, 724.1, 859.3, 923.6, 968.6, 943.6, 978.3, 395.0, 378.5, 470.3, 390.0, 352.4, 596.3, 552.9, 285.3, 157.6, 326.7, 397.1, 0.0, 99.3, 99.5, 136.9, 289.0, 265.5, 540.8, 671.4, 691.0, 601.3],
+    "Local warehouse 10": [732.4, 871.5, 870.4, 856.7, 842.1, 867.2, 889.3, 956.7, 813.6, 841.4, 588.1, 600.6, 874.6, 806.7, 862.1, 867.2, 897.4, 706.8, 992.0, 780.5, 777.9, 980.0, 1025.0, 862.2, 896.9, 449.3, 457.7, 517.5, 504.6, 405.4, 633.3, 618.5, 296.1, 298.9, 125.1, 317.8, 284.9, 383.2, 196.3, 419.5, 0.0, 32.1, 279.8, 410.5, 609.7, 519.9],
+    "Local warehouse 11": [927.6, 1066.7, 1011.3, 997.6, 886.0, 1008.1, 1084.5, 1151.9, 1008.8, 1036.6, 783.2, 851.2, 1015.5, 947.6, 1003.0, 1008.1, 1038.3, 847.7, 1132.9, 921.5, 829.4, 1038.1, 1091.4, 882.1, 948.4, 590.2, 598.6, 658.4, 645.5, 546.3, 774.2, 759.4, 437.0, 485.7, 313.8, 429.9, 578.8, 677.1, 490.2, 614.7, 329.2, 316.8, 70.6, 99.1, 588.5, 632.0],
+    "Local warehouse 12": [859.5, 998.6, 685.5, 671.8, 264.1, 458.0, 1016.4, 1083.8, 940.8, 968.6, 715.2, 783.1, 727.2, 659.3, 714.7, 682.3, 712.6, 521.9, 614.5, 373.4, 207.8, 416.6, 469.8, 234.1, 326.8, 402.4, 420.6, 363.9, 458.4, 395.0, 308.2, 542.4, 414.2, 538.0, 497.6, 292.1, 691.7, 747.0, 657.2, 667.0, 609.8, 628.1, 651.0, 497.7, 0.0, 92.3],
+}
+
+# Road travel time (h) from each candidate site to each local warehouse, in the
+# order of LOCAL_EXP: OSRM, consulted on 10/11/2026
+TRAVEL_TIME = {
+    "Barcelona": [1.29, 1.31, 4.03, 11.07, 6.6, 10.79, 6.47, 7.99, 6.61, 9.79, 11.85, 11.06],
+    "Getafe": [7.69, 6.09, 4.01, 5.68, 4.58, 5.9, 0.68, 2.47, 4.63, 5.17, 6.66, 4.31],
+    "Zaragoza": [4.47, 2.87, 3.82, 9.36, 6.31, 9.57, 3.4, 4.92, 3.54, 6.73, 8.78, 7.99],
+    "Valencia": [4.88, 2.87, 0.0, 7.29, 2.63, 6.82, 4.07, 6.25, 6.72, 8.95, 10.45, 7.62],
+    "Seville": [11.92, 9.91, 7.31, 0.0, 6.24, 2.68, 6.15, 6.26, 9.25, 8.43, 9.66, 2.63],
+    "Antequera": [11.32, 9.31, 6.54, 2.03, 4.5, 0.81, 5.92, 7.74, 9.89, 10.32, 11.55, 4.52],
+    "Valladolid": [8.83, 7.24, 6.33, 6.33, 6.91, 8.24, 2.87, 0.0, 3.25, 3.35, 4.85, 4.81],
+    "León": [9.23, 7.64, 7.71, 7.17, 8.29, 9.62, 4.25, 2.04, 3.65, 1.55, 3.54, 5.65],
+}
+
+# Maximum road travel time from a regional warehouse to a local warehouse (h)
+MAX_TRAVEL_TIME = 4
+
+# Fixed cost c_F[n] of contracting capacity as a regional warehouse at each
+# candidate site for a year (thousand EUR/year), invented
+SITE_COST = dict(zip(SITES, [560, 520, 430, 470, 440, 360, 400, 350]))
+
+# The weekly routes of local warehouse 2 (Tarragona) to the six retailers that
+# the assignment gives it, Tables 10 and 11
+ROUTE_WAREHOUSE = "Local warehouse 2"
+ROUTE_RETAILERS = ["Retailer 1", "Retailer 2", "Retailer 7", "Retailer 9", "Retailer 11", "Retailer 12"]
+
+# Orders of each of them in one week (bikes): its yearly orders divided by 52,
+# rounded to a whole bike
+WEEKLY_ORDERS = {r: round(YEARLY_ORDERS[r] / 52) for r in ROUTE_RETAILERS}
+
+# Road distance (km) between local warehouse 2 and its six retailers: from the
+# node of each row to the node of each column, in the order of ROUTE_NODES. OSRM,
+# consulted on 10/11/2026; a distance and its return can differ. Retailer 9 is in
+# Tarragona, at the point of the local warehouse
+ROUTE_NODES = [ROUTE_WAREHOUSE] + ROUTE_RETAILERS
+ROUTE_KM = [
+    [0.0, 97.0, 104.7, 96.4, 0.0, 234.7, 213.3],
+    [97.5, 0.0, 143.0, 156.0, 97.5, 153.0, 117.6],
+    [105.6, 142.0, 0.0, 27.4, 105.6, 296.8, 258.8],
+    [97.1, 158.3, 28.0, 0.0, 97.1, 313.9, 275.1],
+    [0.0, 97.0, 104.7, 96.4, 0.0, 234.7, 213.3],
+    [235.6, 154.4, 293.5, 311.3, 235.6, 0.0, 74.6],
+    [208.9, 113.1, 254.0, 267.0, 208.9, 74.9, 0.0],
+]
+
+# The van: its capacity (bikes), the longest distance it can drive in a working
+# day (km), and the cost of a route, a fixed cost for each route (EUR/route) plus
+# a cost for each kilometre (EUR/km). Invented
+VAN_CAPACITY = 40
+MAX_ROUTE_KM = 600
+ROUTE_FIXED_COST = 150
+ROUTE_KM_COST = 0.60

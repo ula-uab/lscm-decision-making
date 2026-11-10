@@ -16,12 +16,15 @@ its notebook shows: ``plant_stock`` (M1, stock at the plants),
 retailers, backorder shares and lost sales). ``capacity_scenarios`` (M4B) is a
 version of its own, built on M4: a demand growth and a price by month, overtime,
 rented storage and a plant open or closed. ``lot_sizing`` takes the master plan
-of M4 to the weekly lot plan of each plant, by bike model.
+of M4 to the weekly lot plan of each plant, by bike model. ``expanded_network``
+is the network after an expansion, with three selection problems: which local
+warehouse serves each retailer, which sites act as regional warehouses, and the
+weekly routes of one local warehouse.
 """
 
-from . import (capacity_scenarios, central_warehouse, data, distribution_network, lot_sizing, model, plant_stock,
-               retailers)
+from . import (capacity_scenarios, central_warehouse, data, distribution_network, expanded_network, lot_sizing, model,
+               plant_stock, retailers)
 from .show import capacity_and_demand, feasible_region, production_plan, show_data
 
 __all__ = ["capacity_and_demand", "capacity_scenarios", "central_warehouse", "data", "distribution_network",
-           "feasible_region", "lot_sizing", "model", "plant_stock", "production_plan", "retailers", "show_data"]
+           "expanded_network", "feasible_region", "lot_sizing", "model", "plant_stock", "production_plan", "retailers", "show_data"]
