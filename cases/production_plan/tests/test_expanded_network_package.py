@@ -29,6 +29,9 @@ def test_data_of_the_expanded_network():
     # Retailers 1 to 6 and local warehouses 1 to 4 keep the places and points of M4 and M3
     for node in [*RETAILERS_EXP[:6], *LOCAL_EXP[:4]]:
         assert PLACES_EXP[node][1:] == PLACES_M4[node][1:]
+    # A retailer in the same city as a local warehouse is at the urban distance of 10 km
+    assert sum(km == 10.0 for row in ROAD_KM_EXP.values() for km in row) == 10
+    assert 0.0 not in [km for row in ROAD_KM_EXP.values() for km in row]
     # The twelve arcs of M4 keep their distances
     for origin, destination, _, km, _ in RETAILER_NETWORK:
         assert ROAD_KM_EXP[origin][RETAILERS_EXP.index(destination)] == km
@@ -40,17 +43,17 @@ def test_data_of_the_expanded_network():
 
 def test_tables5_to_7_four_plans_of_the_assignment():
     cheapest = en.cheapest_plan()
-    assert cheapest["cost"] == pytest.approx(27479.90)
+    assert cheapest["cost"] == pytest.approx(28397.90)
     assert cheapest["over"] == ["Local warehouse 1", "Local warehouse 6", "Local warehouse 10"]
     assert [cheapest["load"][l] for l in cheapest["over"]] == [1250, 3090, 2070]
     rule = en.rule_plan()
-    assert rule["cost"] == pytest.approx(36175.90) and not rule["over"]
+    assert rule["cost"] == pytest.approx(37042.90) and not rule["over"]
     assert {city(r): city(rule["warehouse"][r]) for r in RETAILERS_EXP
             if rule["warehouse"][r] != cheapest["warehouse"][r]} == {
         "Girona": "Tarragona", "Marbella": "Seville", "Gijón": "Santiago de Compostela", "Vigo": "Badajoz",
         "Cáceres": "Seville"}
     model = en.assignment_plan()
-    assert model["cost"] == pytest.approx(28866.60)
+    assert model["cost"] == pytest.approx(29784.60)
     assert {city(r): city(model["warehouse"][r]) for r in RETAILERS_EXP
             if model["warehouse"][r] != cheapest["warehouse"][r]} == {
         "Sabadell": "Tarragona", "Manresa": "Girona", "Jaén": "Seville", "Cuenca": "Valencia",
@@ -58,14 +61,14 @@ def test_tables5_to_7_four_plans_of_the_assignment():
     assert [model["load"][l] for l in LOCAL_EXP] == pytest.approx(
         [950, 5610, 2890, 3790, 4860, 2570, 5450, 2330, 2850, 1530, 1620, 1080])
     split = en.assignment_plan(split=True)
-    assert split["cost"] == pytest.approx(27584.70)
+    assert split["cost"] == pytest.approx(28502.70)
     shared = {city(r): {city(l): round(100 * split["share"][l, r], 1) for l in LOCAL_EXP if split["share"][l, r] > 0}
               for r in RETAILERS_EXP if r not in split["warehouse"]}
     assert shared == {"Sabadell": {"Girona": 66.2, "Tarragona": 33.8}, "Jaén": {"Seville": 17.3, "Málaga": 82.7},
                       "Segovia": {"Alcalá de Henares": 2.9, "Valladolid": 97.1},
                       "León": {"Valladolid": 13.0, "Oviedo": 87.0}}
-    assert rule["cost"] / model["cost"] - 1 == pytest.approx(0.253, abs=5e-4)
-    assert 1 - split["cost"] / model["cost"] == pytest.approx(0.044, abs=5e-4)
+    assert rule["cost"] / model["cost"] - 1 == pytest.approx(0.244, abs=5e-4)
+    assert 1 - split["cost"] / model["cost"] == pytest.approx(0.043, abs=5e-4)
 
 
 def test_the_retailers_of_local_warehouse_2():
@@ -117,16 +120,16 @@ def test_tables12_and_13_weekly_routes():
     assert len(routes) == 19 and len(en.short_list(routes)) == 15
     by_number = {route["number"]: route for route in routes}
     assert [city(r) for r in by_number[16]["stops"]] == ["Sabadell", "Lleida", "Tarragona"]
-    assert (by_number[16]["km"], by_number[16]["cost"]) == (344.2, 356.52)
-    assert (by_number[4]["km"], by_number[4]["cost"]) == (0.0, 150.0)
+    assert (by_number[16]["km"], by_number[16]["cost"]) == (354.2, 362.52)
+    assert (by_number[4]["km"], by_number[4]["cost"]) == (20.0, 162.0)
     assert (by_number[15]["km"], by_number[15]["cost"]) == (518.2, 460.92)
     for exactly_one in (True, False):
         plan = en.route_plan(routes, exactly_one=exactly_one)
         assert [route["number"] for route in plan["routes"]] == [3, 15, 16]
-        assert plan["cost"] == pytest.approx(1083.54) and plan["km"] == pytest.approx(1055.9)
+        assert plan["cost"] == pytest.approx(1089.54) and plan["km"] == pytest.approx(1065.9)
     short = en.route_plan(en.short_list(routes))
     assert [route["number"] for route in short["routes"]] == [3, 4, 7, 15]
-    assert short["cost"] == pytest.approx(1233.54)
+    assert short["cost"] == pytest.approx(1245.54)
 
 
 def test_plans_without_a_constraint():
@@ -137,8 +140,8 @@ def test_plans_without_a_constraint():
 
 def test_script_agrees_with_the_package():
     out = subprocess.run([sys.executable, str(SCRIPT)], capture_output=True, text=True, check=True, cwd=CASE).stdout
-    for text in ["27.479,90", "36.175,90", "28.866,60", "27.584,70", "2.220 thousand", "no feasible solution",
-                 "routes 3; 15; 16", "1.083,54", "routes 3; 4; 7; 15", "1.233,54", "35.530", "11,2 %"]:
+    for text in ["28.397,90", "37.042,90", "29.784,60", "28.502,70", "2.220 thousand", "no feasible solution",
+                 "routes 3; 15; 16", "1.089,54", "routes 3; 4; 7; 15", "1.245,54", "35.530", "11,2 %"]:
         assert text in out
     assert "False" not in out
 
