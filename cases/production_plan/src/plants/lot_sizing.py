@@ -32,21 +32,18 @@ The notebook calls one function per step: ``show_orders``, ``show_master_plan``,
 from __future__ import annotations
 
 import functools
-import json
 import math
 from fractions import Fraction
-from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Polygon, Rectangle
 import pandas as pd
 import pulp
 
-from . import retailers
+from . import figures, retailers
 from .data import (ARCS_M4, ASSEMBLY_TIME, AVERAGE_ORDERS, BACKORDER_SHARE, CENTRAL, CREW_COST, FIRST_BIKE_CHECK,
-                   HOLIDAYS, HOURS_PER_DAY, LOCAL, MODELS, MONTH_DAYS, NODES, PLACES_M4, PLANT_STOCK_0, PRODUCT_MIX,
-                   RAIL_TERMINAL, REGIONAL, RETAILERS, SEASONAL_INDEX, SETUP_TIME, VALUE_FACTOR, WEEK_FACTOR, WEEKS,
-                   F, K, K_h, K_h_node_m4, K_n, T, c, c_b, c_h, c_h_node_m4, c_l)
+                   HOLIDAYS, HOURS_PER_DAY, LOCAL, MODELS, MONTH_DAYS, NODES, NODES_M4, PLACES_M4, PLANT_STOCK_0,
+                   PRODUCT_MIX, RAIL_TERMINAL, REGIONAL, RETAILERS, SEASONAL_INDEX, SETUP_TIME, VALUE_FACTOR,
+                   WEEK_FACTOR, WEEKS, F, K, K_h, K_h_node_m4, K_n, T, c_b, c_h, c_h_node_m4, c_l)
 from .model import _optimal
 from .show import COLOURS, SHORT, _display, _light, _number
 
@@ -727,31 +724,12 @@ def show_orders(retailer: str = "Retailer 1", show_table: bool = False) -> None:
         _orders_figure(data["weekly orders"])
 
 
-@_light
 def _monthly_orders_figure(order: dict) -> None:
     """The orders of each month, stacked by retailer, with the orders of each
     retailer inside its part of the bar and the total above it (Table 4)."""
-    fig, ax = plt.subplots(figsize=(11, 4.6))
-    colours = plt.get_cmap("Set2")
-    bottom = [0] * len(T)
-    for k, r in enumerate(RETAILERS):
-        values = [order[r, t] for t in T]
-        ax.bar(range(len(T)), values, 0.62, bottom=bottom, color=colours(k), label=_name(r))
-        for i, v in enumerate(values):
-            ax.text(i, bottom[i] + v / 2, _number(v), ha="center", va="center", fontsize=7.5)
-        bottom = [b + v for b, v in zip(bottom, values)]
-    for i, total in enumerate(bottom):
-        ax.text(i, total + max(bottom) * 0.015, _number(total), ha="center", va="bottom", fontsize=8.5,
-                weight="bold")
-    ax.set_xticks(range(len(T)), T)
-    ax.set_ylim(0, max(bottom) * 1.1)
-    ax.set_ylabel("Orders (bikes)")
-    ax.set_title("Orders of each retailer in each month, the four models together: the data with which M4 is "
-                 f"solved ({_number(sum(bottom))} bikes in the six months)", fontsize=10)
-    ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
-    ax.spines[["top", "right"]].set_visible(False)
-    fig.tight_layout()
-    plt.show()
+    rows = {_name(r): [order[r, t] for t in T] for r in RETAILERS}
+    figures.orders_figure(rows, "Orders of each retailer in each month, the four models together: the data with which "
+                          f"M4 is solved ({_number(sum(sum(v) for v in rows.values()))} bikes in the six months)")
 
 
 @_light
@@ -800,19 +778,14 @@ def network_tables() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return (warehouses.rename_axis("Warehouse"), arcs, retailers_.rename_axis("Retailer"))
 
 
-def master_plan_table(master: dict, least: dict) -> pd.DataFrame:
-    """Table 7: what the plan of M4 sets for each plant and month, with the least
-    stock of each model at the end of the month."""
-    rows = {}
-    for f in PLANTS:
-        for t in T:
-            rows[f, t] = {("Assembly", ""): float(master["assembled"][f, t]),
-                          ("Shipments to the network", ""): float(master["shipped"][f, t]),
-                          ("Stock at the end of the month", ""): float(master["stock"][f, t]),
-                          **{("Least stock at the end of the month", j): least[f, t][j] for j in MODELS}}
-    table = pd.DataFrame(rows).T.rename_axis(["Plant", "Month"])
-    table.columns = pd.MultiIndex.from_tuples(table.columns)
-    return table
+def master_plan_table(master: dict, least: dict, plant: str) -> pd.DataFrame:
+    """Table 7 for one plant: what the plan of M4 sets for it in each month, with the
+    least stock of each model at the end of the month."""
+    rows = {"Assembly": {t: float(master["assembled"][plant, t]) for t in T},
+            "Shipments to the network": {t: float(master["shipped"][plant, t]) for t in T},
+            "Stock at the end of the month": {t: float(master["stock"][plant, t]) for t in T},
+            **{f"Least stock, {j}": {t: least[plant, t][j] for t in T} for j in MODELS}}
+    return pd.DataFrame(rows).T.rename_axis(f"{_name(plant)}, bikes")
 
 
 @_light
@@ -882,90 +855,22 @@ def show_master_plan(show_tables: bool = False) -> None:
           f"{_number(float(sum(master['backorders'].values())))} and lost sales "
           f"{_number(float(sum(master['lost sales'].values())))} bikes.")
     if show_tables:
-        _display(master_plan_table(master, data["least stock"]))
+        for f in PLANTS:
+            _display(master_plan_table(master, data["least stock"], f))
     else:
         _master_plan_figure(master, data["least stock"])
     print("Stock of the network, plants and warehouses, at the end of each month (bikes): "
           + "; ".join(f"{t} {_number(float(master['network stock'][t]))}" for t in T) + ".")
 
 
-# The geometry of the figure of the network of M4 in the statement (figure CS-F1):
-# the position, shape and label of each node and the route of each arc. It is
-# written by web/T3.Planning/lot_sizing/dump_geometry.py of the lecturer repository;
-# copy it again here when that figure changes
-NETWORK_FIGURE = Path(__file__).with_name("network_m4.json")
-INK, TEXT, FILL = "#034854", "#444444", "#F2F6F6"
-
-
-def _node_data(node: str) -> str:
-    """The data of M4 at a node, as written under its label."""
-    if node in F:
-        return (f"{_number(c[node])} €/bike · {_number(K[node][T[0]])} bikes/month\n"
-                f"{_number(c_h[node])} €/(bike·month) · {_number(K_h[node])} bikes")
-    if node in RETAILERS:
-        return f"backorder share {_number(BACKORDER_SHARE[node], 1)}"
-    if node == RAIL_TERMINAL:
-        return ""
-    text = f"{_number(c_h_node_m4[node])} €/(bike·month) · {_number(K_h_node_m4[node])} bikes"
-    return text + (f"\nnode capacity {_number(K_n[node])} bikes/month" if node in K_n else "")
-
-
-@_light
 def _network_figure() -> None:
     """The network of M4 as in the statement, with the data of each node under its
     label and the transport cost and the arc capacity on each arc."""
-    g = json.loads(NETWORK_FIGURE.read_text(encoding="utf-8"))
-    fig, ax = plt.subplots(figsize=(16.6, 7.6))
-    for d in g["nodes"].values():
-        x0, y0, x1, y1 = d["bbox"]
-        cx, cy = d["pos"]
-        shape = {"transform": lambda: Rectangle((x0, y0), x1 - x0, y1 - y0),
-                 "stock": lambda: Polygon([(cx, y0), (x1, y1), (x0, y1)]),
-                 "transit": lambda: Circle((cx, cy), (x1 - x0) / 2),
-                 "demand": lambda: Polygon([(cx, y0), (x1, cy), (cx, y1), (x0, cy)])}[d["kind"]]()
-        shape.set(facecolor=FILL, edgecolor=INK, linewidth=1.4, zorder=3)
-        ax.add_patch(shape)
-    for route, arc in zip(g["arcs"], ARCS_M4):
-        assert (route["from"], route["to"]) == (arc["origin"], arc["destination"])
-        points = route["pts"]
-        xs, ys = zip(*points)
-        ax.plot(xs, ys, color=INK, lw=1.2, ls=(0, (5, 3)) if arc["mode"] == "Rail" else "-", zorder=2)
-        ax.annotate("", xy=points[-1], xytext=points[-2], arrowprops=dict(arrowstyle="-|>", color=INK, lw=1.2))
-        if arc["destination"] in RETAILERS:
-            # on the last stretch, next to the head: the stretches before it can be shared
-            (x0, y0), (x1, y1) = points[-2], points[-1]
-            where, label = (x1 - 48, y1), _number(arc["cost"], 2)
-        else:
-            (x0, y0), (x1, y1) = max(zip(points[:-1], points[1:]),
-                                     key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
-            where = ((x0 + x1) / 2, (y0 + y1) / 2)
-            label = f"{_number(arc['cost'], 2)} · {_number(arc['capacity'])}"
-        ax.text(*where, label, fontsize=7.5, ha="center", va="center", color=SHORT, zorder=4,
-                bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none"))
-    for x, y in g["dots"]:
-        ax.add_patch(Circle((x, y), 3, color=INK, zorder=3))
-    align = {"end": "right", "start": "left", "middle": "center", None: "left"}
-    for label in g["labels"]:
-        ax.text(label["x"], label["y"], label["s"], fontsize=9.5, ha=align[label["anchor"]], va="baseline",
-                style="italic" if label["italic"] else "normal", color=TEXT)
-    for node, d in g["nodes"].items():
-        name, place = (next(L for L in g["labels"] if L["s"] == s) for s in (node, d["place"]))
-        if node == CENTRAL:                    # its label is above the node: the data go above its name
-            where, va = (name["x"], name["y"] - 22), "bottom"
-        else:
-            where, va = (place["x"], place["y"] + 12), "top"
-        ax.text(*where, _node_data(node), fontsize=8, color=SHORT, ha=align[place["anchor"]], va=va,
-                linespacing=1.15)
-    ax.set_xlim(0, 1664)
-    ax.set_ylim(650, -40)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    ax.set_title("Data of M4. Plants: unit assembly cost · capacity; holding cost · storage capacity. Warehouses: "
-                 "holding cost · storage capacity.\nArcs: transport cost (€/bike) · arc capacity (bikes/month); "
-                 f"the arcs to the retailers have an arc capacity of {_number(ARCS_M4[-1]['capacity'])} bikes/month.",
-                 fontsize=10, color=TEXT)
-    fig.tight_layout()
-    plt.show()
+    figures.network(NODES_M4, range(len(ARCS_M4)), {node: figures.data_text(node) for node in NODES_M4},
+                    {a: figures.arc_text(arc) for a, arc in enumerate(ARCS_M4)},
+                    "Data of M4. Plants: unit assembly cost · capacity; holding cost · storage capacity. Warehouses: "
+                    "holding cost · storage capacity.\nArcs: transport cost (€/bike) · arc capacity (bikes/month); "
+                    f"the arcs to the retailers have an arc capacity of {_number(ARCS_M4[-1]['capacity'])} bikes/month.")
 
 
 def mix_table(mix: dict, split: dict, master: dict) -> pd.DataFrame:

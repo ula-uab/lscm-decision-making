@@ -11,6 +11,8 @@ The notebook calls one function per step:
 3. ``backorder_share_test``, ``lost_sale_cost_test``, ``promotion_test`` and
    ``transport_cost_test``: the plan when one datum changes.
 
+Each one shows figures or, with ``show_tables``, the same data in tables.
+
 The model reuses the list of arcs and the functions ``entering`` and ``leaving``
 of M3, and the check of a single optimal plan of M2; M3 does not change.
 """
@@ -25,21 +27,14 @@ from .central_warehouse import SEVERAL, only_optimal
 from .data import (ARCS_M4, BACKORDER_SHARE, CENTRAL, FORECAST_5, F, K, K_h_node, K_h_node_m4, K_n, LOCAL,
                    NODES, NODES_M4, PLACES_M4, RAIL_TERMINAL, RETAILERS, REGIONAL, SHARE_M4, T, b_0, c, c_b,
                    c_h_node_m4, c_l, h_node_0_m4, h_node_end_m4)
-from .distribution_network import POSITION, arc_name, entering, leaving
+from .distribution_network import PRICES, _kind, arc_name, entering, leaving, places_table, stage_stock
 from .model import TOL, _constraints, _optimal
-from .show import COLOURS, SHORT, _display, _european_axes, _light, _number
+from . import figures
+from .show import _display, _european_axes, _light, _number
 
 FORECAST = "Forecast 5"                   # M4 is solved with forecast 5
 DEMAND = FORECAST_5
 FIRST_RETAILER_ARC = len(ARCS_M4) - 12    # arcs 14 to 25 of the list go to the retailers
-
-# Position of each retailer in the figure of the network, and where its label goes
-RETAILER_POSITION = {
-    "Retailer 1": (0.4, 42.6, "right"), "Retailer 2": (2.0, 43.1, "right"),
-    "Retailer 3": (0.3, 38.2, "right"), "Retailer 4": (-1.4, 37.6, "right"),
-    "Retailer 5": (-4.0, 38.9, "left"), "Retailer 6": (-3.2, 36.9, "right"),
-}
-
 
 def _key(node: str) -> str:
     return node.replace(" ", "")
@@ -163,22 +158,43 @@ def m3_has_no_solution(demand: dict = DEMAND) -> bool:
 # What the notebook shows
 # ---------------------------------------------------------------------------
 
-def show_data() -> None:
-    """Tables 1 to 3 of retailers.md: the retailers and their places, their arcs, and
-    their orders, backorder shares and lost-sale cost."""
-    _display(pd.DataFrame({r: {"Place": PLACES_M4[r][0], "Latitude": _number(PLACES_M4[r][1], 4),
-                               "Longitude": _number(PLACES_M4[r][2], 4)} for r in RETAILERS}).T.rename_axis("Retailer"))
-    _display(pd.DataFrame([{"Arc": a + 1, "Origin": arc["origin"], "Destination": arc["destination"],
-                            "Distance (km)": arc["km"], "Transport cost (€/bike)": arc["cost"],
-                            "Arc capacity (bikes/month)": arc["capacity"]}
-                           for a, arc in enumerate(ARCS_M4) if a >= FIRST_RETAILER_ARC]).set_index("Arc"))
+def _name(node: str) -> str:
+    """A node with its place: «Retailer 1 (Lleida)»."""
+    return f"{node} ({PLACES_M4[node][0]})"
+
+
+def show_data(show_tables: bool = False) -> None:
+    """The places of the network on the map, the network with the data of each node
+    and arc, and the orders of each retailer; with ``show_tables``, the places of
+    the network and Tables 1 to 3 of retailers.md instead of the figures."""
+    print(f"{FORECAST} (bikes/month): " + "; ".join(f"{t} {_number(DEMAND[t])}" for t in T) + ".")
     order = orders()
+    if not show_tables:
+        figures.places_map([(_kind(i), *PLACES_M4[i]) for i in NODES_M4], "Places of the nodes of the network of M4")
+        figures.network(NODES_M4, range(len(ARCS_M4)),
+                        {i: figures.data_text(i, stock=True, lost_sale=True) for i in NODES_M4},
+                        {a: figures.arc_text(arc) for a, arc in enumerate(ARCS_M4)},
+                        "Data of M4. Plants: unit assembly cost · capacity; holding cost · storage capacity; initial "
+                        "stock → required final stock. Warehouses: holding cost · storage capacity"
+                        + ("; each one starts and ends the six months with no stock" if figures.warehouses_empty(NODES)
+                           else "") + ".\nRetailers: backorder share; lost-sale cost. Arcs: transport cost (€/bike) · "
+                        "arc capacity (bikes/month); the arcs to the retailers have an arc capacity of "
+                        f"{_number(ARCS_M4[-1]['capacity'])} bikes/month.")
+        figures.orders_figure({f"{_name(r)}, {_number(100 * SHARE_M4[r])} %": [order[r, t] for t in T]
+                               for r in RETAILERS},
+                              f"Orders of each retailer in each month: its share of {FORECAST.lower()}",
+                              ylabel="Orders (bikes/month)")
+        return
+    _display(places_table(NODES_M4, PLACES_M4))
+    _display(pd.DataFrame([{"Arc": a + 1, "Origin": arc["origin"], "Destination": arc["destination"],
+                            "Distance (km)": _number(arc["km"], 1), "Transport cost (€/bike)": _number(arc["cost"], 2),
+                            "Arc capacity (bikes/month)": _number(arc["capacity"])}
+                           for a, arc in enumerate(ARCS_M4) if a >= FIRST_RETAILER_ARC]).set_index("Arc"))
     table = pd.DataFrame({r: {t: order[r, t] for t in T} for r in RETAILERS}).T
     table.insert(0, "Share", [f"{_number(100 * SHARE_M4[r])} %" for r in RETAILERS])
     table.insert(1, "Backorder share", [_number(BACKORDER_SHARE[r], 1) for r in RETAILERS])
     table.insert(2, "Lost-sale cost (€/bike)", [c_l[r] for r in RETAILERS])
     _display(table.rename_axis("Orders (bikes/month)"))
-    print(f"{FORECAST} (bikes/month): " + "; ".join(f"{t} {_number(DEMAND[t])}" for t in T) + ".")
 
 
 def _retailer_table(solution: dict) -> pd.DataFrame:
@@ -187,14 +203,18 @@ def _retailer_table(solution: dict) -> pd.DataFrame:
     for label, key in (("Orders", "orders"), ("Deliveries", "deliveries"),
                        ("Backorders at the end of the month", "backorders"), ("Lost sales", "lost sales")):
         for r in RETAILERS:
-            rows[label, f"{r} ({PLACES_M4[r][0]})"] = {t: solution[key][r, t] for t in months}
+            rows[label, _name(r)] = {t: solution[key][r, t] for t in months}
     return pd.DataFrame(rows).T.rename_axis(["Bikes", "Retailer"])
+
+
+def _assembly_table(solution: dict) -> pd.DataFrame:
+    return (pd.DataFrame({t: {f: solution["assembly"][f, t] for f in F} for t in solution["months"]})
+            .rename_axis("Assembly (bikes)"))
 
 
 def _tables(solution: dict) -> None:
     months, arc_list = solution["months"], solution["arcs"]
-    _display(pd.DataFrame({t: {f: solution["assembly"][f, t] for f in F} for t in months})
-             .rename_axis("Bikes assembled"))
+    _display(_assembly_table(solution))
     _display(pd.DataFrame({t: {f"{a + 1}. {arc_name(arc)}": solution["flow"][a, t] for a, arc in enumerate(arc_list)}
                            for t in months}).rename_axis("Flow on each arc (bikes)"))
     _display(pd.DataFrame({t: {i: solution["stock"][i, t] for i in NODES} for t in months})
@@ -217,81 +237,97 @@ def _prices(solution: dict) -> None:
         if i != RAIL_TERMINAL and any(solution["storage price"][i, t] for t in months):
             rows[f"Storage capacity, {i}"] = {t: solution["storage price"][i, t] for t in months}
     if rows:
-        print("Shadow price of each capacity that is full in some month (€/bike): the change in cost with one "
-              "more bike of capacity (negative: a saving).")
+        print(PRICES)
         _display(pd.DataFrame(rows).T.rename_axis("Capacity"))
 
 
-@_light
-def _figure(solution: dict, month: str) -> None:
-    """Left: the network with the retailers, with the flow on each arc in one month;
-    an arc whose capacity is full is drawn in red. Right: lost sales of each retailer
-    in each month."""
-    arc_list, months = solution["arcs"], solution["months"]
-    position = {**POSITION, **RETAILER_POSITION}
-    fig, (left, right) = plt.subplots(1, 2, figsize=(12, 5.2), gridspec_kw={"width_ratios": [1.4, 1]})
-    lon = {i: position[i][0] for i in NODES_M4}
-    lat = {i: position[i][1] for i in NODES_M4}
-    top = max([solution["flow"][a, month] for a in range(len(arc_list))] + [1])
-    for a, arc in enumerate(arc_list):
-        i, j = arc["origin"], arc["destination"]
-        flow = solution["flow"][a, month]
-        full = flow > TOL and abs(flow - arc["capacity"]) < 1e-6
-        colour = SHORT if full else ("0.25" if flow > TOL else "0.85")
-        left.annotate("", xy=(lon[j], lat[j]), xytext=(lon[i], lat[i]),
-                      arrowprops=dict(arrowstyle="-|>", color=colour, lw=0.8 + 4 * flow / top,
-                                      ls="-" if arc["mode"] == "Road" else "--", shrinkA=6, shrinkB=6))
-        if flow > TOL:
-            left.annotate(_number(flow), ((lon[i] + lon[j]) / 2, (lat[i] + lat[j]) / 2), fontsize=7,
-                          color=colour, ha="center", va="center",
-                          bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.8))
-    for i in NODES_M4:
-        colour = COLOURS.get(i, "black" if i == RAIL_TERMINAL else ("tab:red" if i in RETAILERS else "tab:gray"))
-        marker = "s" if i == RAIL_TERMINAL else ("D" if i in RETAILERS else "o")
-        left.scatter(lon[i], lat[i], s=50, color=colour, marker=marker, zorder=3)
-        side = position[i][2]
-        left.annotate(f"{i}\n{PLACES_M4[i][0]}", (lon[i], lat[i]), xytext=(7 if side == "right" else -7, 0),
-                      textcoords="offset points", fontsize=6.5, ha="left" if side == "right" else "right",
-                      va="center")
-    left.plot([], [], color="0.25", lw=2, label="road")
-    left.plot([], [], color="0.25", lw=2, ls="--", label="rail")
-    left.plot([], [], color=SHORT, lw=2, label="arc capacity full")
-    left.set_title(f"Flow on each arc in {month} (bikes); positions follow the map, not to scale", fontsize=10)
-    left.set_xlim(-8.5, 5.5)
-    left.set_ylim(36.4, 43.8)
-    left.axis("off")
-    left.legend(fontsize=7, loc="lower right")
+def _lost_sales_table(solution: dict) -> pd.DataFrame:
+    return (pd.DataFrame({t: {_name(r): solution["lost sales"][r, t] for r in RETAILERS} for t in solution["months"]})
+            .rename_axis("Lost sales (bikes)"))
 
-    x = range(len(months))
-    bottom = [0.0] * len(months)
+
+def _network_text(solution: dict, month: str) -> dict:
+    """Under each node, its stock at the end of the month; at each retailer, its
+    orders, deliveries and lost sales in the month and its backorders at the end of
+    the month."""
+    text = {i: f"stock {_number(solution['stock'][i, month])}" for i in NODES if i != RAIL_TERMINAL}
+    for r in RETAILERS:
+        text[r] = (f"orders {_number(solution['orders'][r, month])} · deliveries "
+                   f"{_number(solution['deliveries'][r, month])}\n"
+                   f"lost sales {_number(solution['lost sales'][r, month])} · "
+                   f"backorders {_number(solution['backorders'][r, month])}")
+    return text
+
+
+def _lost_sales(ax, solution: dict) -> None:
+    """The lost sales of each retailer in each month, stacked."""
+    months = solution["months"]
     colours = plt.get_cmap("tab10")
-    for k, r in enumerate(RETAILERS):
-        values = [solution["lost sales"][r, t] for t in months]
-        right.bar(x, values, bottom=bottom, color=colours(k), width=0.7, label=f"{r} ({PLACES_M4[r][0]})")
-        bottom = [b + v for b, v in zip(bottom, values)]
-    right.set_xticks(list(x), months)
-    right.set_ylabel("Lost sales (bikes)")
-    right.set_ylim(0, max(150, max(bottom) * 1.2))
-    right.set_title("Lost sales of each retailer", fontsize=10)
-    right.legend(fontsize=7, loc="upper left")
-    right.spines[["top", "right"]].set_visible(False)
+    rows = {_name(r): [solution["lost sales"][r, t] for t in months] for r in RETAILERS}
+    total = max(sum(v[i] for v in rows.values()) for i in range(len(months)))
+    figures.stacked(ax, months, rows, {name: colours(k) for k, name in enumerate(rows)}, top=max(total * 1.25, 10))
+    if total <= TOL:
+        ax.text(0.5, 0.5, "no lost sales", transform=ax.transAxes, ha="center", va="center", fontsize=9)
+    ax.set_ylabel("Lost sales (bikes)")
+    ax.set_title("Lost sales of each retailer", fontsize=10)
+    ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
+
+
+@_light
+def _results_figure(solution: dict, month: str, full: bool, node_capacity: dict) -> None:
+    """The lost sales of each retailer; with ``full``, before it the stock at each
+    stage of the network and after it the shadow prices of the capacities that are
+    full in the month of the form."""
+    if full:
+        fig, axes = plt.subplots(1, 3, figsize=(17, 4.4), gridspec_kw={"width_ratios": [1, 1, 1.3]})
+        figures.stage_stock(axes[0], stage_stock(solution), solution["months"])
+        axes[0].set_title("Stock at each stage of the network", fontsize=10)
+        _lost_sales(axes[1], solution)
+        figures.shadow_prices(axes[2], figures.full_capacities(solution, month, NODES, K_h_node_m4, node_capacity),
+                              month)
+    else:
+        fig, ax = plt.subplots(figsize=(7.5, 4.2))
+        _lost_sales(ax, solution)
     _european_axes(fig)
+    fig.tight_layout()
     plt.show()
 
 
-def _summary(solution: dict) -> None:
-    """Lost sales of each retailer and bikes assembled at each plant, in one table each."""
-    months = solution["months"]
-    _display(pd.DataFrame({t: {f"{r} ({PLACES_M4[r][0]})": solution["lost sales"][r, t] for r in RETAILERS}
-                           for t in months}).rename_axis("Lost sales (bikes)"))
-    _display(pd.DataFrame({t: {f: solution["assembly"][f, t] for f in F} for t in months})
-             .rename_axis("Bikes assembled"))
+@_light
+def _arc_figure(solution: dict, arc: int) -> None:
+    """The flow in each month on the two arcs that reach the retailer of an arc."""
+    arc_list, months = solution["arcs"], solution["months"]
+    retailer = arc_list[arc]["destination"]
+    pair = entering(retailer, arc_list)
+    fig, ax = plt.subplots(figsize=(9, 3.8))
+    colours = plt.get_cmap("tab10")
+    top = max(max(solution["flow"][a, t] for a in pair for t in months), 1) * 1.2
+    for k, a in enumerate(pair):
+        x = [i + (k - 0.5) * 0.38 for i in range(len(months))]
+        values = [solution["flow"][a, t] for t in months]
+        ax.bar(x, values, 0.36, color=colours(k),
+               label=f"arc {a + 1}: {_name(arc_list[a]['origin'])}, transport cost {_number(arc_list[a]['cost'], 2)} €/bike")
+        for xi, v in zip(x, values):
+            ax.text(xi, v + top * 0.01, _number(v), ha="center", va="bottom", fontsize=7)
+    ax.set_ylim(0, top)
+    ax.set_xticks(range(len(months)), months)
+    ax.set_ylabel("Flow (bikes/month)")
+    ax.set_title(f"Flow on the two arcs to {_name(retailer)}", fontsize=10)
+    ax.legend(fontsize=7.5, loc="upper left", frameon=False)
+    ax.spines[["top", "right"]].set_visible(False)
+    _european_axes(fig)
+    fig.tight_layout()
+    plt.show()
 
 
-def _report(data: dict, heading: str, month: str = "May", full: bool = True) -> dict | None:
-    """Solve M4 with the data given and show the plan and its cost, whether other
-    plans have the same cost, the tables (all of them, or the lost sales and the
-    assembly) and the figure."""
+def _report(data: dict, heading: str, month: str = "May", full: bool = True, show_tables: bool = False,
+            arc: int | None = None) -> dict | None:
+    """Solve M4 with the data given and show its cost, its lost sales and whether
+    other plans have the same cost; then the plan in figures or, with
+    ``show_tables``, in tables. With ``full``, the whole plan and the shadow prices
+    of the full capacities; without it, the lost sales, the assembly and the flows
+    of one month on the network. With ``arc``, first the flow on the two arcs to the
+    retailer of that arc (a position in the list)."""
     if month not in T:
         raise ValueError(f"The month must be one of {', '.join(T)}.")
     solution = solve(**data)
@@ -302,18 +338,41 @@ def _report(data: dict, heading: str, month: str = "May", full: bool = True) -> 
     print(f"{heading}: optimal plan, cost {_number(solution['cost'], 2)} €; lost sales {_number(lost)} bikes.")
     if not only_plan(**data):
         print(SEVERAL)
+    if show_tables:
+        if arc is not None:
+            arc_list = solution["arcs"]
+            _display(pd.DataFrame({t: {f"{a + 1}. {arc_name(arc_list[a])}": solution["flow"][a, t]
+                                       for a in range(FIRST_RETAILER_ARC, len(arc_list))} for t in solution["months"]})
+                     .rename_axis("Flow from the local warehouses to the retailers (bikes)"))
+        if full:
+            _tables(solution)
+            _prices(solution)
+        else:
+            _display(_lost_sales_table(solution))
+            _display(_assembly_table(solution))
+        return solution
+    if arc is not None:
+        _arc_figure(solution, arc)
+    title = (f"Plan of M4 in {month}. On each arc, its flow (bikes). Under each node, its stock at the end of {month} "
+             f"(bikes);\nat each retailer, its orders, deliveries and lost sales in {month} and its backorders at the end "
+             f"of {month} (bikes).")
+    node_capacity = data.get("node_capacity", K_n)
     if full:
-        _tables(solution)
-        _prices(solution)
+        figures.flow_network(solution, month, NODES_M4, _network_text(solution, month), title)
+        figures.assembly_figure(solution["assembly"], K, solution["months"], F,
+                                "Assembly of each plant in each month and its capacity")
+        _results_figure(solution, month, True, node_capacity)
     else:
-        _summary(solution)
-    _figure(solution, month)
+        _results_figure(solution, month, False, node_capacity)
+        figures.assembly_figure(solution["assembly"], K, solution["months"], F,
+                                "Assembly of each plant in each month and its capacity")
+        figures.flow_network(solution, month, NODES_M4, _network_text(solution, month), title)
     return solution
 
 
-def retailer_plan(month: str = "May") -> dict | None:
-    """The plan with forecast 5, with the flows of one month on the map; and, first,
-    whether M3 has a plan for forecast 5."""
+def retailer_plan(month: str = "May", show_tables: bool = False) -> dict | None:
+    """The plan with forecast 5, with the flows of one month on the network; and,
+    first, whether M3 has a plan for forecast 5."""
     if m3_has_no_solution():
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
@@ -324,38 +383,42 @@ def retailer_plan(month: str = "May") -> dict | None:
               f"{_number(ordered - assembled + ending)} bikes have to be in stock, and the network can hold "
               f"{_number(sum(K_h_node[i] for i in NODES))}.")
         print()
-    return _report({}, FORECAST, month)
+    return _report({}, FORECAST, month, show_tables=show_tables)
 
 
-def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 0.4) -> dict | None:
+def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 0.4, month: str = "May",
+                         show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the backorder share of one retailer changed."""
     if retailer not in RETAILERS:
         raise ValueError(f"The retailer must be one of {', '.join(RETAILERS)}.")
     share = {**BACKORDER_SHARE, retailer: backorder_share}
-    print(f"Backorder share of {retailer} ({PLACES_M4[retailer][0]}): {_number(backorder_share, 2)}; "
+    print(f"Backorder share of {_name(retailer)}: {_number(backorder_share, 2)}; "
           f"lost sales, the rest: {_number(1 - backorder_share, 2)}.")
-    return _report({"backorder_share": share}, FORECAST, full=False)
+    return _report({"backorder_share": share}, FORECAST, month, full=False, show_tables=show_tables)
 
 
-def lost_sale_cost_test(lost_sale_cost: float = 700) -> dict | None:
+def lost_sale_cost_test(lost_sale_cost: float = 700, month: str = "May", show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the lost-sale cost, the price that the retailers
     pay for a bike, changed for every retailer."""
     print(f"Lost-sale cost: {_number(lost_sale_cost)} €/bike.")
-    return _report({"lost_sale_cost": {r: lost_sale_cost for r in RETAILERS}}, FORECAST, full=False)
+    return _report({"lost_sale_cost": {r: lost_sale_cost for r in RETAILERS}}, FORECAST, month, full=False,
+                   show_tables=show_tables)
 
 
-def promotion_test(retailer: str = "Retailer 2", month: str = "Jan", extra_orders: float = 100) -> dict | None:
+def promotion_test(retailer: str = "Retailer 2", month: str = "Jan", extra_orders: float = 100,
+                   show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and more orders of one retailer in one month."""
     if retailer not in RETAILERS:
         raise ValueError(f"The retailer must be one of {', '.join(RETAILERS)}.")
     order = orders()
     order[retailer, month] += extra_orders
-    print(f"Orders of {retailer} ({PLACES_M4[retailer][0]}) in {month}: {_number(order[retailer, month])} bikes, "
+    print(f"Orders of {_name(retailer)} in {month}: {_number(order[retailer, month])} bikes, "
           f"{_number(extra_orders)} more than in {FORECAST.lower()}.")
-    return _report({"order": order}, FORECAST, month, full=False)
+    return _report({"order": order}, FORECAST, month, full=False, show_tables=show_tables)
 
 
-def transport_cost_test(arc: int = 17, transport_cost: float = 1.05) -> dict | None:
+def transport_cost_test(arc: int = 17, transport_cost: float = 1.05, month: str = "May",
+                        show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the transport cost of one arc from a local
     warehouse to a retailer changed (arcs 14 to 25)."""
     if not FIRST_RETAILER_ARC < arc <= len(ARCS_M4):
@@ -363,9 +426,4 @@ def transport_cost_test(arc: int = 17, transport_cost: float = 1.05) -> dict | N
     arc_list = [dict(a) for a in ARCS_M4]
     arc_list[arc - 1]["cost"] = transport_cost
     print(f"Transport cost of arc {arc}, {arc_name(arc_list[arc - 1])}: {_number(transport_cost, 2)} €/bike.")
-    solution = solve(arc_list=arc_list)
-    if solution is not None:
-        _display(pd.DataFrame({t: {f"{a + 1}. {arc_name(arc_list[a])}": solution["flow"][a, t]
-                                   for a in range(FIRST_RETAILER_ARC, len(arc_list))} for t in solution["months"]})
-                 .rename_axis("Flow from the local warehouses to the retailers (bikes)"))
-    return _report({"arc_list": arc_list}, FORECAST, full=False)
+    return _report({"arc_list": arc_list}, FORECAST, month, full=False, show_tables=show_tables, arc=arc - 1)

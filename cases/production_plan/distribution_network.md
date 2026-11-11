@@ -261,13 +261,15 @@ The third test changes the node capacity of regional warehouse 2. From 300 bikes
 
 The Python script `distribution_network_solver.py`, in this folder, prints every table of this document and checks that M2 has no solution with forecast 4. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
-The notebook [`notebooks/distribution_network.ipynb`](notebooks/distribution_network.ipynb) solves the plan of §6.1, draws the network with the flows of the month the reader chooses, and runs the three tests of §6.4. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/distribution_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/distribution_network.py`), which reads the data of M0 to M3 from `src/plants/data.py`.
+The notebook [`notebooks/distribution_network.ipynb`](notebooks/distribution_network.ipynb) solves the plan of §6.1, draws the network with the flows of the month the reader chooses, and runs the three tests of §6.4. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/distribution_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/distribution_network.py`), which reads the data of M0 to M3 from `src/plants/data.py`. The map of the places of the nodes draws the outline of the peninsula from Natural Earth.
 
 ## References
 
 Albrecht, M., Rohde, J., & Wagner, M. (2015). Master planning. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 155–175). Springer. https://doi.org/10.1007/978-3-642-55309-7
 
 Fleischmann, B., Meyr, H., & Wagner, M. (2015). Advanced planning. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 71–95). Springer. https://doi.org/10.1007/978-3-642-55309-7
+
+Natural Earth. (2022). *Admin 0 – Countries* (Version 5.1.1) [1:50m cultural vectors; public domain map data]. Retrieved November 11, 2026, from https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/
 
 OpenStreetMap contributors. (2026). *Nominatim* [Search engine for OpenStreetMap data]. Retrieved October 23, 2026, from https://nominatim.openstreetmap.org
 

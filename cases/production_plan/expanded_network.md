@@ -418,7 +418,7 @@ Its assumptions:
 
 The Python script `expanded_network_solver.py`, in this folder, prints every table of this document except Table 4, and checks that each optimal plan is the only one. It writes the models with the library PuLP and solves them with the solver HiGHS to their exact optimum (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
-The notebook [`notebooks/expanded_network.ipynb`](notebooks/expanded_network.ipynb) solves the three problems and lets the reader change one datum in each: the node capacity of a local warehouse in the assignment; the maximum travel time, and «at least one» or «exactly one», in the covering; and the capacity of the truck, and the full or the short list, in the partition. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/expanded_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/expanded_network.py`), which reads the data from `src/plants/data.py`.
+The notebook [`notebooks/expanded_network.ipynb`](notebooks/expanded_network.ipynb) solves the three problems and lets the reader change one datum in each: the node capacity of a local warehouse in the assignment; the maximum travel time, and «at least one» or «exactly one», in the covering; and the capacity of the truck, and the full or the short list, in the partition. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/expanded_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/expanded_network.py`), which reads the data from `src/plants/data.py`. Its maps draw the outline of the peninsula from Natural Earth.
 
 ## Sources
 
@@ -429,6 +429,8 @@ Fleischmann, B., Kopfer, H., & Sürie, C. (2015). Transport planning for procure
 Fleischmann, B., Meyr, H., & Wagner, M. (2015). Advanced planning. In H. Stadtler, C. Kilger, & H. Meyr (Eds.), *Supply chain management and advanced planning: Concepts, models, software, and case studies* (5th ed., pp. 71–95). Springer. https://doi.org/10.1007/978-3-642-55309-7_4 (§4.2.2, p. 78; §4.2.4, p. 81)
 
 Instituto Nacional de Estadística (INE). (2026). *Cifras oficiales de población resultantes de la revisión del Padrón municipal a 1 de enero de 2025* [Official population figures of the municipalities, table 29005]. Retrieved November 10, 2026, from https://www.ine.es/jaxiT3/Tabla.htm?t=29005
+
+Natural Earth. (2022). *Admin 0 – Countries* (Version 5.1.1) [1:50m cultural vectors; public domain map data]. Retrieved November 11, 2026, from https://www.naturalearthdata.com/downloads/50m-cultural-vectors/50m-admin-0-countries-2/
 
 Open Source Routing Machine (OSRM). (2026). *OSRM demo server* [Road routing on OpenStreetMap data]. Retrieved November 10, 2026, from https://project-osrm.org
 

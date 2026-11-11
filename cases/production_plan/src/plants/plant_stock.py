@@ -9,6 +9,8 @@ The notebook calls one function per step:
 3. ``holding_cost_test``, ``demand_test``, ``horizon_test`` and ``final_stock_test``:
    the plan when one datum changes.
 
+Steps 2 and 3 show figures or, with ``show_tables``, the same data in tables.
+
 A capacity is given as capacity[f][t] (bikes/month), a demand as demand[t]
 (bikes/month), and holding costs and stocks as dicts by plant. ``final=None``
 solves the model without the required final stock.
@@ -22,6 +24,7 @@ import pulp
 
 from .data import F, FORECASTS, K, T, c, c_h, h_0, h_end
 from .model import TOL, _constraints, _optimal
+from . import figures
 from .show import COLOURS, _display, _euros, _european_axes, _light, _number
 
 FORECAST = "Forecast 2"                   # M1 is solved with forecast 2
@@ -153,81 +156,111 @@ def show_data() -> None:
 def _plan_table(solution: dict) -> pd.DataFrame:
     months = solution["months"]
     rows = {}
-    for label, key in (("Assembled", "assembly"), ("Shipped", "shipments"),
+    for label, key in (("Assembly", "assembly"), ("Shipments", "shipments"),
                        ("Stock at the end of the month", "stock")):
         for f in F:
             rows[label, f] = {t: solution[key][f, t] for t in months}
     return pd.DataFrame(rows).T.rename_axis(["Bikes", "Plant"])
 
 
+def _by_plant(ax, solution: dict, key: str, label: str, demand: dict, top: float) -> None:
+    """Bars stacked by plant, one for each month, with the bikes of each plant
+    inside its part of the bar, clear of the point of the demand."""
+    months = solution["months"]
+    rows = {f: [solution[key][f, t] for t in months] for f in F}
+    figures.stacked(ax, months, rows, COLOURS, top=top, totals=False, avoid=[[demand[t]] for t in months])
+    for handle in ax.containers:
+        handle.set_label(f"{label} {handle.get_label()}")
+
+
 @_light
 def _figure(solution: dict, demand: dict, initial: dict, capacity: dict = K) -> None:
-    """Left: bikes assembled by each plant, with the capacity of the three plants
-    and the demand. Right: bikes in stock at each plant at the end of each month."""
+    """Four panels: the assembly of each plant against the capacity of the three
+    plants and the demand; the shipments of each plant against the demand; the
+    stock of each plant at the end of each month; and the shadow price of the
+    demand of each month."""
     months = solution["months"]
-    fig, (left, right) = plt.subplots(1, 2, figsize=(11, 3.8))
+    fig, axes = plt.subplots(2, 2, figsize=(12, 7.6))
     x = range(len(months))
-    bottom = [0.0] * len(months)
-    for f in F:
-        values = [solution["assembly"][f, t] for t in months]
-        left.bar(x, values, bottom=bottom, color=COLOURS[f], width=0.7, label=f"assembled {f}")
-        bottom = [b + v for b, v in zip(bottom, values)]
-    left.plot(x, [sum(capacity[f][t] for f in F) for t in months], color="0.4", ls="--", marker="_",
-              label="capacity of the three plants")
-    left.plot(x, [demand[t] for t in months], color="black", marker="o", label="demand")
-    left.set_xticks(list(x), months)
-    left.set_ylabel("Bikes/month")
-    left.set_ylim(0, max(760, max(demand[t] for t in months) * 1.1))
-    left.set_title("Bikes assembled, capacity and demand", fontsize=10)
-    left.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, frameon=False)
-    left.spines[["top", "right"]].set_visible(False)
+    top = max(760, max(demand[t] for t in months) * 1.15)
+
+    ax = axes[0, 0]
+    _by_plant(ax, solution, "assembly", "assembly,", demand, top)
+    figures.step(ax, months, [sum(capacity[f][t] for f in F) for t in months], color="black", lw=1, ls="--",
+                  label="capacity of the three plants")
+    ax.plot(x, [demand[t] for t in months], color="black", marker="o", lw=1.2, label="demand")
+    ax.set_ylabel("Bikes per month")
+    ax.set_title("Assembly of each plant, capacity and demand", fontsize=10)
+
+    ax = axes[0, 1]
+    _by_plant(ax, solution, "shipments", "shipments,", demand, top)
+    ax.plot(x, [demand[t] for t in months], color="black", marker="o", lw=1.2, label="demand")
+    ax.set_ylabel("Bikes per month")
+    ax.set_title("Shipments of each plant and demand", fontsize=10)
 
     # The stock starts from the stock at the end of the month before the horizon
+    ax = axes[1, 0]
     start = T[T.index(months[0]) - 1] if months[0] != T[0] else "Dec"
     labels = [start] + months
-    bottom = [0.0] * len(labels)
-    for f in F:
-        values = [initial[f]] + [solution["stock"][f, t] for t in months]
-        right.bar(range(len(labels)), values, bottom=bottom, color=COLOURS[f], width=0.7, label=f"stock {f}")
-        bottom = [b + v for b, v in zip(bottom, values)]
-    right.set_xticks(range(len(labels)), labels)
-    right.set_ylabel("Bikes at the end of the month")
-    right.set_ylim(0, max(300, max(bottom) * 1.15))
-    right.set_title("Stock at the plants", fontsize=10)
-    right.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, frameon=False)
-    right.spines[["top", "right"]].set_visible(False)
+    rows = {f"stock, {f}": [initial[f]] + [solution["stock"][f, t] for t in months] for f in F}
+    totals = [sum(v[i] for v in rows.values()) for i in range(len(labels))]
+    figures.stacked(ax, labels, rows, {f"stock, {f}": COLOURS[f] for f in F}, top=max(300, max(totals) * 1.15))
+    ax.set_ylabel("Bikes at the end of the month")
+    ax.set_title("Stock at the plants at the end of each month", fontsize=10)
+
+    ax = axes[1, 1]
+    prices = [solution["demand price"][t] for t in months]
+    ax.plot(x, prices, color="black", marker="o", lw=1.2)
+    for i, v in enumerate(prices):
+        ax.annotate(_number(v), (i, v), xytext=(0, 7), textcoords="offset points", ha="center", fontsize=7.5)
+    ax.set_xticks(list(x), months)
+    ax.set_xlim(-0.5, len(months) - 0.5)
+    ax.set_ylim(0, max(prices) * 1.25 if max(prices) > 0 else 1)
+    ax.set_ylabel("€/bike")
+    ax.set_title("Shadow price of the demand of each month: the change in the cost\nof the plan with one more bike "
+                 "of demand in that month", fontsize=10)
+    ax.spines[["top", "right"]].set_visible(False)
+    for ax in axes[0]:
+        ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.09), ncol=3, frameon=False)
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[1, 0].legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.09), ncol=3, frameon=False)
     _european_axes(fig)
+    fig.tight_layout()
     plt.show()
 
 
 def _report(solution: dict | None, demand: dict, initial: dict, heading: str,
-            unique: bool | None = True) -> None:
-    """The plan and its cost, whether other plans have the same cost, the shadow
-    prices of the demand and the figure."""
+            unique: bool | None = True, show_tables: bool = False) -> None:
+    """The cost of the plan and whether other plans have the same cost; then the
+    plan and the shadow prices of the demand in the figure or, with
+    ``show_tables``, in tables."""
     if solution is None:
         print(f"{heading}: the model has no solution.")
         return
     months = solution["months"]
     print(f"{heading}: optimal plan, cost {_euros(solution['cost'])}.")
-    _display(_plan_table(solution))
     if not unique:
         print("With these data the model has several optimal plans with the same cost; "
-              "the table shows one of them.")
-    print("Shadow price of the demand of each month (€/bike): what one more bike of demand costs.")
-    _display(pd.DataFrame({t: {"Shadow price (€/bike)": solution["demand price"][t]} for t in months}))
-    _figure(solution, demand, initial)
+              "the cell shows one of them.")
+    if show_tables:
+        _display(_plan_table(solution))
+        print("Shadow price of the demand of each month (€/bike): the change in the cost of the plan with one more "
+              "bike of demand in that month.")
+        _display(pd.DataFrame({t: {"Shadow price (€/bike)": solution["demand price"][t]} for t in months}))
+    else:
+        _figure(solution, demand, initial)
 
 
-def stock_plan(with_required_final_stock: bool = True) -> dict | None:
+def stock_plan(with_required_final_stock: bool = True, show_tables: bool = False) -> dict | None:
     """The plan with forecast 2, with or without the required final stock."""
     final = h_end if with_required_final_stock else None
     heading = f"{FORECAST}, {'with' if with_required_final_stock else 'without'} the required final stock"
     solution, unique = _solve(final=final)
-    _report(solution, DEMAND, h_0, heading, unique)
+    _report(solution, DEMAND, h_0, heading, unique, show_tables)
     return solution
 
 
-def holding_cost_test(holding_plant_1: float = 5) -> dict | None:
+def holding_cost_test(holding_plant_1: float = 5, show_tables: bool = False) -> dict | None:
     """The plan with the three holding costs moved together: plant 2 costs 1 €/(bike·month)
     more than plant 1, and plant 3 costs 2 more."""
     holding = {"Plant 1": holding_plant_1, "Plant 2": holding_plant_1 + 1, "Plant 3": holding_plant_1 + 2}
@@ -239,11 +272,11 @@ def holding_cost_test(holding_plant_1: float = 5) -> dict | None:
         plant_3 = {t: solution["assembly"]["Plant 3", t] for t in T if solution["assembly"]["Plant 3", t] > TOL}
         print(f"Seasonal stock at the end of March: {_number(march)} bikes. Bikes assembled at plant 3: "
               + ("; ".join(f"{_number(v)} in {t}" for t, v in plant_3.items()) if plant_3 else "none") + ".")
-    _report(solution, DEMAND, h_0, f"{FORECAST}, with the required final stock", unique)
+    _report(solution, DEMAND, h_0, f"{FORECAST}, with the required final stock", unique, show_tables)
     return solution
 
 
-def demand_test(month: str = "Apr", demand: float = 650) -> dict | None:
+def demand_test(month: str = "Apr", demand: float = 650, show_tables: bool = False) -> dict | None:
     """The plan with the demand of one month changed, the rest of forecast 2 unchanged;
     if there is no solution, the month in which capacity falls short."""
     if month not in T:
@@ -252,13 +285,13 @@ def demand_test(month: str = "Apr", demand: float = 650) -> dict | None:
     print("Demand (bikes/month): " + "; ".join(f"{t} {_number(changed[t])}" for t in T) + ".")
     solution, unique = _solve(demand=changed)
     _report(solution, changed, h_0, f"Demand of {month} {_number(demand)}, with the required final stock",
-            unique)
+            unique, show_tables)
     if solution is None:
         print(why_no_plan(demand=changed))
     return solution
 
 
-def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
+def horizon_test(last_month: str = "Mar", show_tables: bool = False) -> tuple[dict | None, dict | None]:
     """A plan from January to the last month, with the required final stock at the
     end of that month; then, from the stock it leaves, a plan for the months left until June."""
     if last_month not in T:
@@ -266,7 +299,7 @@ def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
     i = T.index(last_month)
     first_months, later_months = T[:i + 1], T[i + 1:]
     first, unique = _solve(months=first_months)
-    _report(first, DEMAND, h_0, f"Plan from {first_months[0]} to {last_month}", unique)
+    _report(first, DEMAND, h_0, f"Plan from {first_months[0]} to {last_month}", unique, show_tables)
     if first is None:
         print(why_no_plan(months=first_months))
         return None, None
@@ -278,13 +311,14 @@ def horizon_test(last_month: str = "Mar") -> tuple[dict | None, dict | None]:
     print()
     later, unique = _solve(months=later_months, initial=left)
     _report(later, DEMAND, left,
-            f"Plan from {later_months[0]} to {later_months[-1]}, from that stock", unique)
+            f"Plan from {later_months[0]} to {later_months[-1]}, from that stock", unique, show_tables)
     if later is None:
         print(why_no_plan(months=later_months, initial=left))
     return first, later
 
 
-def final_stock_test(plant: str = "Plant 1", required_final_stock: float = 20) -> dict | None:
+def final_stock_test(plant: str = "Plant 1", required_final_stock: float = 20,
+                     show_tables: bool = False) -> dict | None:
     """The plan with the required final stock of one plant changed; the other plants
     keep theirs."""
     if plant not in F:
@@ -293,7 +327,7 @@ def final_stock_test(plant: str = "Plant 1", required_final_stock: float = 20) -
     print("Required final stock (bikes): "
           + "; ".join(f"{f.lower()} {_number(v)}" for f, v in final.items()) + ".")
     solution, unique = _solve(final=final)
-    _report(solution, DEMAND, h_0, f"{FORECAST}, with that required final stock", unique)
+    _report(solution, DEMAND, h_0, f"{FORECAST}, with that required final stock", unique, show_tables)
     if solution is None:
         print(why_no_plan(final=final))
     return solution

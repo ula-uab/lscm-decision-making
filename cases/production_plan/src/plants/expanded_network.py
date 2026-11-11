@@ -12,14 +12,18 @@ PuLP and solved with HiGHS to its exact optimum:
 
 The notebook expanded_network.ipynb calls one function per step:
 
-1. ``show_data``: the retailers, the local warehouses, the candidate sites and the
-   distances and travel times;
+1. ``show_data``: a map of the retailers, the local warehouses and the candidate
+   sites, and the tables of their data, distances and travel times;
 2. ``assignment``: the four plans of the assignment, with the capacity of one local
    warehouse changed;
 3. ``covering``: the regional warehouses for a maximum travel time, with "at least
    one" or "exactly one";
 4. ``routes``: the weekly routes for a truck capacity, from the full list of
    candidate routes or from the short list.
+
+Steps 2 to 4 show a map of the plan or, with ``show_tables``, its tables; the
+tables of what the model receives, computed with the values of the form, are
+always shown.
 
 M0 to M4 are the network before the expansion; this module does not use them.
 """
@@ -37,6 +41,7 @@ from .data import (LOCAL_EXP, MAX_ROUTE_KM, MAX_TRAVEL_TIME, NODE_CAPACITY_YEAR,
                    ROUTE_WAREHOUSE, SITE_COST, SITES, TRANSPORT_RATE, TRAVEL_TIME, TRUCK_CAPACITY, WEEKLY_ORDERS,
                    YEARLY_ORDERS)
 from .model import TOL, _optimal
+from . import figures
 from .show import SHORT, _display, _light, _number
 
 SHORT_LIST_STOPS = 2           # the short list: the routes of one and of two retailers
@@ -322,30 +327,39 @@ def _lon_lat(node: str) -> tuple[float, float]:
     return PLACES_EXP[node][2], PLACES_EXP[node][1]
 
 
-def _map(ax, title: str) -> None:
-    ax.set_title(f"{title}; positions follow the map, not to scale", fontsize=10)
-    ax.set_xlim(-9.5, 3.8)
-    ax.set_ylim(35.9, 44.2)
-    ax.set_aspect(1.25)
-    ax.axis("off")
+def _map(ax, title: str, window: tuple | None = None) -> None:
+    """The outline of the peninsula under a map, with its title."""
+    figures.peninsula(ax, window)
+    ax.set_title(title, fontsize=10)
+
+
+def _coordinates(node: str) -> dict:
+    return {"Latitude": _number(PLACES_EXP[node][1], 4), "Longitude": _number(PLACES_EXP[node][2], 4)}
 
 
 def show_data() -> None:
-    """Tables 1 to 5 and 7 of expanded_network.md: the retailers with their yearly
+    """A map of the retailers, the local warehouses and the candidate sites; and
+    Tables 1 to 5 and 7 of expanded_network.md: the retailers with their yearly
     orders, the local warehouses with their node capacity, the transport cost of
-    each pair, the candidate sites with their fixed cost, and the travel times."""
-    _display(pd.DataFrame({r: {"Place": PLACES_EXP[r][0], "Orders (bikes/year)": YEARLY_ORDERS[r]}
+    each pair, the candidate sites with their fixed cost, and the travel times. The
+    tables of the places give their latitude and longitude."""
+    places = ([("Retailer", *PLACES_EXP[r]) for r in RETAILERS_EXP] + [("Local warehouse", *PLACES_EXP[l])
+                                                                       for l in LOCAL_EXP]
+              + [("Candidate site for a regional warehouse", *PLACES_EXP[n]) for n in SITES])
+    figures.places_map(places, "Retailers, local warehouses and candidate sites for a regional warehouse",
+                       figsize=(9.5, 7.2), by_hand=figures.BY_HAND)
+    _display(pd.DataFrame({r: {"Place": PLACES_EXP[r][0], "Orders (bikes/year)": YEARLY_ORDERS[r], **_coordinates(r)}
                            for r in RETAILERS_EXP}).T.rename_axis("Retailer"))
-    _display(pd.DataFrame({l: {"Place": PLACES_EXP[l][0], "Node capacity (bikes/year)": NODE_CAPACITY_YEAR[l]}
-                           for l in LOCAL_EXP}).T.rename_axis("Local warehouse"))
+    _display(pd.DataFrame({l: {"Place": PLACES_EXP[l][0], "Node capacity (bikes/year)": NODE_CAPACITY_YEAR[l],
+                               **_coordinates(l)} for l in LOCAL_EXP}).T.rename_axis("Local warehouse"))
     print(f"Orders of all the retailers: {_number(sum(YEARLY_ORDERS.values()))} bikes/year; capacity of all the "
           f"local warehouses: {_number(sum(NODE_CAPACITY_YEAR.values()))} bikes/year.")
-    table = pd.DataFrame({PLACES_EXP[l][0]: {place(r): f"{COST[l, r]:.2f}".replace(".", ",") for r in RETAILERS_EXP}
+    table = pd.DataFrame({PLACES_EXP[l][0]: {place(r): _number(COST[l, r], 2) for r in RETAILERS_EXP}
                           for l in LOCAL_EXP})
     _display(table.rename_axis("Transport cost (€/bike)"))
-    _display(pd.DataFrame({n: {"Fixed cost (thousand €/year)": SITE_COST[n]} for n in SITES}).T
+    _display(pd.DataFrame({n: {"Fixed cost (thousand €/year)": SITE_COST[n], **_coordinates(n)} for n in SITES}).T
              .rename_axis("Candidate site"))
-    _display(pd.DataFrame({n: {PLACES_EXP[l][0]: f"{TRAVEL_TIME[n][k]:.2f}".replace(".", ",")
+    _display(pd.DataFrame({n: {PLACES_EXP[l][0]: _number(TRAVEL_TIME[n][k], 2)
                                for k, l in enumerate(LOCAL_EXP)} for n in SITES}).T
              .rename_axis("Travel time (h)"))
     _display(pd.DataFrame({place(r): {"Weekly orders (bikes)": WEEKLY_ORDERS[r]} for r in ROUTE_RETAILERS}).T
@@ -356,22 +370,27 @@ def show_data() -> None:
 def _assignment_figure(model_plan: dict, cheapest: dict) -> None:
     """The retailers joined to the local warehouse that serves them in the model; in
     red the retailers that do not go to their cheapest warehouse."""
-    fig, ax = plt.subplots(figsize=(8.5, 6.4))
+    fig, ax = plt.subplots(figsize=(9.5, 7.2))
+    _map(ax, "Local warehouse of each retailer in the generalized assignment")
     for r, l in model_plan["warehouse"].items():
         moved = l != cheapest["warehouse"][r]
         (x0, y0), (x1, y1) = _lon_lat(l), _lon_lat(r)
-        ax.plot([x0, x1], [y0, y1], color=SHORT if moved else "0.6", lw=1.6 if moved else 0.8, zorder=1)
+        ax.plot([x0, x1], [y0, y1], color=SHORT if moved else "0.45", lw=1.6 if moved else 0.8, zorder=1)
+    points = []
     for r in RETAILERS_EXP:
-        ax.scatter(*_lon_lat(r), s=12 + YEARLY_ORDERS[r] / 25, color="tab:blue", zorder=2)
+        size = 12 + YEARLY_ORDERS[r] / 25
+        ax.scatter(*_lon_lat(r), s=size, color="tab:blue", zorder=2)
+        points.append((*_lon_lat(r), size ** 0.5))
     for l in LOCAL_EXP:
-        x, y = _lon_lat(l)
-        ax.scatter(x, y, s=70, marker="s", color="black", zorder=3)
-        ax.annotate(PLACES_EXP[l][0], (x, y), xytext=(5, 4), textcoords="offset points", fontsize=7)
+        ax.scatter(*_lon_lat(l), s=70, marker="s", color="black", zorder=3)
+        points.append((*_lon_lat(l), 9))
     ax.scatter([], [], s=40, color="tab:blue", label="retailer (size: yearly orders)")
     ax.scatter([], [], s=50, marker="s", color="black", label="local warehouse")
     ax.plot([], [], color=SHORT, lw=1.6, label="not served by its cheapest local warehouse")
-    ax.legend(fontsize=7, loc="lower right")
-    _map(ax, "Local warehouse of each retailer in the generalized assignment")
+    ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
+    fig.tight_layout()
+    lines = [[_lon_lat(l), _lon_lat(r)] for r, l in model_plan["warehouse"].items()]
+    figures.place_labels(ax, [(PLACES_EXP[l][0], _lon_lat(l)) for l in LOCAL_EXP], points, lines)
     plt.show()
 
 
@@ -391,11 +410,12 @@ def _assignment_table(plans: dict, orders: dict) -> pd.DataFrame:
     return pd.DataFrame(rows).T.rename_axis("Retailer")
 
 
-def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None) -> dict:
+def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None, show_tables: bool = False) -> dict:
     """The four plans of the assignment, with the node capacity of one local warehouse
     changed: each retailer at its cheapest warehouse, the rule, the generalized
-    assignment and the transportation problem. Their costs, the warehouse of each
-    retailer in each plan, the load of each warehouse and a map of the assignment."""
+    assignment and the transportation problem. Their costs; then a map of the
+    assignment or, with ``show_tables``, the warehouse of each retailer in each plan
+    and the load of each warehouse."""
     if warehouse not in LOCAL_EXP:
         raise ValueError(f"The local warehouse must be one of {', '.join(LOCAL_EXP)}.")
     capacities = dict(NODE_CAPACITY_YEAR)
@@ -431,48 +451,66 @@ def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None) 
     print(f"Transportation problem: {_number(split['cost'], 2)} €/year, "
           f"{_number(100 * (1 - split['cost'] / model_plan['cost']), 1)} % less than the generalized assignment; "
           f"{len(shared)} retailers are split between two or more local warehouses.")
+    if not show_tables:
+        _assignment_figure(model_plan, cheapest)
+        return plans
     changed = [r for r in RETAILERS_EXP if r in moved or r in shared
                or (rule is not None and rule["warehouse"][r] != cheapest["warehouse"][r])]
     print("Retailers that are not at their cheapest local warehouse in some plan:")
     _display(_assignment_table(plans, {r: YEARLY_ORDERS[r] for r in changed}))
-    loads = pd.DataFrame({place(l): {"Node capacity": capacities[l],
-                                     **{label: (plan["load"][l] if plan else "—") for label, plan in plans.items()}}
+    loads = pd.DataFrame({place(l): {"Node capacity": _number(capacities[l]),
+                                     **{label: (_number(plan["load"][l], 1) if plan else "—")
+                                        for label, plan in plans.items()}}
                           for l in LOCAL_EXP}).T
-    _display(loads.round(1).rename_axis("Load of each local warehouse (bikes/year)"))
-    _assignment_figure(model_plan, cheapest)
+    _display(loads.rename_axis("Load of each local warehouse (bikes/year)"))
     return plans
 
 
 @_light
-def _covering_figure(plan: dict) -> None:
-    """The candidate sites, the chosen ones in green, joined to the local warehouses
-    within their reach."""
-    fig, ax = plt.subplots(figsize=(8.5, 6.4))
+def _covering_figure(plan: dict, max_time: float) -> None:
+    """The candidate sites, the chosen ones filled, joined to the local warehouses
+    within their reach; a local warehouse within reach of two or more chosen sites
+    in red."""
+    fig, ax = plt.subplots(figsize=(9.5, 7.2))
+    _map(ax, "Regional warehouses and the local warehouses within their reach")
+    hours = f"{_number(max_time)} h"
     for n in plan["sites"]:
         for l in plan["sets"][n]:
             (x0, y0), (x1, y1) = _lon_lat(n), _lon_lat(l)
             ax.plot([x0, x1], [y0, y1], color="tab:green", lw=1, zorder=1)
+    points = []
     for l in LOCAL_EXP:
         x, y = _lon_lat(l)
-        ax.scatter(x, y, s=55, marker="s", color=SHORT if len(plan["reached by"][l]) > 1 else "black", zorder=3)
-        ax.annotate(PLACES_EXP[l][0], (x, y), xytext=(5, -9), textcoords="offset points", fontsize=7)
+        ax.scatter(x + 0.17, y, s=55, marker="s", color=SHORT if len(plan["reached by"][l]) > 1 else "black",
+                   zorder=3)
+        points.append((x + 0.17, y, 9))
     for n in SITES:
         x, y = _lon_lat(n)
         ax.scatter(x, y, s=140, marker="^", color="tab:green" if n in plan["sites"] else "white",
                    edgecolors="tab:green", zorder=4)
-        ax.annotate(n, (x, y), xytext=(6, 5), textcoords="offset points", fontsize=7, color="tab:green")
-    ax.scatter([], [], s=80, marker="^", color="tab:green", label="candidate site chosen")
-    ax.scatter([], [], s=80, marker="^", color="white", edgecolors="tab:green", label="candidate site not chosen")
-    ax.scatter([], [], s=40, marker="s", color="black", label="local warehouse")
-    ax.scatter([], [], s=40, marker="s", color=SHORT, label="within reach of two or more chosen sites")
-    ax.legend(fontsize=7, loc="lower right")
-    _map(ax, "Regional warehouses and the local warehouses within their reach")
+        points.append((x, y, 13))
+    ax.scatter([], [], s=80, marker="^", color="tab:green", label="Regional warehouse: candidate site chosen")
+    ax.scatter([], [], s=80, marker="^", color="white", edgecolors="tab:green",
+               label="Candidate site for a regional warehouse, not chosen")
+    ax.scatter([], [], s=40, marker="s", color="black",
+               label=f"Local warehouse within {hours} of one regional warehouse")
+    ax.scatter([], [], s=40, marker="s", color=SHORT,
+               label=f"Local warehouse within {hours} of two or more regional warehouses")
+    ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
+    fig.tight_layout()
+    cities = {PLACES_EXP[l][0]: (_lon_lat(l)[0] + 0.17, _lon_lat(l)[1]) for l in LOCAL_EXP}
+    for n in SITES:
+        cities.setdefault(PLACES_EXP[n][0], _lon_lat(n))
+    lines = [[_lon_lat(n), _lon_lat(l)] for n in plan["sites"] for l in plan["sets"][n]]
+    figures.place_labels(ax, list(cities.items()), points, lines)
     plt.show()
 
 
-def covering(max_time: float = MAX_TRAVEL_TIME, exactly_one: bool = False) -> dict | None:
+def covering(max_time: float = MAX_TRAVEL_TIME, exactly_one: bool = False, show_tables: bool = False) -> dict | None:
     """The candidate set of each site for a maximum travel time, and the regional
-    warehouses of least cost with "at least one" (set covering) or "exactly one"."""
+    warehouses of least cost with "at least one" (set covering) or "exactly one";
+    then a map of them or, with ``show_tables``, the local warehouses within reach
+    of two or more of them."""
     plan = covering_plan(max_time=max_time, exactly_one=exactly_one)
     sets = reach(max_time=max_time)
     _display(pd.DataFrame({n: {"Fixed cost (thousand €/year)": SITE_COST[n],
@@ -489,11 +527,15 @@ def covering(max_time: float = MAX_TRAVEL_TIME, exactly_one: bool = False) -> di
           f"cost {_number(plan['cost'])} thousand €/year.")
     if not only_covering(max_time=max_time, exactly_one=exactly_one):
         print(SEVERAL)
+    if not show_tables:
+        _covering_figure(plan, max_time)
+        return plan
     twice = {place(l): "; ".join(sites) for l, sites in plan["reached by"].items() if len(sites) > 1}
     if twice:
-        print("Local warehouses within reach of two or more chosen sites:")
-        _display(pd.DataFrame({"Chosen sites": twice}).rename_axis("Local warehouse"))
-    _covering_figure(plan)
+        print("Local warehouses within reach of two or more regional warehouses:")
+        _display(pd.DataFrame({"Regional warehouses within reach": twice}).rename_axis("Local warehouse"))
+    else:
+        print("No local warehouse is within reach of two or more regional warehouses.")
     return plan
 
 
@@ -504,40 +546,43 @@ def _route_name(route: dict) -> str:
 
 
 def _route_table(routes: list[dict]) -> pd.DataFrame:
-    return pd.DataFrame({route["number"]: {"Retailers, in the order of visits": _route_name(route), "Load (bikes)": route["load"],
-                                           "Distance (km)": f"{route['km']:.1f}".replace(".", ","),
-                                           "Cost (€)": f"{route['cost']:.2f}".replace(".", ",")}
+    return pd.DataFrame({route["number"]: {"Retailers, in the order of visits": _route_name(route),
+                                           "Load (bikes)": route["load"], "Distance (km)": _number(route["km"], 1),
+                                           "Cost (€)": _number(route["cost"], 2)}
                          for route in routes}).T.rename_axis("Candidate route")
+
+
+ROUTE_WINDOW = (-1.3, 40.9, 3.2, 42.4)           # the region of local warehouse 2: west, south, east, north
 
 
 @_light
 def _routes_figure(plan: dict) -> None:
-    """The routes chosen, each in its colour, from local warehouse 2 to its retailers."""
-    fig, ax = plt.subplots(figsize=(7, 4.6))
+    """The routes of the plan, each in its colour, from local warehouse 2 to its
+    retailers."""
+    fig, ax = plt.subplots(figsize=(9, 4.6))
+    _map(ax, "Routes of the plan; in brackets, the weekly orders (bikes); straight lines, not the roads",
+         ROUTE_WINDOW)
     colours = plt.get_cmap("tab10")
+    lines = []
     for k, route in enumerate(plan["routes"]):
         stops = [ROUTE_WAREHOUSE, *route["stops"], ROUTE_WAREHOUSE]
-        xs, ys = zip(*(_lon_lat(node) for node in stops))
+        lines.append([_lon_lat(node) for node in stops])
+        xs, ys = zip(*lines[-1])
         ax.plot(xs, ys, color=colours(k), lw=1.8, label=f"Route {route['number']}", marker="o", ms=4)
-    for r in ROUTE_RETAILERS:
-        x, y = _lon_lat(r)
-        ax.annotate(f"{PLACES_EXP[r][0]} ({WEEKLY_ORDERS[r]})", (x, y), xytext=(5, 5), textcoords="offset points",
-                    fontsize=7)
     x, y = _lon_lat(ROUTE_WAREHOUSE)
-    ax.scatter(x, y, s=80, marker="s", color="black", zorder=3)
-    ax.legend(fontsize=7, loc="lower left")
-    ax.set_title("Routes chosen; in brackets, the weekly orders (bikes); straight lines, not the roads", fontsize=10)
-    ax.set_xlim(-1.3, 3.2)
-    ax.set_ylim(40.9, 42.4)
-    ax.set_aspect(1.25)
-    ax.axis("off")
+    ax.scatter(x, y, s=80, marker="s", color="black", zorder=3, label=f"{place(ROUTE_WAREHOUSE)}")
+    ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
+    fig.tight_layout()
+    labels = [(f"{PLACES_EXP[r][0]} ({WEEKLY_ORDERS[r]})", _lon_lat(r)) for r in ROUTE_RETAILERS]
+    figures.place_labels(ax, labels, [(*_lon_lat(r), 6) for r in ROUTE_RETAILERS] + [(x, y, 9)], lines)
     plt.show()
 
 
-def routes(truck: float = TRUCK_CAPACITY, full_list: bool = True) -> dict | None:
+def routes(truck: float = TRUCK_CAPACITY, full_list: bool = True, show_tables: bool = False) -> dict | None:
     """The candidate routes for a truck capacity, from the full list or from the short
     list, and the weekly routes of least cost with "exactly one" (set partitioning)
-    and with "at least one" (set covering)."""
+    and with "at least one" (set covering); then a map of the routes of the plan or,
+    with ``show_tables``, the table of those routes."""
     candidates = candidate_routes(truck=truck)
     if not full_list:
         candidates = short_list(candidates)
@@ -558,12 +603,14 @@ def routes(truck: float = TRUCK_CAPACITY, full_list: bool = True) -> dict | None
           f"{_number(plan['km'], 1)} km.")
     if not only_routes(candidates):
         print(SEVERAL)
-    _display(_route_table(plan["routes"]).rename_axis("Route chosen"))
     cover = route_plan(candidates, exactly_one=False)
     twice = [place(r) for r, n in cover["visits"].items() if n > 1]
     same = sorted(route["number"] for route in cover["routes"]) == sorted(route["number"] for route in plan["routes"])
     print(f"Set covering (each retailer on at least one route): {_number(cover['cost'], 2)} €/week; "
           + ("the same routes." if same else f"routes {', '.join(str(route['number']) for route in cover['routes'])}"
              + (f"; on two or more routes: {', '.join(twice)}." if twice else ".")))
-    _routes_figure(plan)
+    if show_tables:
+        _display(_route_table(plan["routes"]).rename_axis("Route of the plan"))
+    else:
+        _routes_figure(plan)
     return plan

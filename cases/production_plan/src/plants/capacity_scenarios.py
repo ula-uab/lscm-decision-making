@@ -31,7 +31,8 @@ from .data import (ARCS_M4, BACKORDER_SHARE, BASELINE_FORECAST, CENTRAL, F, K, K
                    c_u, h_node_0_m4, h_node_end_m4, o_max, u_max)
 from .distribution_network import entering, leaving
 from .model import TOL, _optimal
-from .show import COLOURS, SHORT, _display, _european_axes, _light, _number
+from . import figures
+from .show import _display, _european_axes, _light, _number
 
 PLANT_3 = "Plant 3"
 OPEN, CLOSED, VARIABLE = "open", "closed", "variable"     # plant 3: a datum, open or closed, or a binary variable
@@ -316,7 +317,7 @@ def _plant_tables(solution: dict) -> None:
         rows[f] = {t: solution["assembly"][f, t] for t in months}
         if o_max[f] > 0:
             rows[f"{f}, in overtime"] = {t: solution["overtime"][f, t] for t in months}
-    print("Bikes assembled (bikes/month); each row «in overtime» is part of the row of its plant")
+    print("Assembly (bikes/month); each row «in overtime» is part of the row of its plant")
     _display(pd.DataFrame(rows).T)
     stock = {}
     for name, row in solution["seasonal stock"].items():
@@ -351,51 +352,62 @@ def _lost_sales_table(solution: dict) -> None:
 
 
 @_light
-def _figure(solution: dict) -> None:
-    """Left: the capacity utilization of each plant in each month, with the share of
-    the capacity that the overtime adds above 100 %. Right: the lost sales of each
-    retailer in each month."""
+def _results_figure(solution: dict) -> None:
+    """Left: the stock at each stage of the network at the end of each month, with
+    the part in rented storage hatched. Right: for each month, the lost sales of
+    each retailer and, beside them, hatched, its backorders at the end of the month."""
     months = solution["months"]
-    capacity = K
-    fig, (left, right) = plt.subplots(1, 2, figsize=(12, 4.6))
-    width = 0.26
-    for k, f in enumerate(F):
-        values = [100 * solution["assembly"][f, t] / capacity[f][t] for t in months]
-        places = [i + (k - 1) * width for i in range(len(months))]
-        left.bar(places, values, width=width, color=COLOURS[f], label=f)
-    left.axhline(100, color=SHORT, lw=1, ls="--")
-    left.annotate("assembly capacity; above it, overtime", (len(months) - 0.5, 100), xytext=(0, 3), textcoords="offset points",
-                  fontsize=7, color=SHORT, ha="right")
-    left.set_xticks(range(len(months)), months)
-    left.set_ylabel("Capacity utilization (% of the assembly capacity)")
-    left.set_ylim(0, 125)
-    left.set_title("Capacity utilization of each plant in each month", fontsize=10)
-    left.legend(fontsize=7, loc="upper left")
-    left.spines[["top", "right"]].set_visible(False)
+    fig, (left, right) = plt.subplots(1, 2, figsize=(15, 4.6))
+    stock = {name: [row[t] for t in months] for name, row in solution["seasonal stock"].items() if name != "Total"}
+    figures.stage_stock(left, stock, months, rented=solution["rented"] if any(solution["rented"].values()) else None)
+    left.set_title("Stock at each stage of the network", fontsize=10)
 
-    bottom = [0.0] * len(months)
+    width = 0.38
     colours = plt.get_cmap("tab10")
-    for k, r in enumerate(RETAILERS):
-        values = [solution["lost sales"][r, t] for t in months]
-        right.bar(range(len(months)), values, bottom=bottom, color=colours(k), width=0.7,
-                  label=f"{r} ({PLACES_M4[r][0]})")
-        bottom = [b + v for b, v in zip(bottom, values)]
-    right.set_xticks(range(len(months)), months)
-    right.set_ylabel("Lost sales (bikes)")
-    right.set_ylim(0, max(10, max(bottom) * 1.25))
-    if max(bottom) <= TOL:
-        right.text(0.5, 0.5, "no lost sales", transform=right.transAxes, ha="center", va="center",
-                   fontsize=9, color=SHORT)
-    right.set_title("Lost sales of each retailer", fontsize=10)
-    right.legend(fontsize=7, loc="upper left")
-    right.spines[["top", "right"]].set_visible(False)
+    lost = {f"lost sales, {r} ({PLACES_M4[r][0]})": [solution["lost sales"][r, t] for t in months] for r in RETAILERS}
+    waiting = {f"backorders, {r} ({PLACES_M4[r][0]})": [solution["backorders"][r, t] for t in months]
+               for r in RETAILERS}
+    tops = [sum(v[i] for v in rows.values()) for rows in (lost, waiting) for i in range(len(months))]
+    top = max(max(tops) * 1.25, 10)
+    figures.stacked(right, months, lost, {name: colours(k) for k, name in enumerate(lost)}, top=top, width=width,
+                    x0=-width / 2)
+    figures.stacked(right, months, waiting, {name: colours(k) for k, name in enumerate(waiting)}, top=top,
+                    width=width, x0=width / 2, hatch={name: "///" for name in waiting})
+    if max(tops) <= TOL:
+        right.text(0.5, 0.5, "no lost sales and no backorders", transform=right.transAxes, ha="center", va="center",
+                   fontsize=9)
+    handles = [plt.Rectangle((0, 0), 1, 1, color=colours(k)) for k in range(len(RETAILERS))]
+    handles += [plt.Rectangle((0, 0), 1, 1, facecolor="0.6"), plt.Rectangle((0, 0), 1, 1, facecolor="0.6",
+                                                                            hatch="///", edgecolor="white")]
+    labels = [f"{r} ({PLACES_M4[r][0]})" for r in RETAILERS] + ["lost sales in the month",
+                                                                "backorders at the end of the month"]
+    right.legend(handles, labels, fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.09), ncol=3, frameon=False)
+    right.set_ylabel("Bikes")
+    right.set_title("Lost sales (left bar) and backorders (right bar, hatched) of each retailer", fontsize=10)
     _european_axes(fig)
+    fig.tight_layout()
     plt.show()
+
+
+def _figures(solution: dict, overtime: bool) -> None:
+    """The figures of the plan of a scenario: the orders and the price of each
+    month; the assembly of each plant against its capacity, with the part in
+    overtime; the stock at each stage; and the lost sales and the backorders."""
+    months, order = solution["months"], solution["orders"]
+    figures.orders_figure({f"{r} ({PLACES_M4[r][0]})": [order[r, t] for t in months] for r in RETAILERS},
+                          "Orders of each retailer and price of a bike in each month of the scenario",
+                          ylabel="Orders (bikes/month)", price=solution["price"])
+    figures.assembly_figure(solution["assembly"], K, months, F,
+                            "Assembly of each plant in each month: in regular time and, hatched, in overtime",
+                            overtime=solution["overtime"], overtime_limit=o_max if overtime else None,
+                            closed=[f for f in F if solution["open"][f] == 0])
+    _results_figure(solution)
 
 
 def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promotion_growth: float = 0.0,
          plant_3: str = OPEN, overtime: bool = False, overtime_cost: float = c_o,
-         rented_storage: bool = False, rented_cost: float = c_u, fixed_cost: float = 0.0) -> dict | None:
+         rented_storage: bool = False, rented_cost: float = c_u, fixed_cost: float = 0.0,
+         show_tables: bool = False) -> dict | None:
     """The plan of a scenario, with the values of the form of the notebook. The
     percentages are given as percentages, not as shares: ``growth`` is the demand
     growth of every month, and ``promotion_months``, ``discount`` and
@@ -406,8 +418,9 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
     (EUR/month).
 
     Shows the cost and the margin of the plan, the margin under the baseline forecast
-    with the same options, the capacity utilization of each plant, the bikes
-    assembled, the seasonal stock, the lost sales and the figure."""
+    with the same options and the capacity utilization of each plant; then the
+    price and the orders, the assembly, the seasonal stock and the lost sales in
+    figures or, with ``show_tables``, in tables."""
     options = _options(plant_3, overtime, overtime_cost, rented_storage, rented_cost, fixed_cost)
     data = {**_scenario(growth, promotion_months, discount, promotion_growth), **options}
     solution = solve(**data)
@@ -429,12 +442,15 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
     print(f"Margin under the baseline forecast (demand growth 0, no promotion), with the same setting of plant 3{again}, "
           f"the same fixed cost and the same capacity options, to compare with the margin of the scenario: "
           f"{_number(base['margin'], 2)} €.")
-    print(SEVERAL if not only_plan(**data) else "No other plan has the same optimal cost: the tables below are those of the only optimal plan.")
+    print(SEVERAL if not only_plan(**data) else "No other plan has the same optimal cost: the cell shows the only optimal "
+          "plan.")
     print("Capacity utilization in the six months (bikes assembled, overtime included, as a share of the assembly "
           "capacity of the six months): "
           + "; ".join(f"{f} {_number(100 * solution['capacity utilization'][f], 1)} %" for f in F) + ".")
-    _price_and_orders(solution)
-    _plant_tables(solution)
-    _lost_sales_table(solution)
-    _figure(solution)
+    if show_tables:
+        _price_and_orders(solution)
+        _plant_tables(solution)
+        _lost_sales_table(solution)
+    else:
+        _figures(solution, overtime)
     return solution

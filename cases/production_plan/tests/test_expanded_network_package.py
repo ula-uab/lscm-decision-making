@@ -2,6 +2,7 @@
 expanded_network.md, and that the notebook of the expanded network runs from
 start to end."""
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -172,5 +173,17 @@ def test_notebook_runs():
     nbformat = pytest.importorskip("nbformat")
     nbclient = pytest.importorskip("nbclient")
     nb = nbformat.read(NOTEBOOK, as_version=4)
+    nbclient.NotebookClient(nb, timeout=300, kernel_name="python3",
+                            resources={"metadata": {"path": str(NOTEBOOK.parent)}}).execute()
+
+
+def test_notebook_runs_with_the_tables():
+    # Every cell with the box show_tables, run with it ticked
+    nbformat = pytest.importorskip("nbformat")
+    nbclient = pytest.importorskip("nbclient")
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    for cell in nb.cells:
+        if cell.cell_type == "code":
+            cell.source = re.sub(r"^show_tables = \w+", "show_tables = True", cell.source, flags=re.MULTILINE)
     nbclient.NotebookClient(nb, timeout=300, kernel_name="python3",
                             resources={"metadata": {"path": str(NOTEBOOK.parent)}}).execute()
