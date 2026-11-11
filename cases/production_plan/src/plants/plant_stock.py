@@ -13,7 +13,9 @@ Steps 2 and 3 show figures or, with ``show_tables``, the same data in tables.
 
 A capacity is given as capacity[f][t] (bikes/month), a demand as demand[t]
 (bikes/month), and holding costs and stocks as dicts by plant. ``final=None``
-solves the model without the required final stock.
+solves the model without the required final stock. ``storage``, a dict by plant
+(bikes), adds a storage capacity at each plant: "M1 with the storage capacities
+of the plants", which central_warehouse.md (§6.3) compares with M1 and M2.
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ def _name(f: str, t: str) -> str:
 
 
 def build(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = h_0,
-          final: dict | None = h_end, capacity: dict = K, plants=F):
+          final: dict | None = h_end, capacity: dict = K, plants=F, storage: dict | None = None):
     """The model of M1, not solved. Returns the model, its variables p, x and h
     (dicts by (f, t)) and the cost expression."""
     model = pulp.LpProblem("plant_stock", pulp.LpMinimize)
@@ -58,6 +60,8 @@ def build(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = 
             # what it assembles: the stock of the previous month
             model += (x[f, t] <= before + p[f, t], f"shipment_limit_{_name(f, t)}")
             model += (p[f, t] <= capacity[f][t], f"capacity_{_name(f, t)}")
+            if storage is not None:
+                model += (h[f, t] <= storage[f], f"storage_{_name(f, t)}")
         if final is not None:
             model += (h[f, months[-1]] >= final[f], f"final_stock_{f.replace(' ', '')}")
     # The plants together ship at least the demand of each month
@@ -67,11 +71,11 @@ def build(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = 
 
 
 def solve(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = h_0,
-          final: dict | None = h_end, capacity: dict = K, plants=F) -> dict | None:
+          final: dict | None = h_end, capacity: dict = K, plants=F, storage: dict | None = None) -> dict | None:
     """Solve M1. Returns the cost (EUR), the bikes assembled, shipped and in stock
     of each plant and month (bikes), and the shadow price of the demand of each
     month (EUR/bike); or None if the model has no solution."""
-    model, p, x, h, _ = build(demand, months, holding, initial, final, capacity, plants)
+    model, p, x, h, _ = build(demand, months, holding, initial, final, capacity, plants, storage)
     if not _optimal(model.solve(pulp.HiGHS(msg=False))):
         return None
     cons = _constraints(model)
@@ -87,11 +91,12 @@ def solve(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = 
 
 
 def only_plan(demand: dict = DEMAND, months=T, holding: dict = c_h, initial: dict = h_0,
-              final: dict | None = h_end, capacity: dict = K, plants=F) -> bool | None:
+              final: dict | None = h_end, capacity: dict = K, plants=F,
+              storage: dict | None = None) -> bool | None:
     """True if the optimal plan of M1 is the only one: with the cost fixed at its
     optimum, every variable has the same minimum and maximum. False if several
     plans have the optimal cost; None if the model has no solution."""
-    model, p, x, h, cost = build(demand, months, holding, initial, final, capacity, plants)
+    model, p, x, h, cost = build(demand, months, holding, initial, final, capacity, plants, storage)
     if not _optimal(model.solve(pulp.HiGHS(msg=False))):
         return None
     model += (cost <= pulp.value(model.objective) + 1e-6, "optimal_cost")

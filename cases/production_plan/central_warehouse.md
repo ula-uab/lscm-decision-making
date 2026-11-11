@@ -182,9 +182,27 @@ The backorder cost test uses forecast 2 of M0 and M1, with its peak in April and
 
 With a storage capacity of 50 bikes at the warehouse, 160 orders of February are backordered; with 150 bikes, 60. From 160 bikes up, the warehouse holds 160 bikes at the end of January and 50 orders of February are backordered: the unmet demand that the plants cannot supply in any way (Table 3).
 
+### 6.3 Validation of M1 against the storage capacities (forecast 2)
+
+M1, in [`plant_stock.md`](plant_stock.md), is solved with forecast 2 and has no storage capacity at the plants. Table 8 compares its plan with two other plans under forecast 2: M1 with the storage capacities of the plants of Table 1, without the warehouse and without backorders; and M2, the plan of the backorder cost test of §6.2 with 60 €/(bike·month). Each of the three is the only optimal plan of its model.
+
+Table 8. M1, M1 with the storage capacities of the plants and M2 under forecast 2
+
+| | M1 | M1 with the storage capacities of the plants | M2 |
+|---|---|---|---|
+| Stock at the end of March, plant 1 (bikes) | 250 | 40 | 40 |
+| Stock at the end of March, plant 2 (bikes) | 0 | 30 | 30 |
+| Stock at the end of March, plant 3 (bikes) | 0 | 0 | 0 |
+| Stock at the end of March, warehouse (bikes) | — | — | 150 |
+| Assembled at plant 3 in April (bikes) | 0 | 150 | 0 |
+| Assembled at plant 3 in May (bikes) | 120 | 150 | 150 |
+| Cost of the plan (€) | 858.460 | 865.040 | 860.260 |
+
+The plan of M1 holds 250 bikes at plant 1 at the end of March, and plant 1 can hold 40. With the storage capacities of the plants, M1 still has a plan: plants 1 and 2 hold the stock that fits, 40 and 30 bikes, plant 3 assembles at its capacity in April and May, and the plan costs 6.580 € more. M2 holds at the warehouse 150 bikes that do not fit at the plants, plant 3 assembles only in May, and the plan costs 1.800 € more than M1 and 4.780 € less than M1 with the storage capacities of the plants.
+
 ## 7. Script and notebook
 
-The Python script `central_warehouse_solver.py`, in this folder, prints every table of this document and checks that M1 has no solution with forecast 3. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
+The Python script `central_warehouse_solver.py`, in this folder, prints every table of this document and checks that M1 has no solution with forecast 3. For Table 8 it also solves M1 and M1 with the storage capacities of the plants under forecast 2. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
 The notebook [`notebooks/central_warehouse.ipynb`](notebooks/central_warehouse.ipynb) solves the plan of §6.1 and the four tests of §6.2. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/central_warehouse.ipynb). Its code is in the package `plants` of this folder (`src/plants/central_warehouse.py`), which reads the data of M0, M1 and M2 from `src/plants/data.py`.
 

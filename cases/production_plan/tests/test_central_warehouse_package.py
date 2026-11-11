@@ -11,7 +11,7 @@ matplotlib.use("Agg")
 
 from plants import central_warehouse as cw  # noqa: E402
 from plants import plant_stock as ps  # noqa: E402
-from plants.data import F, FORECAST_3, FORECASTS, T  # noqa: E402
+from plants.data import F, FORECAST_3, FORECASTS, K_h, T  # noqa: E402
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "central_warehouse.ipynb"
 
@@ -98,6 +98,26 @@ def test_storage_capacity_of_the_plants():
     assert more["warehouse stock"]["Jan"] < base["warehouse stock"]["Jan"]
     assert less["owed"]["Feb"] > base["owed"]["Feb"]
 
+
+
+def test_table8_m1_against_the_storage_capacities_with_forecast_2():
+    # M1, M1 with the storage capacities of the plants and M2, under forecast 2
+    demand = FORECASTS["Forecast 2"]
+    plans = {"M1": ps.solve(demand=demand), "M1 with storage": ps.solve(demand=demand, storage=K_h),
+             "M2": cw.solve(demand=demand)}
+    assert {name: [plan["stock"][f, "Mar"] for f in F] for name, plan in plans.items()} == {
+        "M1": [250, 0, 0], "M1 with storage": [40, 30, 0], "M2": [40, 30, 0]}
+    assert plans["M2"]["warehouse stock"]["Mar"] == 150
+    assert {name: [plan["assembly"]["Plant 3", t] for t in ("Apr", "May")] for name, plan in plans.items()} == {
+        "M1": [0, 120], "M1 with storage": [150, 150], "M2": [0, 150]}
+    assert [plan["cost"] for plan in plans.values()] == pytest.approx([858460, 865040, 860260])
+
+
+def test_table8_plans_are_the_only_optimal_plans():
+    demand = FORECASTS["Forecast 2"]
+    assert ps.only_plan(demand=demand) is True
+    assert ps.only_plan(demand=demand, storage=K_h) is True
+    assert cw.only_plan(demand=demand) is True
 
 def test_notebook_runs():
     nbformat = pytest.importorskip("nbformat")

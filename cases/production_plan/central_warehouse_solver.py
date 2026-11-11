@@ -3,9 +3,9 @@
 # This script reproduces every table of central_warehouse.md (same folder): the
 # data of the plants, the warehouse and forecast 3 (Tables 1 to 3); that M1,
 # with stock at the plants only, has no solution with forecast 3; the plan of
-# M2 with forecast 3 (Table 5); and the shadow prices of the backorder balance
-# and of the
-# storage capacities (Tables 6 and 7).
+# M2 with forecast 3 (Table 5); the shadow prices of the backorder balance
+# and of the storage capacities (Tables 6 and 7); and the plans of M1, M1 with
+# the storage capacities of the plants and M2 under forecast 2 (Table 8).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -62,17 +62,24 @@ c_b, b_0, b_max = 60, 0, 0
 # Forecast 3: the orders that the warehouse receives (bikes/month)
 d = dict(zip(T, [380, 900, 420, 440, 430, 230]))
 
+# Forecast 2 of M0 and M1, with its peak in April and May (Table 8)
+d_2 = dict(zip(T, [380, 330, 420, 650, 620, 230]))
+
 
 # ---------------------------------------------------------------------------
 # §4 The model, written with PuLP and solved with HiGHS
 # ---------------------------------------------------------------------------
 
-def solve_model(m1=False):
-    """Solve M2 with forecast 3. Returns (cost, values of each kind of variable,
-    shadow prices of the backorder balance, of the storage at the plants and of the storage
-    at the warehouse), or None if it has no solution. With m1=True, the model
-    of M1 written with the variables of M2: no warehouse (it cannot hold stock),
-    no backorders and no storage capacity at the plants."""
+def solve_model(m1=False, plant_storage=None, demand=d):
+    """Solve M2 with a demand, forecast 3 by default. Returns (cost, values of
+    each kind of variable, shadow prices of the backorder balance, of the storage
+    at the plants and of the storage at the warehouse), or None if it has no
+    solution. With m1=True, the model of M1 written with the variables of M2: no
+    warehouse (it cannot hold stock), no backorders and no storage capacity at
+    the plants; with m1=True and plant_storage=True, M1 with the storage
+    capacities of the plants."""
+    if plant_storage is None:
+        plant_storage = not m1
     model = pulp.LpProblem("central_warehouse", pulp.LpMinimize)
 
     def name(f, t):
@@ -104,7 +111,7 @@ def solve_model(m1=False):
             model += (x[f, t] <= before + p[f, t], f"shipment_limit_{name(f, t)}")
             # Assembly capacity and storage capacity of the plant
             model += (p[f, t] <= K[f][t], f"capacity_{name(f, t)}")
-            if not m1:
+            if plant_storage:
                 model += (h[f, t] <= K_h[f], f"storage_{name(f, t)}")
         # Final stock at the plant
         model += (h[f, T[-1]] >= h_end[f], f"final_stock_{f.replace(' ', '')}")
@@ -120,7 +127,7 @@ def solve_model(m1=False):
         model += (s[t] <= stock_before + arriving, f"shipment_limit_warehouse_{t}")
         # Backorder balance, written with the demand on the right so that
         # its shadow price is what one more order costs
-        model += (s[t] + b[t] - owed_before == d[t], f"orders_{t}")
+        model += (s[t] + b[t] - owed_before == demand[t], f"orders_{t}")
         # Storage capacity of the warehouse (none in M1)
         model += (h_w[t] <= (0 if m1 else K_h_w), f"warehouse_storage_{t}")
         if m1:
@@ -242,3 +249,22 @@ if __name__ == "__main__":
     for f in F:
         by_month(f"Storage capacity, {f.lower()}", [storage_price[f, t] for t in T])
     by_month("Storage capacity, warehouse", [warehouse_price[t] for t in T])
+
+    # §6.3 Validation of M1 against the storage capacities, forecast 2
+    title("§6.3 Validation of M1 against the storage capacities (forecast 2)")
+    print("Table 8. M1, M1 with the storage capacities of the plants and M2 under forecast 2")
+    plans = {"M1": solve_model(m1=True, demand=d_2),
+             "M1 + storage of plants": solve_model(m1=True, plant_storage=True, demand=d_2),
+             "M2": solve_model(demand=d_2)}
+    print(f"{'':<44}" + "".join(f"{name:>24}" for name in plans))
+
+    def row(label, values):
+        print(f"{label:<44}" + "".join(f"{value:>24}" for value in values))
+
+    for f in F:
+        row(f"Stock at the end of March, {f.lower()}", [eu(v[1]["h"][f, "Mar"], 0) for v in plans.values()])
+    row("Stock at the end of March, warehouse",
+        ["—" if name.startswith("M1") else eu(v[1]["h_w"]["Mar"], 0) for name, v in plans.items()])
+    for t, month in (("Apr", "April"), ("May", "May")):
+        row(f"Assembled at plant 3 in {month}", [eu(v[1]["p"]["Plant 3", t], 0) for v in plans.values()])
+    row("Cost of the plan (EUR)", [eu(v[0], 0) for v in plans.values()])
