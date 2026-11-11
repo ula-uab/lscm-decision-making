@@ -149,13 +149,15 @@ def test_plans_without_a_constraint():
 
 
 def test_question_of_the_notebook_on_the_assignment():
-    # Girona at 2.700 and Tarragona at 12.000: the model has a solution, alone or together
-    girona, tarragona = {"Local warehouse 1": 2700}, {"Local warehouse 2": 12000}
-    for change in (girona, tarragona, {**girona, **tarragona}):
-        assert en.assignment_plan(capacity={**NODE_CAPACITY_YEAR, **change}) is not None
-    # With Tarragona at 12.000 alone the rule finds no valid plan
-    assert en.rule_plan(capacity={**NODE_CAPACITY_YEAR, **girona}) is not None
-    assert en.rule_plan(capacity={**NODE_CAPACITY_YEAR, **tarragona}) is None
+    # Step 1, Girona at 2.700: the rule finds a valid plan, and so does the model
+    girona = {**NODE_CAPACITY_YEAR, "Local warehouse 1": 2700}
+    assert en.rule_plan(capacity=girona)["cost"] == pytest.approx(79111.10)
+    assert en.assignment_plan(capacity=girona)["cost"] == pytest.approx(64289.60)
+    # Step 2, Girona back to 2.500 and Tarragona at 12.000: the rule finds no valid plan, the model does
+    tarragona = {**NODE_CAPACITY_YEAR, "Local warehouse 2": 12000}
+    assert NODE_CAPACITY_YEAR["Local warehouse 1"] == 2500
+    assert en.rule_plan(capacity=tarragona) is None
+    assert en.assignment_plan(capacity=tarragona)["cost"] == pytest.approx(66147.50)
 
 
 def test_script_agrees_with_the_package():
