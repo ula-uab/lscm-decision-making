@@ -74,7 +74,7 @@ def place(node: str) -> str:
 
 def _only_selection(model, chosen: list, others: list, cost: float) -> bool:
     """True if no other selection of the binary variables has the optimal cost: the
-    model, with the chosen selection excluded, has no solution or a dearer one.
+    model, with the chosen selection excluded, has no solution or a more expensive one.
     The model is changed."""
     model += (pulp.lpSum(chosen) - pulp.lpSum(others) <= len(chosen) - 1, "exclude_the_optimum")
     if not _optimal(model.solve(_solver())):

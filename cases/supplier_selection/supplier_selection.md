@@ -67,7 +67,7 @@ $$
 10 \times \frac{p_{\max} - p_s}{p_{\max} - p_{\min}}
 $$
 
-where $p_s$ is the price of $s$ for the batteries and $p_{\max}$ and $p_{\min}$ are the highest and the lowest of the prices compared, 148 and 130 €/unit. The cheapest supplier gets 10 points and the dearest 0. The score with the price is $0.6\, q_s + 0.4 \times \text{price score}$, and Table 4 gives the four suppliers in the order of this score.
+where $p_s$ is the price of $s$ for the batteries and $p_{\max}$ and $p_{\min}$ are the highest and the lowest of the prices compared, 148 and 130 €/unit. The cheapest supplier gets 10 points and the most expensive 0. The score with the price is $0.6\, q_s + 0.4 \times \text{price score}$, and Table 4 gives the four suppliers in the order of this score.
 
 Table 4. Decision matrix for the batteries, with the price weighing 40 % (points, 0–10)
 
@@ -241,7 +241,7 @@ Table 8. Local search from the selection of the buyer's rule
 | 0 | start | A, B, C, D | 2,630 |
 | 1 | remove A | B, C, D | 2,585 |
 
-Removing A moves the brakes to D, 5 k€/year dearer, and saves the 50 k€/year of fixed cost of A. From B, C, D no move lowers the cost. Its cheapest neighbours, reached by swapping B for A, B for E or D for E, cost 2,590 k€/year, and removing B, C or D would leave the motors, the frames or the brakes without a supplier. B, C, D is a local optimum, 40 k€/year above the optimum of the model.
+Removing A moves the brakes to D, which costs 5 k€/year more, and saves the 50 k€/year of fixed cost of A. From B, C, D no move lowers the cost. Its cheapest neighbours, reached by swapping B for A, B for E or D for E, cost 2,590 k€/year, and removing B, C or D would leave the motors, the frames or the brakes without a supplier. B, C, D is a local optimum, 40 k€/year above the optimum of the model.
 
 The optimum of the model is two moves away from B, C, D: swapping D for E gives B, C, E (2,590 k€/year), and removing B then gives C, E (2,545 k€/year). The first move raises the cost, and a search that only makes moves that lower the cost never makes it.
 
@@ -350,7 +350,7 @@ Table 12. Branches of the decision tree
 | Buyer's rule | C | C keeps delivering | 0.90 | 2,630 |
 | Buyer's rule | C | C stops: 3 components moved | 0.10 | 2,630 + 3 × 100 = 2,930 |
 
-Table 13 gives, for each strategy, the planned cost (a year in which every supplier delivers), the expected cost and the worst case (the cost of its dearest branch).
+Table 13 gives, for each strategy, the planned cost (a year in which every supplier delivers), the expected cost and the worst case (the cost of its most expensive branch).
 
 Table 13. Planned cost, expected cost and worst case of each strategy (k€/year)
 

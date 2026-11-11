@@ -49,7 +49,7 @@ The objective is the assembly cost of the plan, in euros: the bikes assembled in
 
 - **Demand of each month.** The plants together assemble at least the demand of each month. Without this constraint, assembling nothing would cost 0 and would be the optimum.
 - **Capacity.** No plant assembles more than its capacity in any month. Without this constraint, the whole demand would be assembled in plant 1, the cheapest.
-- **Non-negativity.** A plant cannot assemble a negative number of bikes. Without this constraint, the model could assemble a negative quantity in a dear plant, a meaningless saving, and the demand of each month would be met with more bikes than needed in the cheaper plants.
+- **Non-negativity.** A plant cannot assemble a negative number of bikes. Without this constraint, the model could assemble a negative quantity in a high-cost plant, a meaningless saving, and the demand of each month would be met with more bikes than needed in the cheaper plants.
 
 **Assumptions.**
 

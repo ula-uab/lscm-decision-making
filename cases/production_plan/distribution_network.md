@@ -220,7 +220,7 @@ Plants 1 and 2 assemble at their capacity every month, and plant 3 from March. T
 
 Regional warehouse 2, in Getafe, supplies Seville and part of the orders of Valencia. Of its three routes, the rail route through the rail terminal is the cheapest, 2,30 €/bike from the central warehouse, and it carries 200 bikes a month from February, the arc capacity of arc 7, from the rail terminal to Getafe. The train itself has an arc capacity of 400 bikes and is never full: the rail terminal holds no stock, so the train carries only what arc 7 carries.
 
-From March to June, plant 3 ships 60 bikes a month directly to Getafe, the arc capacity of arc 4. In May the node capacity of regional warehouse 2, 280 bikes, is full: 200 bikes by rail, 60 from plant 3 and 20 by road from the central warehouse, the dearest route. Valencia, local warehouse 3, receives from the two regional warehouses. When regional warehouse 2 cannot send more, regional warehouse 1 supplies Valencia: all its 252 orders in May.
+From March to June, plant 3 ships 60 bikes a month directly to Getafe, the arc capacity of arc 4. In May the node capacity of regional warehouse 2, 280 bikes, is full: 200 bikes by rail, 60 from plant 3 and 20 by road from the central warehouse, the highest-cost route. Valencia, local warehouse 3, receives from the two regional warehouses. When regional warehouse 2 cannot send more, regional warehouse 1 supplies Valencia: all its 252 orders in May.
 
 ### 6.3 Shadow prices of the full capacities
 
