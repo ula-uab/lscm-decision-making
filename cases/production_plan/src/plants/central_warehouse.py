@@ -35,6 +35,7 @@ FORECAST = "Forecast 3"                   # M2 is solved with forecast 3
 DEMAND = FORECAST_3
 WAREHOUSE = "Warehouse"
 WAREHOUSE_COLOUR = "tab:gray"
+DELIVERIES = "tab:green"                  # red is kept for the backorders
 SEVERAL = ("With these data the model has several optimal plans with the same cost; "
            "the cell shows one of them.")
 
@@ -216,7 +217,7 @@ def _figure(solution: dict, demand: dict, capacity: dict = K) -> None:
     figures.step(left, months, [sum(capacity[f][t] for f in F) for t in months], color="black", lw=1, ls="--",
                  label="capacity of the three plants")
     left.plot(x, [demand[t] for t in months], color="black", marker="o", lw=1.2, label="orders")
-    left.plot(x, [solution["served"][t] for t in months], color=SHORT, marker="s", ls=":", label="deliveries")
+    left.plot(x, [solution["served"][t] for t in months], color=DELIVERIES, marker="s", ls=":", label="deliveries")
     left.set_ylabel("Bikes per month")
     left.set_title("Assembly of each plant, orders and deliveries", fontsize=10)
 

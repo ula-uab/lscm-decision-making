@@ -661,6 +661,15 @@ def run(plant: str, name: str, check: bool = False) -> dict | None:
 # What the notebook shows
 # ---------------------------------------------------------------------------
 
+# The colour of each bike model in the figures, by its position in MODELS. Red is
+# kept for the capacity overload
+MODEL_COLOURS = ["tab:blue", "tab:orange", "tab:green", "tab:brown"]
+
+
+def _model_colour(k: int) -> str:
+    return MODEL_COLOURS[k]
+
+
 def fixed(x, decimals: int = 2) -> str:
     """A number in European format, rounded half up from its exact value."""
     return _number(float(half_up(x, decimals)), decimals)
@@ -738,7 +747,7 @@ def _orders_figure(weekly: dict) -> None:
     stacked by model."""
     top = max(sum(weekly[r, j, w] for j in MODELS) for r in RETAILERS for w in WEEKS)
     fig, axes = plt.subplots(3, 2, figsize=(12, 8), sharex=True)
-    colours = plt.get_cmap("tab10")
+    colours = _model_colour
     for ax, r in zip(axes.flat, RETAILERS):
         bottom = [0] * len(WEEKS)
         for k, j in enumerate(MODELS):
@@ -795,7 +804,7 @@ def _master_plan_figure(master: dict, least: dict) -> None:
     month, stacked by model: the least stock of each model."""
     fig, axes = plt.subplots(2, len(PLANTS), figsize=(15, 6.6), sharex=True, gridspec_kw={"height_ratios": [1.5, 1]})
     x = range(len(T))
-    colours = plt.get_cmap("tab10")
+    colours = _model_colour
     top = max(K[f][t] for f in PLANTS for t in T) * 1.3
     stock_top = max(float(master["stock"][f, t]) for f in PLANTS for t in T) * 1.2
     for k, f in enumerate(PLANTS):
@@ -870,7 +879,8 @@ def _network_figure() -> None:
                     {a: figures.arc_text(arc) for a, arc in enumerate(ARCS_M4)},
                     "Data of M4. Plants: unit assembly cost · capacity; holding cost · storage capacity. Warehouses: "
                     "holding cost · storage capacity.\nArcs: transport cost (€/bike) · arc capacity (bikes/month); "
-                    f"the arcs to the retailers have an arc capacity of {_number(ARCS_M4[-1]['capacity'])} bikes/month.")
+                    "the arcs to the retailers have an arc capacity of "
+                    f"{_number(ARCS_M4[-1]['capacity'])} bikes/month.", text_colour=figures.INK)
 
 
 def mix_table(mix: dict, split: dict, master: dict) -> pd.DataFrame:
@@ -947,7 +957,7 @@ def _mix_figure(mix: dict, split: dict, master: dict) -> None:
     seasonal stock at the end of each month, with the stock of the network above
     each bar."""
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.4), sharey=True)
-    colours = plt.get_cmap("tab10")
+    colours = _model_colour
     titles = ("Product mix of the shipments of each month",
               "Split of the seasonal stock at the end of each month\n(above each bar: stock of the network, "
               "plants and warehouses)")
@@ -981,7 +991,7 @@ def _shipments_figure(plant: str, shipments: dict, least: dict) -> None:
     least stock at the end of each month, stacked by model, in the week in which it
     is required."""
     fig, (above, below) = plt.subplots(2, 1, figsize=(13, 6.2), sharex=True, gridspec_kw={"height_ratios": [1.6, 1]})
-    colours = plt.get_cmap("tab10")
+    colours = _model_colour
     bottom = [0] * len(WEEKS)
     for k, j in enumerate(MODELS):
         values = [shipments[plant, j, w] for w in WEEKS]
@@ -1068,7 +1078,7 @@ def _lots_figure(plant: str, plan: dict) -> None:
     the stock at the end of each week stacked by model, with the storage capacity
     and the least stock at the end of each month."""
     fig, (above, below) = plt.subplots(2, 1, figsize=(13, 6.6), sharex=True)
-    colours = plt.get_cmap("tab10")
+    colours = _model_colour
     for ax, key in ((above, "assembled"), (below, "stock")):
         bottom = [0] * len(WEEKS)
         for k, j in enumerate(MODELS):
@@ -1251,7 +1261,7 @@ def _limit_figure(plant: str, case: dict) -> None:
     the expected plan (black marks) in a limit case of step 7."""
     model, expected = case["model"], case["expected"]
     fig, axes = plt.subplots(len(MODELS), 1, figsize=(13, 8.4), sharex=True)
-    colours = plt.get_cmap("tab10")
+    colours = _model_colour
     for k, (ax, j) in enumerate(zip(axes, MODELS)):
         lots = [model["weeks"][w]["assembled"][j] for w in WEEKS]
         known = [expected["weeks"][w]["assembled"][j] for w in WEEKS]

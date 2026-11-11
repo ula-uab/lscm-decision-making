@@ -35,6 +35,10 @@ from .show import _display, _european_axes, _light, _number
 FORECAST = "Forecast 5"                   # M4 is solved with forecast 5
 DEMAND = FORECAST_5
 FIRST_RETAILER_ARC = len(ARCS_M4) - 12    # arcs 14 to 25 of the list go to the retailers
+# The colour of each retailer in the figures with one series per retailer. Red is
+# kept for a full arc capacity: Murcia is pink, as in the figure of its orders
+RETAILER_COLOURS = dict(zip(RETAILERS, ["tab:blue", "tab:orange", "tab:green", "tab:pink", "tab:purple",
+                                        "tab:brown"]))
 
 def _key(node: str) -> str:
     return node.replace(" ", "")
@@ -262,10 +266,9 @@ def _network_text(solution: dict, month: str) -> dict:
 def _lost_sales(ax, solution: dict) -> None:
     """The lost sales of each retailer in each month, stacked."""
     months = solution["months"]
-    colours = plt.get_cmap("tab10")
     rows = {_name(r): [solution["lost sales"][r, t] for t in months] for r in RETAILERS}
     total = max(sum(v[i] for v in rows.values()) for i in range(len(months)))
-    figures.stacked(ax, months, rows, {name: colours(k) for k, name in enumerate(rows)}, top=max(total * 1.25, 10))
+    figures.stacked(ax, months, rows, {_name(r): RETAILER_COLOURS[r] for r in RETAILERS}, top=max(total * 1.25, 10))
     if total <= TOL:
         ax.text(0.5, 0.5, "no lost sales", transform=ax.transAxes, ha="center", va="center", fontsize=9)
     ax.set_ylabel("Lost sales (bikes)")

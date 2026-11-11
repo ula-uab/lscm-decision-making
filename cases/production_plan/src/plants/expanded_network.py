@@ -45,6 +45,7 @@ from . import figures
 from .show import SHORT, _display, _light, _number
 
 SHORT_LIST_STOPS = 2           # the short list: the routes of one and of two retailers
+TWICE = "#E6A800"              # a local warehouse within reach of two or more regional warehouses
 
 
 def _solver():
@@ -470,7 +471,7 @@ def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None, 
 def _covering_figure(plan: dict, max_time: float) -> None:
     """The candidate sites, the chosen ones filled, joined to the local warehouses
     within their reach; a local warehouse within reach of two or more chosen sites
-    in red."""
+    in dark yellow."""
     fig, ax = plt.subplots(figsize=(9.5, 7.2))
     _map(ax, "Regional warehouses and the local warehouses within their reach")
     hours = f"{_number(max_time)} h"
@@ -488,7 +489,7 @@ def _covering_figure(plan: dict, max_time: float) -> None:
             ax.plot([x0, x1], [y0, y1], color="tab:green", lw=1, zorder=1)
     points = []
     for l in LOCAL_EXP:
-        ax.scatter(*square(l), s=55, marker="s", color=SHORT if len(plan["reached by"][l]) > 1 else "black",
+        ax.scatter(*square(l), s=55, marker="s", color=TWICE if len(plan["reached by"][l]) > 1 else "black",
                    zorder=3)
         points.append((*square(l), 9))
     for n in SITES:
@@ -501,7 +502,7 @@ def _covering_figure(plan: dict, max_time: float) -> None:
                label="Candidate site for a regional warehouse, not chosen")
     ax.scatter([], [], s=40, marker="s", color="black",
                label=f"Local warehouse within {hours} of one regional warehouse")
-    ax.scatter([], [], s=40, marker="s", color=SHORT,
+    ax.scatter([], [], s=40, marker="s", color=TWICE,
                label=f"Local warehouse within {hours} of two or more regional warehouses")
     ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
     fig.tight_layout()
