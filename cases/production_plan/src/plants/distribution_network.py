@@ -308,14 +308,15 @@ def _route_figure(solution: dict) -> None:
     arc_list, months = solution["arcs"], solution["months"]
     routes = _routes(solution)
     fig, ax = plt.subplots(figsize=(11, 4.8))
-    colours = plt.get_cmap("tab10")
+    # one colour for each route, none red: red marks a full arc capacity
+    colours = ["tab:blue", "tab:orange", "tab:green", "tab:brown", "tab:purple"]
     width = 0.8 / len(routes)
     top = max(max(solution["flow"][a, t] for a in routes for t in months), 1) * 1.2
     for k, a in enumerate(routes):
         x = [i + (k - (len(routes) - 1) / 2) * width for i in range(len(months))]
         values = [solution["flow"][a, t] for t in months]
         arc = arc_list[a]
-        ax.bar(x, values, width * 0.92, color=colours(k),
+        ax.bar(x, values, width * 0.92, color=colours[k],
                label=f"arc {a + 1}: {arc_name(arc)} (arc capacity {_number(arc['capacity'])})")
         for xi, v in zip(x, values):
             ax.text(xi, v + top * 0.01, _number(v), ha="center", va="bottom", fontsize=6.5)

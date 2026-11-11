@@ -46,6 +46,9 @@ from .show import SHORT, _display, _light, _number
 
 SHORT_LIST_STOPS = 2           # the short list: the routes of one and of two retailers
 TWICE = "#E6A800"              # a local warehouse within reach of two or more regional warehouses
+# The colours of the routes of a plan, one for each retailer at most: none is red,
+# nor a colour with another meaning in the notebook
+ROUTE_COLOURS = ["tab:orange", "tab:purple", "tab:brown", "tab:pink", "tab:olive", "#1B2A7A"]
 
 
 def _solver():
@@ -570,13 +573,12 @@ def _routes_figure(plan: dict) -> None:
     fig, ax = plt.subplots(figsize=(9, 4.6))
     _map(ax, "Routes of the plan; in brackets, the weekly orders (bikes); straight lines, not the roads",
          ROUTE_WINDOW)
-    colours = plt.get_cmap("tab10")
     lines = []
     for k, route in enumerate(plan["routes"]):
         stops = [ROUTE_WAREHOUSE, *route["stops"], ROUTE_WAREHOUSE]
         lines.append([_lon_lat(node) for node in stops])
         xs, ys = zip(*lines[-1])
-        ax.plot(xs, ys, color=colours(k), lw=1.8, label=f"Route {route['number']}", marker="o", ms=4)
+        ax.plot(xs, ys, color=ROUTE_COLOURS[k], lw=1.8, label=f"Route {route['number']}", marker="o", ms=4)
     x, y = _lon_lat(ROUTE_WAREHOUSE)
     ax.scatter(x, y, s=80, marker="s", color="black", zorder=3, label=f"{place(ROUTE_WAREHOUSE)}")
     ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)

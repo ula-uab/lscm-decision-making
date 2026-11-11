@@ -42,14 +42,15 @@ PRICE_BAR = "0.3"                 # the bars of the shadow prices: a colour that
 PENINSULA = Path(__file__).with_name("peninsula.json")
 SEA, SPAIN, NEIGHBOUR = "#DCEBF5", "#D4D4D4", "#ECECEC"
 
-# One symbol and one colour for each kind of element of a network on the map
+# One symbol and one colour for each kind of element of a network on the map; no
+# red, which marks what is to be avoided
 KINDS = {
     "Plant": dict(marker="s", color="tab:blue", s=55),
     "Central warehouse": dict(marker="v", color="dimgray", s=75),
     "Rail terminal": dict(marker="o", color="black", s=30),
     "Regional warehouse": dict(marker="v", color="tab:olive", s=75),
     "Local warehouse": dict(marker="v", color="tab:cyan", s=60),
-    "Retailer": dict(marker="D", color="tab:red", s=32),
+    "Retailer": dict(marker="D", color=FILL, edge=INK, s=36),      # as in the figure of the network
     "Candidate site for a regional warehouse": dict(marker="^", color="tab:green", s=80),
 }
 
@@ -343,8 +344,8 @@ def places_map(places: list, title: str, window: tuple | None = None, figsize=(8
         for k, kind in enumerate(kinds):
             x = lon + 0.17 * (k - (len(kinds) - 1) / 2)        # side by side, about one symbol apart
             style = KINDS[kind]
-            ax.scatter(x, lat, marker=style["marker"], color=style["color"], s=style["s"], edgecolors="white",
-                       linewidths=0.6, zorder=3)
+            ax.scatter(x, lat, marker=style["marker"], color=style["color"], s=style["s"],
+                       edgecolors=style.get("edge", "white"), linewidths=1.1 if "edge" in style else 0.6, zorder=3)
             points.append((x, lat, style["s"] ** 0.5 + 1))
     for kind, city, lat, lon in places:
         if city not in shown:
@@ -353,7 +354,8 @@ def places_map(places: list, title: str, window: tuple | None = None, figsize=(8
             labels.append((city, (lon + 0.17 * (len(group) - 1) / 2, lat)))
     for kind in dict.fromkeys(kind for kind, *_ in places):
         style = KINDS[kind]
-        ax.scatter([], [], marker=style["marker"], color=style["color"], s=style["s"], label=kind)
+        ax.scatter([], [], marker=style["marker"], color=style["color"], s=style["s"], label=kind,
+                   edgecolors=style.get("edge", "none"), linewidths=1.1)
     ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
     ax.set_title(title, fontsize=10)
     fig.tight_layout()
