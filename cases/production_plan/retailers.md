@@ -2,9 +2,9 @@
 
 This document is the fifth version, M4, of the production plan of an electric bicycle assembler. M0, in [`production_plan.md`](production_plan.md), is the linear model of the plants; M1, in [`plant_stock.md`](plant_stock.md), adds the stock at the plants; M2, in [`central_warehouse.md`](central_warehouse.md), a central warehouse and backorders; and M3, in [`distribution_network.md`](distribution_network.md), a distribution network in Spain whose local warehouses receive the orders. M4 adds the retailers, the customers of the manufacturer, as a new stage at the end of the network. Part of the demand that a retailer does not receive in its month is lost: the retailer buys those bikes from a competitor. The document contains all the data and all the results of M4, so that anyone can follow and check them.
 
-## 1. Infeasibility of M3 under forecast 5
+## 1. Infeasibility of M3 under the higher late demand peak
 
-Forecast 5 gives the orders of the six retailers together: 250; 500; 450; 900; 900 and 550 bikes from January to June. With these orders at the local warehouses, split as in M3, M3 has no solution. From April to June 2.350 bikes are ordered, and the plants can assemble 1.800 in those three months; the plants also have to end June with their required final stock, 30 bikes. At the end of March 580 bikes have to be in stock as seasonal stock, and the whole network can hold 440. In M3 every order is delivered by the end of June, so the orders that cannot be delivered make the model infeasible.
+The higher late demand peak gives the orders of the six retailers together: 250; 500; 450; 900; 900 and 550 bikes from January to June. Its peak, in the last three months, requires before it more seasonal stock than the whole network can hold. With these orders at the local warehouses, split as in M3, M3 has no solution. From April to June 2.350 bikes are ordered, and the plants can assemble 1.800 in those three months; the plants also have to end June with their required final stock, 30 bikes. At the end of March 580 bikes have to be in stock as seasonal stock, and the whole network can hold 440. In M3 every order is delivered by the end of June, so the orders that cannot be delivered make the model infeasible.
 
 The customers are not obliged to wait. A retailer that does not receive its bikes can wait for them or buy them from a competitor. M3 does not represent that choice: every order that is not delivered in its month is backordered, and has to be delivered by the end of June.
 
@@ -16,7 +16,7 @@ Of the demand that a retailer does not receive in its month, a share, the backor
 
 Each lost sale adds to the cost of the plan the lost-sale cost: the price that the retailer pays for a bike. The objective already contains the costs of assembling, holding and transporting each bike delivered, and a lost sale does not incur them. Against delivering the bike, a lost sale therefore adds the price less those costs: the margin that the manufacturer does not earn. If the lost-sale cost were the margin, those costs would be subtracted twice, and in the plan of least cost every sale whose margin is below them would be a lost sale. With the price as the lost-sale cost, the plan of least cost is the plan of highest margin.
 
-## 3. Retailer data, forecast 5 and notation
+## 3. Retailer data, the higher late demand peak and notation
 
 The rest of the network keeps all the data of M3 (Tables 1 to 3 of `distribution_network.md`). Table 1 gives the retailers and their places: the point that Nominatim, the search engine of OpenStreetMap, gives for each city. The retailers hold no stock: their storage capacity, their initial stock and their required final stock are 0.
 
@@ -50,9 +50,9 @@ Table 2. Arcs from the local warehouses to the retailers
 | 24 | Local warehouse 4 (Seville) | Retailer 6 (Granada) | 254,3 | 2,54 | 1.000 |
 | 25 | Local warehouse 3 (Valencia) | Retailer 6 (Granada) | 478,4 | 4,78 | 1.000 |
 
-Table 3 gives forecast 5, the share of it that each retailer orders, the same every month, and the backorder share of each retailer. All are invented, and different between retailers. The lost-sale cost is 700 €/bike for every retailer: one bike, one price. It is invented, and it is above what assembling a bike and taking it to any retailer costs, at most 390 € of assembly and less than 20 € of transport. The backorder cost is that of M2, 60 €/(bike·month), with no backorders at the end of December.
+Table 3 gives the higher late demand peak, the share of it that each retailer orders, the same every month, and the backorder share of each retailer. All are invented, and different between retailers. The lost-sale cost is 700 €/bike for every retailer: one bike, one price. It is invented, and it is above what assembling a bike and taking it to any retailer costs, at most 390 € of assembly and less than 20 € of transport. The backorder cost is that of M2, 60 €/(bike·month), with no backorders at the end of December.
 
-Table 3. Forecast 5, the orders of each retailer $d_{rt}$ (bikes/month) and the backorder share $\beta_r$
+Table 3. Higher late demand peak, the orders of each retailer $d_{rt}$ (bikes/month) and the backorder share $\beta_r$
 
 | Retailer | Share | Backorder share $\beta_r$ | Lost sales, $1 - \beta_r$ | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|---|---|---|
@@ -62,7 +62,7 @@ Table 3. Forecast 5, the orders of each retailer $d_{rt}$ (bikes/month) and the 
 | Retailer 4 (Murcia) | 16 % | 0,8 | 0,2 | 40 | 80 | 72 | 144 | 144 | 88 |
 | Retailer 5 (Córdoba) | 20 % | 0,6 | 0,4 | 50 | 100 | 90 | 180 | 180 | 110 |
 | Retailer 6 (Granada) | 10 % | 0,4 | 0,6 | 25 | 50 | 45 | 90 | 90 | 55 |
-| Forecast 5 | 100 % | | | 250 | 500 | 450 | 900 | 900 | 550 |
+| Higher late demand peak | 100 % | | | 250 | 500 | 450 | 900 | 900 | 550 |
 
 Table 4 gives the symbols of M0 to M4, with the term that names each concept. The column «From» gives the version where each symbol first appears. In M4 the demand nodes are the retailers, $V^d = R$.
 
@@ -141,14 +141,14 @@ with $h_{i0}$ given and $b_{r0} = 0$. The objective adds to the cost of M3 the l
 3. A bike shipped in a month arrives in that month at the end of its arc, and can go along several arcs and be delivered in that same month.
 4. The transport cost of an arc is the same every month.
 5. The retailers hold no stock, because the manufacturer does not decide it.
-6. Each retailer orders the same share of forecast 5 every month.
+6. Each retailer orders the same share of the higher late demand peak every month.
 7. The backorder share of a retailer applies every month to all the demand it has not received, also to the backorders of earlier months: an order that waits several months is lost little by little. In a plan of aggregated quantities this is acceptable.
 8. At the end of June no order is backordered: the orders not delivered by then are lost sales.
 9. The lost-sale cost is the same for every retailer: one bike, one price.
 
-## 6. Results under forecast 5
+## 6. Results under the higher late demand peak
 
-### 6.1 Optimal plan under forecast 5
+### 6.1 Optimal plan under the higher late demand peak
 
 The optimal plan costs 1.294.204,84 €, and it is the only optimal plan. Tables 5 to 8 give the bikes assembled, the flow on each arc, the stock of each node, and the deliveries, backorders and lost sales of each retailer.
 
@@ -219,7 +219,7 @@ Table 8. Deliveries, backorders and lost sales of the retailers (bikes)
 
 Lleida, Sabadell, Murcia and Córdoba receive all their orders every month (Table 3), with no backorders and no lost sales; Table 8 gives the other two retailers.
 
-Plants 1 and 2 assemble at their capacity every month, and plant 3 from March; in February it assembles 110 bikes. In March the storage capacity of every node of M3 is full: 440 bikes of seasonal stock. From April to June the seasonal stock and the assembly do not cover the orders, and 140 orders become lost sales in May and June, 3,9 % of the 3.550 orders of forecast 5. Alicante receives 92 bikes of its 162 orders of May; of the other 70, its backorder share, 0,5, is backordered, 35 bikes that it receives in June, and 35 are lost sales. Granada receives no bike in May: of its 90 orders, 36 are backordered and 54 are lost sales; in June it receives 40 of its 91 pending orders, and the other 51 are lost sales, because no order may be backordered at the end of June.
+Plants 1 and 2 assemble at their capacity every month, and plant 3 from March; in February it assembles 110 bikes. In March the storage capacity of every node of M3 is full: 440 bikes of seasonal stock. From April to June the seasonal stock and the assembly do not cover the orders, and 140 orders become lost sales in May and June, 3,9 % of the 3.550 orders of the higher late demand peak. Alicante receives 92 bikes of its 162 orders of May; of the other 70, its backorder share, 0,5, is backordered, 35 bikes that it receives in June, and 35 are lost sales. Granada receives no bike in May: of its 90 orders, 36 are backordered and 54 are lost sales; in June it receives 40 of its 91 pending orders, and the other 51 are lost sales, because no order may be backordered at the end of June.
 
 In April and May the arc from Seville to Córdoba is full, with 150 bikes, and Córdoba receives the other 30 bikes of its orders from Valencia, at 5,21 €/bike instead of 1,44.
 
@@ -227,7 +227,7 @@ In April and May the arc from Seville to Córdoba is full, with 150 bikes, and C
 
 Alicante and Granada have the lowest backorder shares, 0,5 and 0,4: of the demand they do not receive, a larger part is lost sales than at the other retailers. The first test of §6.4 shows that a lower backorder share moves the lost sales to that retailer.
 
-With the plants at their capacity, the orders of the retailers decide which orders become lost sales and at which retailers; where a retailer is does not change which plant assembles or when. For M3 to have no solution with forecast 5, the plants lack capacity: from March to June all three assemble at their capacity. A rise in the orders of a retailer reaches the plants only while a plant has free capacity. With 100 more orders in January, plant 3 assembles 60 more bikes in January and 40 more in February, whether the orders are those of Sabadell or of Granada, and the lost sales do not change. With 100 more orders in May, no plant has free capacity: the plants assemble the same, and the lost sales grow by 100, at Alicante, Córdoba and Granada, whether the orders are those of Lleida or of Córdoba (§6.4).
+With the plants at their capacity, the orders of the retailers decide which orders become lost sales and at which retailers; where a retailer is does not change which plant assembles or when. For M3 to have no solution with the higher late demand peak, the plants lack capacity: from March to June all three assemble at their capacity. A rise in the orders of a retailer reaches the plants only while a plant has free capacity. With 100 more orders in January, plant 3 assembles 60 more bikes in January and 40 more in February, whether the orders are those of Sabadell or of Granada, and the lost sales do not change. With 100 more orders in May, no plant has free capacity: the plants assemble the same, and the lost sales grow by 100, at Alicante, Córdoba and Granada, whether the orders are those of Lleida or of Córdoba (§6.4).
 
 ### 6.3 Shadow prices of the full capacities
 
@@ -267,7 +267,7 @@ The fourth test changes the transport cost of an arc to a retailer. With arc 17,
 
 ## 7. Script and notebook
 
-The Python script `retailers_solver.py`, in this folder, prints every table of this document except Table 4, and checks that M3 has no solution with forecast 5. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
+The Python script `retailers_solver.py`, in this folder, prints every table of this document except Table 4, and checks that M3 has no solution with the higher late demand peak. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
 The notebook [`notebooks/retailers.ipynb`](notebooks/retailers.ipynb) solves the plan of §6.1, draws the network with the flows of the month the reader chooses and the lost sales of each retailer, and runs the four tests of §6.4. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/retailers.ipynb). Its code is in the package `plants` of this folder (`src/plants/retailers.py`), which reads the data of M0 to M4 from `src/plants/data.py` and uses the network of M3 without changing it. The map of the places of the nodes draws the outline of the peninsula from Natural Earth.
 

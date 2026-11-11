@@ -3,8 +3,9 @@
 # This script reproduces every table of retailers.md (same folder): the
 # retailers, their arcs, their orders, backorder shares and lost-sale cost
 # (Tables 1 to 3); that M3, with the orders at the local warehouses, has no
-# solution with forecast 5; the plan of M4 with forecast 5 (Tables 5 to 8); and
-# the shadow prices of the capacities that are full (Table 9).
+# solution with the higher late demand peak; the plan of M4 with the higher late
+# demand peak (Tables 5 to 8); and the shadow prices of the capacities that are
+# full (Table 9).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -123,9 +124,9 @@ NETWORK_M4 = NETWORK + [
 ]
 ARCS_M4 = [(i, j, mode, km, cap, round(km * RATE[mode], 2)) for i, j, mode, km, cap in NETWORK_M4]
 
-# Forecast 5 (bikes/month), the share of it that each retailer receives every
-# month, the backorder share beta[r] of each retailer (the rest is lost sales) and
-# the lost-sale cost c_l (EUR/bike), the price that a retailer pays for a bike
+# Higher late demand peak (bikes/month), the share of it that each retailer
+# receives every month, the backorder share beta[r] of each retailer (the rest is
+# lost sales) and the lost-sale cost c_l (EUR/bike), the price that a retailer pays for a bike
 d = dict(zip(T, [250, 500, 450, 900, 900, 550]))
 SHARE = dict(zip(RETAILERS, [0.14, 0.22, 0.18, 0.16, 0.20, 0.10]))
 BETA = dict(zip(RETAILERS, [0.9, 0.7, 0.5, 0.8, 0.6, 0.4]))
@@ -138,7 +139,7 @@ c_l = 700
 
 def solve_model(nodes, arcs, share, retailers=True):
     """Solve the model on a network: nodes, arcs (origin, destination, mode, km,
-    capacity, cost) and the share of forecast 5 of each demand node. With
+    capacity, cost) and the share of the higher late demand peak of each demand node. With
     retailers=True (M4), the demand nodes are retailers: of the demand not
     delivered in its month, the backorder share is backordered and the rest is
     lost sales, and no order is pending at the end of June. With retailers=False
@@ -270,7 +271,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §3 Data
-    title("§3 Retailer data and forecast 5")
+    title("§3 Retailer data and the higher late demand peak")
     print("Table 1. Retailers")
     for r in RETAILERS:
         print(f"{r:<14}{PLACES[r]}")
@@ -285,17 +286,18 @@ if __name__ == "__main__":
     header()
     for r in RETAILERS:
         by_month(f"{r} ({eu(100 * SHARE[r], 0)} %; backorder share {eu(BETA[r], 1)})", [SHARE[r] * d[t] for t in T])
-    by_month("Forecast 5", [d[t] for t in T])
+    by_month("Higher late demand peak", [d[t] for t in T])
     print(f"Lost-sale cost: {eu(c_l)} EUR/bike; backorder cost: {eu(c_b)} EUR/(bike*month)")
 
-    # §1 M3 with forecast 5: the network of M3, with the orders at the local
+    # §1 M3 with the higher late demand peak: the network of M3, with the orders at the local
     # warehouses split as in M3 and no lost sales
     m3 = solve_model(NODES, ARCS, SHARE_M3, retailers=False)
     print()
-    print(f"M3 (orders at the local warehouses) has a solution with forecast 5: {'yes' if m3 else 'no'}")
+    print("M3 (orders at the local warehouses) has a solution with the higher late demand peak: "
+          f"{'yes' if m3 else 'no'}")
 
-    # §6 Plan of M4 with forecast 5
-    title("§6.1 Optimal plan under forecast 5")
+    # §6 Plan of M4 with the higher late demand peak
+    title("§6.1 Optimal plan under the higher late demand peak")
     cost, v, prices = solve_model(NODES + RETAILERS, ARCS_M4, SHARE)
     print("Table 5. Bikes assembled")
     header()

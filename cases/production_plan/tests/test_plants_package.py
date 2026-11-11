@@ -36,7 +36,7 @@ def test_table4_shadow_prices_and_ranges():
 
 
 def test_table5_plan_with_forecast_1():
-    solution = m.solve(demand=FORECASTS["Forecast 1"])
+    solution = m.solve(demand=FORECASTS["Demand below capacity"])
     assert solution["cost"] == pytest.approx(713800)
     plan = solution["plan"]
     assert [plan["Plant 1", t] for t in T] == [250, 250, 250, 250, 250, 230]
@@ -45,7 +45,7 @@ def test_table5_plan_with_forecast_1():
 
 
 def test_table6_shadow_prices_and_reduced_costs():
-    solution = m.solve(demand=FORECASTS["Forecast 1"])
+    solution = m.solve(demand=FORECASTS["Demand below capacity"])
     assert [solution["demand price"][t] for t in T] == [340, 340, 340, 340, 340, 310]
     assert [solution["reduced cost"]["Plant 3", t] for t in T] == [50, 50, 50, 50, 50, 80]
     assert solution["reduced cost"]["Plant 2", "Jun"] == 30
@@ -53,7 +53,7 @@ def test_table6_shadow_prices_and_reduced_costs():
 
 
 def test_table7_forecast_2_has_no_solution():
-    demand = FORECASTS["Forecast 2"]
+    demand = FORECASTS["Seasonal demand peak"]
     assert m.solve(demand=demand) is None
     assert m.monthly_capacity() == {t: 600 for t in T}
     assert m.shortfall(demand) == {"Apr": 50, "May": 20}
@@ -66,7 +66,7 @@ def test_table7_forecast_2_has_no_solution():
 
 def test_one_source_of_data():
     # The model, the tables and the figures read the same demand and capacity
-    assert m.d is FORECASTS["Forecast 1"] and m.K is K
+    assert m.d is FORECASTS["Demand below capacity"] and m.K is K
 
 
 def test_notebook_runs():

@@ -2,9 +2,10 @@
 #
 # This script reproduces every table of distribution_network.md (same folder):
 # the nodes and the list of arcs of the network, the data of each node and
-# forecast 4 (Tables 1 to 4); that M2, with the plants and the central warehouse
-# only, has no solution with forecast 4; the plan of M3 with forecast 4 (Tables 6
-# to 8); and the shadow prices of the capacities that are full (Table 9).
+# the late demand peak (Tables 1 to 4); that M2, with the plants and the central
+# warehouse only, has no solution with the late demand peak; the plan of M3 with
+# the late demand peak (Tables 6 to 8); and the shadow prices of the capacities
+# that are full (Table 9).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -91,7 +92,7 @@ NETWORK = [
 ]
 ARCS = [(i, j, mode, km, cap, round(km * RATE[mode], 2)) for i, j, mode, km, cap in NETWORK]
 
-# Forecast 4 (bikes/month) and the share of it that each local warehouse
+# Late demand peak (bikes/month) and the share of it that each local warehouse
 # receives every month; backorder cost c_b (EUR/(bike*month)), backorders at the
 # end of December b_0 and allowed at the end of June b_max (bikes), as in M2
 d = dict(zip(T, [240, 440, 400, 800, 840, 500]))
@@ -105,7 +106,7 @@ c_b, b_0, b_max = 60, 0, 0
 
 def solve_model(nodes, arcs, share, storage):
     """Solve the model on a network: nodes, arcs (origin, destination, mode, km,
-    capacity, cost), the share of forecast 4 of each demand node, and the
+    capacity, cost), the share of the late demand peak of each demand node, and the
     storage capacity of each node. Returns (cost, values of each kind of
     variable, shadow prices of the arc, node and storage capacities), or None if
     it has no solution."""
@@ -229,7 +230,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §3 Data
-    title("§3 Data of the network and forecast 4")
+    title("§3 Data of the network and the late demand peak")
     print("Table 1. Nodes")
     for i in NODES:
         print(f"{i:<24}{PLACES[i]}")
@@ -245,21 +246,21 @@ if __name__ == "__main__":
     for i in NODES:
         print(f"{i:<24}{c_h[i]:>5}{K_h[i]:>6}{h_0[i]:>6}{h_end[i]:>6}{K_n.get(i, '-'):>6}")
     print()
-    print("Table 4. Forecast 4 and the orders of each local warehouse (bikes/month)")
+    print("Table 4. Late demand peak and the orders of each local warehouse (bikes/month)")
     header()
     for i in LOCAL:
         by_month(f"{i} ({eu(100 * SHARE[i], 0)} %)", [SHARE[i] * d[t] for t in T])
-    by_month("Forecast 4", [d[t] for t in T])
+    by_month("Late demand peak", [d[t] for t in T])
 
-    # §1 M2 with forecast 4: the plants and the central warehouse, which receives
+    # §1 M2 with the late demand peak: the plants and the central warehouse, which receives
     # all the orders, without the regional and local warehouses
     m2_arcs = [arc for arc in ARCS if arc[1] == CENTRAL]
     m2 = solve_model(F + [CENTRAL], m2_arcs, {CENTRAL: 1.0}, K_h)
     print()
-    print(f"M2 (plants and central warehouse only) has a solution with forecast 4: {'yes' if m2 else 'no'}")
+    print(f"M2 (plants and central warehouse only) has a solution with the late demand peak: {'yes' if m2 else 'no'}")
 
-    # §6 Plan of M3 with forecast 4
-    title("§6.1 Optimal plan under forecast 4")
+    # §6 Plan of M3 with the late demand peak
+    title("§6.1 Optimal plan under the late demand peak")
     cost, v, prices = solve_model(NODES, ARCS, SHARE, K_h)
     print("Table 6. Bikes assembled")
     header()

@@ -25,14 +25,14 @@ import pandas as pd
 import pulp
 
 from .central_warehouse import SEVERAL, only_optimal
-from .data import (ARCS, CENTRAL, F, FORECAST_4, K, K_h_node, K_n, LOCAL, NODES, PLACES, RAIL, RAIL_TERMINAL,
-                   REGIONAL, SHARE, TRANSPORT_RATE, T, arcs as make_arcs, b_0, b_max, c, c_b, c_h_node, h_node_0,
-                   h_node_end)
+from .data import (ARCS, CENTRAL, F, FORECAST_4, FORECAST_4_NAME, K, K_h_node, K_n, LOCAL, NODES, PLACES, RAIL,
+                   RAIL_TERMINAL, REGIONAL, SHARE, TRANSPORT_RATE, T, arcs as make_arcs, b_0, b_max, c, c_b, c_h_node,
+                   h_node_0, h_node_end)
 from .model import TOL, _constraints, _optimal
 from . import figures
 from .show import _display, _european_axes, _light, _number
 
-FORECAST = "Forecast 4"                   # M3 is solved with forecast 4
+FORECAST = FORECAST_4_NAME               # M3 is solved with forecast 4
 DEMAND = FORECAST_4
 RAIL_ARC = next(a for a, arc in enumerate(ARCS) if arc["mode"] == RAIL)
 
@@ -191,8 +191,8 @@ def show_data(show_tables: bool = False) -> None:
                            else "") + ". Arcs: transport cost (€/bike) · arc capacity (bikes/month).",
                         text_colour=figures.INK, arc_list=ARCS)
         figures.orders_figure({f"{i} ({PLACES[i][0]}), {_number(100 * SHARE[i])} %": orders[i] for i in LOCAL},
-                              f"Orders of each local warehouse in each month: its share of {FORECAST.lower()}",
-                              ylabel="Orders (bikes/month)")
+                              f"{FORECAST}: orders of each local warehouse in each month, its share of the forecast",
+                              ylabel="Orders (bikes/month)", capacity=sum(K[f]["Jan"] for f in F))
         return
     _display(places_table(NODES, PLACES))
     _display(pd.DataFrame([{"Arc": a + 1, "Origin": arc["origin"], "Destination": arc["destination"],
@@ -375,7 +375,7 @@ def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
         ending = sum(h_node_end[f] for f in F)
-        print(f"M2, with the plants and the central warehouse only, has no solution with {FORECAST.lower()}: "
+        print(f"M2, with the plants and the central warehouse only, has no solution with the {FORECAST.lower()}: "
               f"from April to June {_number(ordered)} bikes are ordered and the plants can assemble "
               f"{_number(assembled)}, and the plants have to end June with {_number(ending)} bikes. At the end "
               f"of March {_number(ordered - assembled + ending)} bikes have to be in stock, and the plants and "

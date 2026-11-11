@@ -34,9 +34,9 @@ def test_script_agrees_with_the_package():
     from plants import model as m
     from plants.data import F, FORECASTS, K, T
     script = load()
-    cost, plan, demand_price, capacity_price, reduced = script.solve_model(F, T, FORECASTS["Forecast 1"], K)
-    package = m.solve(demand=FORECASTS["Forecast 1"])
+    cost, plan, demand_price, capacity_price, reduced = script.solve_model(F, T, FORECASTS["Demand below capacity"], K)
+    package = m.solve(demand=FORECASTS["Demand below capacity"])
     assert cost == package["cost"] and plan == package["plan"]
     assert demand_price == package["demand price"] and reduced == package["reduced cost"]
     assert capacity_price == package["capacity price"]
-    assert script.solve_model(F, T, FORECASTS["Forecast 2"], K) is None
+    assert script.solve_model(F, T, FORECASTS["Seasonal demand peak"], K) is None

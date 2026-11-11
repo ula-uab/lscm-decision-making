@@ -29,7 +29,7 @@ from .model import TOL, _constraints, _optimal
 from . import figures
 from .show import COLOURS, _display, _euros, _european_axes, _light, _number
 
-FORECAST = "Forecast 2"                   # M1 is solved with forecast 2
+FORECAST = "Seasonal demand peak"         # M1 is solved with forecast 2
 DEMAND = FORECASTS[FORECAST]
 
 
@@ -148,7 +148,8 @@ def why_no_plan(demand: dict = DEMAND, months=T, initial: dict = h_0, final: dic
 # ---------------------------------------------------------------------------
 
 def show_data() -> None:
-    """Table 1 and Table 2 of plant_stock.md: the plants and forecast 2."""
+    """Table 1 and Table 2 of plant_stock.md: the plants and forecast 2; then forecast 2
+    against the assembly capacity of the three plants."""
     _display(pd.DataFrame({f: {"Unit assembly cost (€/bike)": c[f],
                                "Capacity (bikes/month, every month)": K[f]["Jan"],
                                "Holding cost (€/(bike·month))": c_h[f],
@@ -156,6 +157,8 @@ def show_data() -> None:
                                "Required final stock (bikes)": h_end[f]} for f in F})
              .T.rename_axis("Plant"))
     _display(pd.DataFrame({FORECAST: DEMAND}).T.rename_axis("Demand (bikes/month)"))
+    figures.orders_figure({"demand": [DEMAND[t] for t in T]}, FORECAST, ylabel="Demand (bikes)",
+                          capacity=sum(K[f]["Jan"] for f in F), outline=True)
 
 
 def _plan_table(solution: dict) -> pd.DataFrame:

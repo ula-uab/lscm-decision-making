@@ -30,7 +30,7 @@ def test_data_of_the_retailers():
                                                        2.54, 4.78]
     assert sum(SHARE_M4.values()) == pytest.approx(1)
     assert all(abs(o - round(o)) < 1e-9 for o in rt.orders().values())
-    assert list(FORECASTS) == ["Forecast 1", "Forecast 2"]
+    assert list(FORECASTS) == ["Demand below capacity", "Seasonal demand peak"]
     assert all(K_h_node_m4[r] == 0 for r in RETAILERS)
 
 

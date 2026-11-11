@@ -3,9 +3,9 @@
 # This script reproduces every table of production_plan.md (same folder): the
 # reduced version with two plants and one month, its vertices, its optimum and
 # its shadow prices with the ranges in which they hold (Tables 3 and 4); the
-# plan of the full case with forecast 1, its shadow prices and reduced costs
-# (Tables 5 and 6); and forecast 2, for which the model has no solution
-# (Table 7).
+# plan of the full case with demand below capacity, its shadow prices and
+# reduced costs (Tables 5 and 6); and the seasonal demand peak, for which the
+# model has no solution (Table 7).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -47,8 +47,8 @@ K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plan
 
 # Demand d[t] of each forecast (bikes/month), Table 2
 FORECASTS = {
-    "Forecast 1": dict(zip(T, [380, 330, 420, 440, 430, 230])),
-    "Forecast 2": dict(zip(T, [380, 330, 420, 650, 620, 230])),
+    "Demand below capacity": dict(zip(T, [380, 330, 420, 440, 430, 230])),
+    "Seasonal demand peak": dict(zip(T, [380, 330, 420, 650, 620, 230])),
 }
 
 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     # §3 Reduced version: plants 1 and 2, January
     title("§3 Reduced version: plants 1 and 2, January")
     plants, months = ["Plant 1", "Plant 2"], ["Jan"]
-    demand = {"Jan": FORECASTS["Forecast 1"]["Jan"]}
+    demand = {"Jan": FORECASTS["Demand below capacity"]["Jan"]}
     capacity = {f: dict(K[f]) for f in plants}
     k1, k2, d1 = capacity["Plant 1"]["Jan"], capacity["Plant 2"]["Jan"], demand["Jan"]
 
@@ -211,9 +211,9 @@ if __name__ == "__main__":
         print(f"{name:<22}{eu(rhs):>17}{eu(price):>25}{low_text:>12}{high_text:>10}")
     print(f"Spare capacity of plant 2: {eu(k2 - plan['Plant 2', 'Jan'])} bikes")
 
-    # §4 Full case, forecast 1
-    title("§4 Full case, forecast 1")
-    cost, plan, demand_price, capacity_price, reduced = solve_model(F, T, FORECASTS["Forecast 1"], K)
+    # §4 Full case, demand below capacity
+    title("§4 Full case, demand below capacity")
+    cost, plan, demand_price, capacity_price, reduced = solve_model(F, T, FORECASTS["Demand below capacity"], K)
     print("Table 5. Optimal plan (bikes/month)")
     print(f"{'':<34}" + "".join(f"{t:>9}" for t in T))
     for f in F:
@@ -227,9 +227,9 @@ if __name__ == "__main__":
     for f in F:
         by_month(f"Reduced cost, {f.lower()}", [reduced[f, t] for t in T])
 
-    # §5 Full case, forecast 2
-    title("§5 Full case, forecast 2")
-    demand = FORECASTS["Forecast 2"]
+    # §5 Full case, seasonal demand peak
+    title("§5 Full case, seasonal demand peak")
+    demand = FORECASTS["Seasonal demand peak"]
     solution = solve_model(F, T, demand, K)
     print(f"The model has a solution: {'yes' if solution else 'no'}")
     total = {t: sum(K[f][t] for f in F) for t in T}

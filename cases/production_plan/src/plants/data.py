@@ -14,12 +14,14 @@ c = {"Plant 1": 310, "Plant 2": 340, "Plant 3": 390}
 # Capacity K[f][t] (bikes/month), Table 1: the same every month
 K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plant 3": 150}.items()}
 
-# Demand d[t] of each forecast (bikes/month), Table 2
+# Demand d[t] of each forecast (bikes/month), Table 2. Forecasts 1 and 2 of the
+# case, by the name that the student reads: the shape of the demand against the
+# assembly capacity of the three plants
 FORECASTS = {
-    "Forecast 1": dict(zip(T, [380, 330, 420, 440, 430, 230])),
-    "Forecast 2": dict(zip(T, [380, 330, 420, 650, 620, 230])),
+    "Demand below capacity": dict(zip(T, [380, 330, 420, 440, 430, 230])),
+    "Seasonal demand peak": dict(zip(T, [380, 330, 420, 650, 620, 230])),
 }
-d = FORECASTS["Forecast 1"]
+d = FORECASTS["Demand below capacity"]
 
 # Reduced version (§3): plants 1 and 2, January, demand of January
 REDUCED_F = ["Plant 1", "Plant 2"]
@@ -66,6 +68,7 @@ b_max = 0
 # Forecast 3 (bikes/month): the orders that the warehouse receives; forecast 1 with
 # a peak in February. Kept here, not in FORECASTS, which the notebook of M0 shows whole
 FORECAST_3 = dict(zip(T, [380, 900, 420, 440, 430, 230]))
+FORECAST_3_NAME = "Early demand peak"
 
 # ---------------------------------------------------------------------------
 # M3 · Distribution network, Tables 1 to 4 of distribution_network.md. Solved
@@ -145,6 +148,7 @@ K_n = {"Regional warehouse 2": 280}
 # invented. Each local warehouse receives the same share of it every month. Backorders at the local warehouses keep the data
 # of M2 (c_b, b_0, b_max)
 FORECAST_4 = dict(zip(T, [240, 440, 400, 800, 840, 500]))
+FORECAST_4_NAME = "Late demand peak"
 SHARE = {"Local warehouse 1": 0.15, "Local warehouse 2": 0.20, "Local warehouse 3": 0.30, "Local warehouse 4": 0.35}
 
 # ---------------------------------------------------------------------------
@@ -190,6 +194,7 @@ h_node_end_m4 = {**h_node_end, **{r: 0 for r in RETAILERS}}
 # Forecast 5 (bikes/month): the orders of the six retailers together, invented.
 # Each retailer receives the same share of it every month
 FORECAST_5 = dict(zip(T, [250, 500, 450, 900, 900, 550]))
+FORECAST_5_NAME = "Higher late demand peak"
 SHARE_M4 = dict(zip(RETAILERS, [0.14, 0.22, 0.18, 0.16, 0.20, 0.10]))
 
 # Backorder share beta[r]: the share of the demand that retailer r does not receive

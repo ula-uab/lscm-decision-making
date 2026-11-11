@@ -29,7 +29,7 @@ def test_table2_list_of_arcs():
 def test_table4_orders_of_the_local_warehouses():
     assert sum(SHARE.values()) == pytest.approx(1)
     assert [SHARE["Local warehouse 4"] * FORECAST_4[t] for t in T] == pytest.approx([84, 154, 140, 280, 294, 175])
-    assert list(FORECASTS) == ["Forecast 1", "Forecast 2"]
+    assert list(FORECASTS) == ["Demand below capacity", "Seasonal demand peak"]
 
 
 def test_m2_has_no_solution_with_forecast_4():

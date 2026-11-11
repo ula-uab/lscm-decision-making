@@ -85,11 +85,16 @@ def _forecast(name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def show_data() -> None:
-    """Tables 1 and 2: the plants and the two demand forecasts."""
+    """Tables 1 and 2: the plants and the two demand forecasts; then one figure for
+    each forecast, its demand against the assembly capacity of the three plants."""
+    from . import figures
     _display(pd.DataFrame({f: {"Unit assembly cost (€/bike)": c[f],
                                "Capacity (bikes/month, every month)": K[f]["Jan"]} for f in F})
              .T.rename_axis("Plant"))
     _display(pd.DataFrame(FORECASTS).T.rename_axis("Demand (bikes/month)"))
+    for name, demand in FORECASTS.items():
+        figures.orders_figure({"demand": [demand[t] for t in T]}, name, ylabel="Demand (bikes)",
+                              capacity=sum(K[f]["Jan"] for f in F), outline=True)
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +179,7 @@ def _plan_table(solution: dict) -> pd.DataFrame:
     return table.rename_axis("Bikes assembled")
 
 
-def production_plan(forecast: str = "Forecast 1") -> dict | None:
+def production_plan(forecast: str = "Demand below capacity") -> dict | None:
     """The optimal plan for a forecast, its cost, the shadow prices of the demand and
     the reduced costs; or, if the model has no solution, the months that cannot be served."""
     demand = _forecast(forecast)
@@ -201,7 +206,7 @@ def production_plan(forecast: str = "Forecast 1") -> dict | None:
 
 
 @_light
-def capacity_and_demand(forecast: str = "Forecast 2") -> None:
+def capacity_and_demand(forecast: str = "Seasonal demand peak") -> None:
     """Total capacity and demand month by month, with the months where capacity
     falls short; and the cumulative demand against the cumulative capacity."""
     demand = _forecast(forecast)

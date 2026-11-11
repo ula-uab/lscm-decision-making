@@ -1,12 +1,13 @@
 # Production plan with a central warehouse (M2)
 #
 # This script reproduces every table of central_warehouse.md (same folder): the
-# data of the plants, the warehouse and forecast 3 (Tables 1 to 3); that M1,
-# with stock at the plants only, has no solution with forecast 3; the plan of
-# M2 with forecast 3 (Table 5); the shadow prices of the backorder balance
-# and of the storage capacities (Tables 6 and 7); and the plans of M1, M1 with
-# the storage capacities of the plants and M2 under forecast 2 (Table 8), and
-# what each plant assembles in May and June in that plan of M2 (Table 9).
+# data of the plants, the warehouse and the early demand peak (Tables 1 to 3);
+# that M1, with stock at the plants only, has no solution with the early demand
+# peak; the plan of M2 with the early demand peak (Table 5); the shadow prices
+# of the backorder balance and of the storage capacities (Tables 6 and 7); and
+# the plans of M1, M1 with the storage capacities of the plants and M2 under the
+# seasonal demand peak (Table 8), and what each plant assembles in May and June
+# in that plan of M2 (Table 9).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -60,10 +61,10 @@ K_h = {"Plant 1": 40, "Plant 2": 30, "Plant 3": 20}
 c_h_w, K_h_w, h_w_0, h_w_end = 8, 150, 0, 0
 c_b, b_0, b_max = 60, 0, 0
 
-# Forecast 3: the orders that the warehouse receives (bikes/month)
+# Early demand peak: the orders that the warehouse receives (bikes/month)
 d = dict(zip(T, [380, 900, 420, 440, 430, 230]))
 
-# Forecast 2 of M0 and M1, with its peak in April and May (Table 8)
+# Seasonal demand peak of M0 and M1, with its peak in April and May (Table 8)
 d_2 = dict(zip(T, [380, 330, 420, 650, 620, 230]))
 
 
@@ -72,7 +73,7 @@ d_2 = dict(zip(T, [380, 330, 420, 650, 620, 230]))
 # ---------------------------------------------------------------------------
 
 def solve_model(m1=False, plant_storage=None, demand=d):
-    """Solve M2 with a demand, forecast 3 by default. Returns (cost, values of
+    """Solve M2 with a demand, the early demand peak by default. Returns (cost, values of
     each kind of variable, shadow prices of the backorder balance, of the storage
     at the plants and of the storage at the warehouse), or None if it has no
     solution. With m1=True, the model of M1 written with the variables of M2: no
@@ -201,7 +202,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §3 Data
-    title("§3 Data of the plants and the warehouse, forecast 3")
+    title("§3 Data of the plants and the warehouse, the early demand peak")
     print("Table 1. Plants")
     print(f"{'Plant':<10}{'c':>6}{'K':>6}{'c_h':>6}{'K_h':>6}{'h_0':>6}{'h_end':>7}")
     for f in F:
@@ -212,9 +213,9 @@ if __name__ == "__main__":
           f" h_w_end = {h_w_end} bikes")
     print(f"c_b = {c_b} EUR/(bike*month); b_0 = {b_0} bikes; b_max = {b_max} bikes")
     print()
-    print("Table 3. Forecast 3 and the capacity of the plants (bikes)")
+    print("Table 3. Early demand peak and the capacity of the plants (bikes)")
     header()
-    by_month("Orders, forecast 3", [d[t] for t in T])
+    by_month("Orders, early demand peak", [d[t] for t in T])
     by_month("Capacity of the three plants", [sum(K[f][t] for f in F) for t in T])
     cum_d, cum_k = 0, 0
     rows_d, rows_k = [], []
@@ -228,8 +229,8 @@ if __name__ == "__main__":
     print(f"Initial stock at the plants: {sum(h_0.values())} bikes")
     print(f"M1 (stock at the plants only) has a solution: {'yes' if solve_model(m1=True) else 'no'}")
 
-    # §6.1 Plan of M2 with forecast 3
-    title("§6.1 Optimal plan under forecast 3")
+    # §6.1 Plan of M2 with the early demand peak
+    title("§6.1 Optimal plan under the early demand peak")
     cost, v, orders_price, storage_price, warehouse_price = solve_model()
     print("Table 5. Optimal plan (bikes)")
     header()
@@ -251,9 +252,9 @@ if __name__ == "__main__":
         by_month(f"Storage capacity, {f.lower()}", [storage_price[f, t] for t in T])
     by_month("Storage capacity, warehouse", [warehouse_price[t] for t in T])
 
-    # §6.3 Validation of M1 against the storage capacities, forecast 2
-    title("§6.3 Validation of M1 against the storage capacities (forecast 2)")
-    print("Table 8. M1, M1 with the storage capacities of the plants and M2 under forecast 2")
+    # §6.3 Validation of M1 against the storage capacities, seasonal demand peak
+    title("§6.3 Validation of M1 against the storage capacities (seasonal demand peak)")
+    print("Table 8. M1, M1 with the storage capacities of the plants and M2 under the seasonal demand peak")
     plans = {"M1": solve_model(m1=True, demand=d_2),
              "M1 + storage of plants": solve_model(m1=True, plant_storage=True, demand=d_2),
              "M2": solve_model(demand=d_2)}
@@ -270,7 +271,7 @@ if __name__ == "__main__":
         row(f"Assembled at plant 3 in {month}", [eu(v[1]["p"]["Plant 3", t], 0) for v in plans.values()])
     row("Cost of the plan (EUR)", [eu(v[0], 0) for v in plans.values()])
     print()
-    print("Table 9. Assembly at each plant in May and June, M2 under forecast 2 (bikes)")
+    print("Table 9. Assembly at each plant in May and June, M2 under the seasonal demand peak (bikes)")
     print(f"{'':<10}{'May':>9}{'Jun':>9}{'Capacity (bikes/month)':>26}")
     for f in F:
         print(f"{f:<10}" + "".join(f"{eu(plans['M2'][1]['p'][f, t], 0):>9}" for t in ("May", "Jun"))

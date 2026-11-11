@@ -2,9 +2,9 @@
 
 This document is the second version, M1, of the production plan of an electric bicycle assembler. The first version, M0, is the linear model of [`production_plan.md`](production_plan.md): three plants, January to June, and the demand of each month assembled in that month. M1 adds the stock at each plant from one month to the next. With it, the model has a solution for a demand forecast with which M0 has none. The document contains all the data and all the results of M1, so that anyone can follow and check them.
 
-## 1. Infeasibility of M0 under forecast 2
+## 1. Infeasibility of M0 under the seasonal demand peak
 
-With forecast 2 of M0, the demand is 650 bikes in April and 620 in May, and the three plants can assemble 600 a month. M0 has no solution. Yet the cumulative capacity of the plants is never below the cumulative demand (Table 7 of `production_plan.md`): from January to March the plants have 670 bikes of spare capacity, and the demand of April and May exceeds the capacity by 70 bikes. Bikes assembled from January to March and held in stock until April and May would meet the demand.
+The seasonal demand peak of M0 has a peak in April and May above the assembly capacity of the three plants, and the months before it have spare capacity: the demand is 650 bikes in April and 620 in May, and the three plants can assemble 600 a month. M0 has no solution. Yet the cumulative capacity of the plants is never below the cumulative demand (Table 7 of `production_plan.md`): from January to March the plants have 670 bikes of spare capacity, and the demand of April and May exceeds the capacity by 70 bikes. Bikes assembled from January to March and held in stock until April and May would meet the demand.
 
 The problem is not in the system but in the model. M0 assumes that the demand of a month is assembled in that month, and leaves the stock out. M1 represents it.
 
@@ -14,7 +14,7 @@ M1 adds three components to M0. The first is the stock at each plant at the end 
 
 Assembling in earlier periods and holding the bikes as seasonal stock is one of the options of a master plan when a production capacity is a bottleneck (Albrecht et al., 2015, §8.1, p. 156).
 
-## 3. Plant data, forecast 2 and notation
+## 3. Plant data, the seasonal demand peak and notation
 
 The plants keep the costs and capacities of M0. Each one has, in addition, a holding cost and an initial stock, at the end of December. The required final stock of each plant equals its initial stock, so that the plants end the horizon with the stock they started with. The holding costs differ between plants so that in the optimal plan the seasonal stock is held at one plant; with equal holding costs, several plans would have the same cost.
 
@@ -26,13 +26,13 @@ Table 1. Plants
 | Plant 2 | 340 | 200 | 6 | 10 | 10 |
 | Plant 3 | 390 | 150 | 7 | 0 | 0 |
 
-M1 is solved with forecast 2 of M0. Table 2 gives it with the capacity of the plants. Plants 1 and 2, the two cheapest, can assemble 450 bikes a month together: 200 bikes fewer than the demand of April and 170 fewer than that of May.
+M1 is solved with the seasonal demand peak of M0. Table 2 gives it with the capacity of the plants. Plants 1 and 2, the two cheapest, can assemble 450 bikes a month together: 200 bikes fewer than the demand of April and 170 fewer than that of May.
 
-Table 2. Forecast 2 and the capacity of the plants (bikes/month)
+Table 2. Seasonal demand peak and the capacity of the plants (bikes/month)
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
-| Demand $d_t$, forecast 2 | 380 | 330 | 420 | 650 | 620 | 230 |
+| Demand $d_t$, seasonal demand peak | 380 | 330 | 420 | 650 | 620 | 230 |
 | Capacity of plants 1 and 2 | 450 | 450 | 450 | 450 | 450 | 450 |
 | Capacity of the three plants | 600 | 600 | 600 | 600 | 600 | 600 |
 
@@ -90,13 +90,13 @@ with $h_{f0}$ given. The objective is the cost of the plan, in euros: the bikes 
 
 Assumption 3 of M0, «the demand of a month is assembled in that month», no longer holds: it is what M1 changes. Demand is still not backordered.
 
-## 6. Results under forecast 2
+## 6. Results under the seasonal demand peak
 
 ### 6.1 Optimal plan with the required final stock
 
-Table 4 gives the optimal plan with forecast 2 and the required final stock. It is the only optimal plan, and it costs 858.460 €.
+Table 4 gives the optimal plan with the seasonal demand peak and the required final stock. It is the only optimal plan, and it costs 858.460 €.
 
-Table 4. Optimal plan with forecast 2 and the required final stock (bikes)
+Table 4. Optimal plan with the seasonal demand peak and the required final stock (bikes)
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|

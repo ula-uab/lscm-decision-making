@@ -2,9 +2,9 @@
 
 This document is the third version, M2, of the production plan of an electric bicycle assembler. The first version, M0, is the linear model of [`production_plan.md`](production_plan.md). In the second, M1, in [`plant_stock.md`](plant_stock.md), each plant holds stock from one month to the next. M2 adds a central warehouse, which receives the shipments of the plants, holds stock and delivers the orders; demand that the warehouse cannot deliver in its month is backordered. The plants and the warehouse have a storage capacity. The document contains all the data and all the results of M2, so that anyone can follow and check them.
 
-## 1. Infeasibility of M1 under forecast 3
+## 1. Infeasibility of M1 under the early demand peak
 
-Forecast 3 is forecast 1 of M0 with a peak in February: 900 bikes ordered, against 330 in forecast 1. With it, M1 has no solution. In January and February 1.280 bikes are ordered, and the plants can assemble 1.200 in those two months and hold 30 bikes in stock at the end of December: the demand of February exceeds what the plants can supply by 50 bikes (Table 3).
+The early demand peak is the forecast of M0 with demand below capacity, with a peak in February, the second month of the planning horizon: 900 bikes ordered, against 330 in that forecast. With it, M1 has no solution. In January and February 1.280 bikes are ordered, and the plants can assemble 1.200 in those two months and hold 30 bikes in stock at the end of December: the demand of February exceeds what the plants can supply by 50 bikes (Table 3).
 
 The system can still meet those orders. March needs 420 bikes and the plants can assemble 600, so the unmet demand of February can be delivered in March, as backorders. The problem is not in the system but in the model: in M1 every order is delivered in the month it is received, and backorders are not represented.
 
@@ -14,7 +14,7 @@ The demand of M0 and M1 is read in M2 as the orders that a central warehouse rec
 
 Producing and shipping in earlier periods, and holding the bikes as seasonal stock in a distribution centre, is one of the options of a master plan when a capacity is a bottleneck (Albrecht et al., 2015, §8.1, p. 156). Demand that is not met can be backordered, if the customers wait for it, or lost (Albrecht et al., 2015, §8.1.2, p. 160); in M2 it is backordered. Planning the stock levels of the warehouses together with the shipments, within the available storage and transport capacities and at the lowest holding and transport cost, is the task of mid-term distribution planning (Fleischmann et al., 2015, §4.2.3, p. 79).
 
-## 3. Data of the plants and the warehouse, forecast 3 and notation
+## 3. Data of the plants and the warehouse, the early demand peak and notation
 
 The plants keep the data of M0 and M1 and add their storage capacity (Table 1). The warehouse has no initial stock and a required final stock of 0, and there are no backorders at the end of December (Table 2). The backorder cost is higher than the holding cost at the warehouse, so that in the optimal plan only the demand that cannot be delivered on time is backordered.
 
@@ -38,13 +38,13 @@ Table 2. Central warehouse and backorders
 | Backorders at the end of December | $b_0$ | 0 bikes |
 | Maximum backorders at the end of the horizon | $\bar b$ | 0 bikes |
 
-M2 is solved with forecast 3. Table 3 gives it with the capacity of the three plants, month by month and added up from January.
+M2 is solved with the early demand peak. Table 3 gives it with the capacity of the three plants, month by month and added up from January.
 
-Table 3. Forecast 3 and the capacity of the plants (bikes)
+Table 3. Early demand peak and the capacity of the plants (bikes)
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
-| Orders $d_t$, forecast 3 (bikes/month) | 380 | 900 | 420 | 440 | 430 | 230 |
+| Orders $d_t$, early demand peak (bikes/month) | 380 | 900 | 420 | 440 | 430 | 230 |
 | Capacity of the three plants (bikes/month) | 600 | 600 | 600 | 600 | 600 | 600 |
 | Cumulative orders | 380 | 1.280 | 1.700 | 2.140 | 2.570 | 2.800 |
 | Cumulative capacity | 600 | 1.200 | 1.800 | 2.400 | 3.000 | 3.600 |
@@ -120,13 +120,13 @@ with $h_{f0}$, $h_{w0}$ and $b_0$ given. The objective is the cost of the plan, 
 5. Customers wait for their backorders: no sale is lost.
 6. There is no safety stock: no constraint requires the warehouse or the plants to hold a minimum stock.
 
-## 6. Results under forecast 3
+## 6. Results under the early demand peak
 
-### 6.1 Optimal plan under forecast 3
+### 6.1 Optimal plan under the early demand peak
 
-Table 5 gives the optimal plan with forecast 3. It is the only optimal plan, and it costs 928.480 €.
+Table 5 gives the optimal plan with the early demand peak. It is the only optimal plan, and it costs 928.480 €.
 
-Table 5. Optimal plan with forecast 3 (bikes)
+Table 5. Optimal plan with the early demand peak (bikes)
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
@@ -178,15 +178,15 @@ Without the limit on the backorders at the end, plants 1 and 2 assemble 350 bike
 
 With more storage capacity at the plants, the warehouse holds less seasonal stock; with less, more orders of February are backordered.
 
-The backorder cost test uses forecast 2 of M0 and M1, with its peak in April and May. With 60 €/(bike·month), no order is backordered, and plant 3 assembles 150 bikes in May; the plan costs 860.260 €. A backorder from May to June costs the backorder cost plus 340 € at plant 2 in June, and plant 3 in May costs 390 €. Below 50 €/(bike·month) the backorder is cheaper: part of the orders of May is backordered and delivered in June, 150 orders with 30 €/(bike·month). With exactly 50 €/(bike·month) several plans have the same cost.
+The backorder cost test uses the seasonal demand peak of M0 and M1, in April and May. With 60 €/(bike·month), no order is backordered, and plant 3 assembles 150 bikes in May; the plan costs 860.260 €. A backorder from May to June costs the backorder cost plus 340 € at plant 2 in June, and plant 3 in May costs 390 €. Below 50 €/(bike·month) the backorder is cheaper: part of the orders of May is backordered and delivered in June, 150 orders with 30 €/(bike·month). With exactly 50 €/(bike·month) several plans have the same cost.
 
 With a storage capacity of 50 bikes at the warehouse, 160 orders of February are backordered; with 150 bikes, 60. From 160 bikes up, the warehouse holds 160 bikes at the end of January and 50 orders of February are backordered: the unmet demand that the plants cannot supply in any way (Table 3).
 
-### 6.3 Validation of M1 against the storage capacities (forecast 2)
+### 6.3 Validation of M1 against the storage capacities (seasonal demand peak)
 
-M1, in [`plant_stock.md`](plant_stock.md), is solved with forecast 2 and has no storage capacity at the plants. Table 8 compares its plan with two other plans under forecast 2: M1 with the storage capacities of the plants of Table 1, without the warehouse and without backorders; and M2, the plan of the backorder cost test of §6.2 with 60 €/(bike·month). Each of the three is the only optimal plan of its model.
+M1, in [`plant_stock.md`](plant_stock.md), is solved with the seasonal demand peak and has no storage capacity at the plants. Table 8 compares its plan with two other plans under the seasonal demand peak: M1 with the storage capacities of the plants of Table 1, without the warehouse and without backorders; and M2, the plan of the backorder cost test of §6.2 with 60 €/(bike·month). Each of the three is the only optimal plan of its model.
 
-Table 8. M1, M1 with the storage capacities of the plants and M2 under forecast 2
+Table 8. M1, M1 with the storage capacities of the plants and M2 under the seasonal demand peak
 
 | | M1 | M1 with the storage capacities of the plants | M2 |
 |---|---|---|---|
@@ -202,7 +202,7 @@ The plan of M1 holds 250 bikes at plant 1 at the end of March, and plant 1 can h
 
 Table 9 gives the bikes that each plant assembles in May and June in the plan of M2 of Table 8, and the capacity of each plant. In May the three plants assemble at their capacity. In June plant 1 assembles at its capacity, and plant 2 assembles only its required final stock, 10 bikes, so it has spare capacity.
 
-Table 9. Assembly at each plant in May and June, M2 under forecast 2 (bikes)
+Table 9. Assembly at each plant in May and June, M2 under the seasonal demand peak (bikes)
 
 | | May | Jun | Capacity (bikes/month) |
 |---|---|---|---|
@@ -212,7 +212,7 @@ Table 9. Assembly at each plant in May and June, M2 under forecast 2 (bikes)
 
 ## 7. Script and notebook
 
-The Python script `central_warehouse_solver.py`, in this folder, prints every table of this document and checks that M1 has no solution with forecast 3. For Table 8 it also solves M1 and M1 with the storage capacities of the plants under forecast 2. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
+The Python script `central_warehouse_solver.py`, in this folder, prints every table of this document and checks that M1 has no solution with the early demand peak. For Table 8 it also solves M1 and M1 with the storage capacities of the plants under the seasonal demand peak. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
 The notebook [`notebooks/central_warehouse.ipynb`](notebooks/central_warehouse.ipynb) solves the plan of §6.1 and the four tests of §6.2. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/central_warehouse.ipynb). Its code is in the package `plants` of this folder (`src/plants/central_warehouse.py`), which reads the data of M0, M1 and M2 from `src/plants/data.py`.
 

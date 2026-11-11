@@ -74,7 +74,7 @@ def test_holding_cost_of_25_gives_several_optimal_plans():
 
 
 def test_shortage_of_plants_1_and_2_with_forecast_2():
-    demand = FORECASTS["Forecast 2"]
+    demand = FORECASTS["Seasonal demand peak"]
     assert {t: demand[t] - 450 for t in T if demand[t] > 450} == {"Apr": 200, "May": 170}
 
 
@@ -88,7 +88,7 @@ def test_initial_and_final_stock():
 
 
 def test_no_solution_when_the_demand_is_above_capacity_and_stock():
-    demand = dict(FORECASTS["Forecast 2"], Jun=1500)
+    demand = dict(FORECASTS["Seasonal demand peak"], Jun=1500)
     assert ps.solve(demand=demand) is None
     assert ps.why_no_plan(demand=demand).startswith("Unmet demand in Jun")
 

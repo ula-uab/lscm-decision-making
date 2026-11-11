@@ -28,7 +28,7 @@ def test_m1_has_no_solution_with_forecast_3():
 
 
 def test_forecast_3_is_not_in_the_forecasts_of_m0():
-    assert list(FORECASTS) == ["Forecast 1", "Forecast 2"]
+    assert list(FORECASTS) == ["Demand below capacity", "Seasonal demand peak"]
 
 
 def test_table5_plan_with_forecast_3():
@@ -73,11 +73,11 @@ def test_without_the_limit_on_the_orders_owed_at_the_end():
 
 
 def test_cost_of_serving_late_with_forecast_2():
-    on_time = cw.solve(demand=FORECASTS["Forecast 2"], late_cost=60)
+    on_time = cw.solve(demand=FORECASTS["Seasonal demand peak"], late_cost=60)
     assert on_time["cost"] == pytest.approx(860260)
     assert all(on_time["owed"][t] == 0 for t in T)
     assert [on_time["assembly"]["Plant 3", t] for t in T] == [0, 0, 0, 0, 150, 0]
-    late = cw.solve(demand=FORECASTS["Forecast 2"], late_cost=30)
+    late = cw.solve(demand=FORECASTS["Seasonal demand peak"], late_cost=30)
     assert [late["owed"][t] for t in T] == [0, 0, 0, 0, 150, 0]
     assert all(late["assembly"]["Plant 3", t] == 0 for t in T)
 
@@ -102,7 +102,7 @@ def test_storage_capacity_of_the_plants():
 
 def test_table8_m1_against_the_storage_capacities_with_forecast_2():
     # M1, M1 with the storage capacities of the plants and M2, under forecast 2
-    demand = FORECASTS["Forecast 2"]
+    demand = FORECASTS["Seasonal demand peak"]
     plans = {"M1": ps.solve(demand=demand), "M1 with storage": ps.solve(demand=demand, storage=K_h),
              "M2": cw.solve(demand=demand)}
     assert {name: [plan["stock"][f, "Mar"] for f in F] for name, plan in plans.items()} == {
@@ -114,7 +114,7 @@ def test_table8_m1_against_the_storage_capacities_with_forecast_2():
 
 
 def test_table8_plans_are_the_only_optimal_plans():
-    demand = FORECASTS["Forecast 2"]
+    demand = FORECASTS["Seasonal demand peak"]
     assert ps.only_plan(demand=demand) is True
     assert ps.only_plan(demand=demand, storage=K_h) is True
     assert cw.only_plan(demand=demand) is True
@@ -122,7 +122,7 @@ def test_table8_plans_are_the_only_optimal_plans():
 
 def test_table9_assembly_in_may_and_june_with_forecast_2():
     # M2 under forecast 2, the plan of Table 8: what each plant assembles in May and June
-    plan = cw.solve(demand=FORECASTS["Forecast 2"])
+    plan = cw.solve(demand=FORECASTS["Seasonal demand peak"])
     assert {f: [plan["assembly"][f, t] for t in ("May", "Jun")] for f in F} == {
         "Plant 1": [250, 250], "Plant 2": [200, 10], "Plant 3": [150, 0]}
     assert {f: [K[f][t] for t in ("May", "Jun")] for f in F} == {

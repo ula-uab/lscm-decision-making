@@ -1,8 +1,8 @@
 # Production plan with stock at the plants (M1)
 #
 # This script reproduces every table of plant_stock.md (same folder): the data
-# of the plants and forecast 2 (Tables 1 and 2); the plan with forecast 2 and
-# the required final stock, with the shadow prices of the demand (Tables 4
+# of the plants and the seasonal demand peak (Tables 1 and 2); the plan with the
+# seasonal demand peak and the required final stock, with the shadow prices of the demand (Tables 4
 # and 5); the plan without the required final stock (Tables 5 and 6); and a plan from January to
 # March followed by a plan from April to June, which has no solution (Table 7).
 #
@@ -43,7 +43,7 @@ T = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]        # months
 c = {"Plant 1": 310, "Plant 2": 340, "Plant 3": 390}
 K = {f: {t: cap for t in T} for f, cap in {"Plant 1": 250, "Plant 2": 200, "Plant 3": 150}.items()}
 
-# Demand d[t] of forecast 2 (bikes/month), Table 2 of production_plan.md
+# Demand d[t] of the seasonal demand peak (bikes/month), Table 2 of production_plan.md
 d = dict(zip(T, [380, 330, 420, 650, 620, 230]))
 
 # New in M1: holding cost c_h[f] (EUR/(bike*month)), initial stock h_0[f]
@@ -159,23 +159,23 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # §3 Data
-    title("§3 Plant data and forecast 2")
+    title("§3 Plant data and the seasonal demand peak")
     print("Table 1. Plants")
     print(f"{'Plant':<10}{'c (EUR/bike)':>14}{'K (bikes/month)':>17}{'c_h (EUR/(bike*month))':>24}"
           f"{'h_0 (bikes)':>13}{'h_end (bikes)':>15}")
     for f in F:
         print(f"{f:<10}{c[f]:>14}{K[f]['Jan']:>17}{c_h[f]:>24}{h_0[f]:>13}{h_end[f]:>15}")
     print()
-    print("Table 2. Forecast 2 and the capacity of the plants (bikes/month)")
+    print("Table 2. Seasonal demand peak and the capacity of the plants (bikes/month)")
     print(f"{'':<34}" + "".join(f"{t:>9}" for t in T))
-    by_month("Demand, forecast 2", [d[t] for t in T])
+    by_month("Demand, seasonal demand peak", [d[t] for t in T])
     by_month("Capacity of plants 1 and 2", [K["Plant 1"][t] + K["Plant 2"][t] for t in T])
     by_month("Capacity of the three plants", [sum(K[f][t] for f in F) for t in T])
     short = {t: d[t] - K["Plant 1"][t] - K["Plant 2"][t] for t in T
              if d[t] > K["Plant 1"][t] + K["Plant 2"][t]}
     print("Demand above the capacity of plants 1 and 2: " + "; ".join(f"{t} {eu(v, 0)} bikes" for t, v in short.items()))
 
-    # §6.1 Plan with forecast 2 and the required final stock
+    # §6.1 Plan with the seasonal demand peak and the required final stock
     title("§6.1 Optimal plan with the required final stock")
     cost, assembled, shipped, stock, price_target = solve_model(T, h_0, h_end)
     print("Table 4. Optimal plan (bikes)")

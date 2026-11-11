@@ -24,15 +24,15 @@ import pandas as pd
 import pulp
 
 from .central_warehouse import SEVERAL, only_optimal
-from .data import (ARCS_M4, BACKORDER_SHARE, CENTRAL, FORECAST_5, F, K, K_h_node, K_h_node_m4, K_n, LOCAL,
-                   NODES, NODES_M4, PLACES_M4, RAIL_TERMINAL, RETAILERS, REGIONAL, SHARE_M4, T, b_0, c, c_b,
+from .data import (ARCS_M4, BACKORDER_SHARE, CENTRAL, FORECAST_5, FORECAST_5_NAME, F, K, K_h_node, K_h_node_m4, K_n,
+                   LOCAL, NODES, NODES_M4, PLACES_M4, RAIL_TERMINAL, RETAILERS, REGIONAL, SHARE_M4, T, b_0, c, c_b,
                    c_h_node_m4, c_l, h_node_0_m4, h_node_end_m4)
 from .distribution_network import PRICES, _kind, arc_name, entering, leaving, places_table, stage_stock
 from .model import TOL, _constraints, _optimal
 from . import figures
 from .show import _display, _european_axes, _light, _number
 
-FORECAST = "Forecast 5"                   # M4 is solved with forecast 5
+FORECAST = FORECAST_5_NAME               # M4 is solved with forecast 5
 DEMAND = FORECAST_5
 FIRST_RETAILER_ARC = len(ARCS_M4) - 12    # arcs 14 to 25 of the list go to the retailers
 # The colour of each retailer in the figures with one series per retailer. Red is
@@ -186,8 +186,8 @@ def show_data(show_tables: bool = False) -> None:
                         f"{_number(ARCS_M4[-1]['capacity'])} bikes/month.", text_colour=figures.INK)
         figures.orders_figure({f"{_name(r)}, {_number(100 * SHARE_M4[r])} %": [order[r, t] for t in T]
                                for r in RETAILERS},
-                              f"Orders of each retailer in each month: its share of {FORECAST.lower()}",
-                              ylabel="Orders (bikes/month)")
+                              f"{FORECAST}: orders of each retailer in each month, its share of the forecast",
+                              ylabel="Orders (bikes/month)", capacity=sum(K[f]["Jan"] for f in F))
         return
     _display(places_table(NODES_M4, PLACES_M4))
     _display(pd.DataFrame([{"Arc": a + 1, "Origin": arc["origin"], "Destination": arc["destination"],
@@ -381,7 +381,7 @@ def retailer_plan(month: str = "May", show_tables: bool = False) -> dict | None:
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
         ending = sum(h_node_end_m4[f] for f in F)
-        print(f"M3, with the orders at the local warehouses, has no solution with {FORECAST.lower()}: from April "
+        print(f"M3, with the orders at the local warehouses, has no solution with the {FORECAST.lower()}: from April "
               f"to June {_number(ordered)} bikes are ordered and the plants can assemble {_number(assembled)}, "
               f"and the plants have to end June with {_number(ending)} bikes. At the end of March "
               f"{_number(ordered - assembled + ending)} bikes have to be in stock, and the network can hold "
@@ -417,7 +417,7 @@ def promotion_test(retailer: str = "Retailer 2", month: str = "Jan", extra_order
     order = orders()
     order[retailer, month] += extra_orders
     print(f"Orders of {_name(retailer)} in {month}: {_number(order[retailer, month])} bikes, "
-          f"{_number(extra_orders)} more than in {FORECAST.lower()}.")
+          f"{_number(extra_orders)} more than in the {FORECAST.lower()}.")
     return _report({"order": order}, FORECAST, month, full=False, show_tables=show_tables)
 
 

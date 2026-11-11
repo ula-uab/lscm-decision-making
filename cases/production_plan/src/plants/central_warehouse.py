@@ -25,13 +25,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pulp
 
-from .data import (F, FORECAST_3, FORECASTS, K, K_h, K_h_w, T, b_0, b_max, c, c_b, c_h, c_h_w, h_0,
+from .data import (F, FORECAST_3, FORECAST_3_NAME, FORECASTS, K, K_h, K_h_w, T, b_0, b_max, c, c_b, c_h, c_h_w, h_0,
                    h_end, h_w_0, h_w_end)
 from .model import TOL, _constraints, _optimal
 from . import figures
 from .show import COLOURS, SHORT, _display, _euros, _european_axes, _light, _number
 
-FORECAST = "Forecast 3"                   # M2 is solved with forecast 3
+FORECAST = FORECAST_3_NAME               # M2 is solved with forecast 3
 DEMAND = FORECAST_3
 WAREHOUSE = "Warehouse"
 WAREHOUSE_COLOUR = "tab:gray"
@@ -169,7 +169,8 @@ def m1_has_no_solution(demand: dict = DEMAND) -> str | None:
 
 def show_data() -> None:
     """Tables 1 to 3 of central_warehouse.md: the plants, the warehouse and the
-    backorders, and forecast 3."""
+    backorders, and forecast 3; then forecast 3 against the assembly capacity of the
+    three plants."""
     _display(pd.DataFrame({f: {"Unit assembly cost (€/bike)": c[f],
                                "Capacity (bikes/month, every month)": K[f]["Jan"],
                                "Holding cost (€/(bike·month))": c_h[f],
@@ -186,6 +187,8 @@ def show_data() -> None:
                                        "Maximum backorders at the end of the horizon (bikes)": b_max}})
              .rename_axis("Central warehouse"))
     _display(pd.DataFrame({FORECAST: DEMAND}).T.rename_axis("Orders (bikes/month)"))
+    figures.orders_figure({"orders": [DEMAND[t] for t in T]}, FORECAST,
+                          capacity=sum(K[f]["Jan"] for f in F), outline=True)
 
 
 def _plan_table(solution: dict) -> pd.DataFrame:
@@ -311,7 +314,7 @@ def warehouse_plan(show_tables: bool = False) -> dict | None:
     """The plan with forecast 3; and, first, whether M1 has a plan for it."""
     reason = m1_has_no_solution()
     if reason:
-        print(f"M1, with stock at the plants only, has no solution with {FORECAST.lower()}. {reason}")
+        print(f"M1, with stock at the plants only, has no solution with the {FORECAST.lower()}. {reason}")
         print()
     return _report({}, FORECAST, show_tables)
 
@@ -338,7 +341,8 @@ def plant_storage_test(storage_plant_1: float = 40, show_tables: bool = False) -
 def backorder_cost_test(backorder_cost: float = 60, show_tables: bool = False) -> dict | None:
     """The plan with forecast 2 and the backorder cost changed."""
     print(f"Backorder cost: {_number(backorder_cost)} €/(bike·month).")
-    return _report({"demand": FORECASTS["Forecast 2"], "late_cost": backorder_cost}, "Forecast 2", show_tables)
+    return _report({"demand": FORECASTS["Seasonal demand peak"], "late_cost": backorder_cost}, "Seasonal demand peak",
+                   show_tables)
 
 
 def warehouse_storage_test(warehouse_storage: float = 150, show_tables: bool = False) -> dict | None:

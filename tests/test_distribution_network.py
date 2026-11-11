@@ -30,7 +30,7 @@ def row(name, values, width=58):
 def test_script_prints_the_tables():
     out = subprocess.run([sys.executable, SCRIPT], cwd=CASE, capture_output=True, text=True,
                          check=True).stdout
-    for text in ("M2 (plants and central warehouse only) has a solution with forecast 4: no",
+    for text in ("M2 (plants and central warehouse only) has a solution with the late demand peak: no",
                  "Cost: 1.112.018,47 EUR",
                  row("7. Rail terminal -> Regional warehouse 2", [156, 200, 200, 200, 200, 200]),
                  row("Node capacity, Regional warehouse 2", [0, 0, 0, 0, -1.72, 0]),

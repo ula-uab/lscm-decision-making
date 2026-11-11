@@ -419,10 +419,15 @@ def stacked(ax, months: list, rows: dict, colours: dict, top: float | None = Non
 
 
 @_light
-def orders_figure(rows: dict, title: str, ylabel: str = "Orders (bikes)", price: dict | None = None) -> None:
+def orders_figure(rows: dict, title: str, ylabel: str = "Orders (bikes)", price: dict | None = None,
+                  capacity: float | None = None, outline: bool = False) -> None:
     """The orders of each month, stacked by customer (``rows``: customer: orders by
     month), with the orders of each customer inside its part of the bar and the
-    total above it. With ``price``, a panel above with the price of each month."""
+    total above it; with one row, only the total. With ``price``, a panel above with
+    the price of each month. With ``capacity``, the assembly capacity of the three
+    plants in a month, a dashed line as in ``assembly_figure``. With ``outline``, the
+    bars are white with a black edge: black is the colour of the demand in the
+    figures of M0 to M2."""
     if price:
         fig, (above, ax) = plt.subplots(2, 1, figsize=(11, 6), sharex=True, gridspec_kw={"height_ratios": [1, 3.2]})
     else:
@@ -430,15 +435,21 @@ def orders_figure(rows: dict, title: str, ylabel: str = "Orders (bikes)", price:
     colours = plt.get_cmap("Set2")
     bottom = [0] * len(T)
     for k, (name, values) in enumerate(rows.items()):
-        ax.bar(range(len(T)), values, 0.62, bottom=bottom, color=colours(k), label=name)
-        for i, v in enumerate(values):
-            ax.text(i, bottom[i] + v / 2, _number(v), ha="center", va="center", fontsize=7.5)
+        ax.bar(range(len(T)), values, 0.62, bottom=bottom, color="white" if outline else colours(k),
+               edgecolor="black" if outline else None, label=name)
+        if len(rows) > 1:
+            for i, v in enumerate(values):
+                ax.text(i, bottom[i] + v / 2, _number(v), ha="center", va="center", fontsize=7.5)
         bottom = [b + v for b, v in zip(bottom, values)]
+    top = max(max(bottom), capacity or 0)
     for i, total in enumerate(bottom):
-        ax.text(i, total + max(bottom) * 0.015, _number(total), ha="center", va="bottom", fontsize=8.5,
+        ax.text(i, total + top * 0.015, _number(total), ha="center", va="bottom", fontsize=8.5,
                 weight="bold")
+    if capacity:
+        step(ax, T, [capacity] * len(T), color="black", lw=1, ls="--",
+             label=f"assembly capacity of the three plants, {_number(capacity)} bikes/month")
     ax.set_xticks(range(len(T)), T)
-    ax.set_ylim(0, max(bottom) * 1.1)
+    ax.set_ylim(0, top * 1.1)
     ax.set_ylabel(ylabel)
     ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
     ax.spines[["top", "right"]].set_visible(False)

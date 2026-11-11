@@ -14,14 +14,14 @@ Table 1. Assembly plants
 | Plant 2 | 340 | 200 |
 | Plant 3 | 390 | 150 |
 
-The three plants together can assemble 600 bikes a month. Table 2 gives two forecasts of the demand. They differ only in April and May.
+The three plants together can assemble 600 bikes a month. Table 2 gives two forecasts of the demand, which differ only in April and May. With demand below capacity, the demand is below the assembly capacity of the three plants in every month. The seasonal demand peak has a peak in April and May above that capacity, and the months before it have spare capacity.
 
 Table 2. Demand forecasts, $d_t$ (bikes/month)
 
 | Forecast | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
-| Forecast 1 | 380 | 330 | 420 | 440 | 430 | 230 |
-| Forecast 2 | 380 | 330 | 420 | 650 | 620 | 230 |
+| Demand below capacity | 380 | 330 | 420 | 440 | 430 | 230 |
+| Seasonal demand peak | 380 | 330 | 420 | 650 | 620 | 230 |
 
 ## 2. Linear model of the production plan
 
@@ -103,11 +103,11 @@ Table 4. Shadow prices of the reduced version
 
 **Reduced cost.** The reduced cost of a variable is how much its cost per bike would have to fall before it enters the optimal plan with a positive value. In the reduced version both variables are positive, so both reduced costs are zero.
 
-## 4. Plan of the full case with forecast 1
+## 4. Plan of the full case with demand below capacity
 
-Table 5 gives the optimal plan for forecast 1.
+Table 5 gives the optimal plan with demand below capacity.
 
-Table 5. Optimal plan with forecast 1 (bikes/month)
+Table 5. Optimal plan with demand below capacity (bikes/month)
 
 | Plant | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
@@ -118,7 +118,7 @@ Table 5. Optimal plan with forecast 1 (bikes/month)
 
 The cost of the plan is 713.800 €: 1.480 bikes from plant 1 at 310 € and 750 bikes from plant 2 at 340 €. Plant 3 is not used.
 
-Table 6. Shadow prices of the demand and reduced costs, forecast 1 (€/bike)
+Table 6. Shadow prices of the demand and reduced costs, demand below capacity (€/bike)
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|
@@ -133,11 +133,11 @@ Table 6. Shadow prices of the demand and reduced costs, forecast 1 (€/bike)
 - **Reduced cost of plant 3.** Plant 3 would have to cost 50 €/bike less (340 € instead of 390 €) to enter the plan from January to May, and 80 €/bike less (310 €) in June, when the bike it would replace comes from plant 1.
 - **Reduced cost of plant 2 in June.** Plant 2 assembles nothing in June: it would have to cost 30 €/bike less, the same as plant 1, to enter the plan.
 
-## 5. Forecast 2: a model with no solution
+## 5. Seasonal demand peak: a model with no solution
 
-With forecast 2 the demand is 650 bikes in April and 620 in May, and the plants can assemble 600 a month. The model has no solution: 50 bikes are short in April and 20 in May.
+With the seasonal demand peak the demand is 650 bikes in April and 620 in May, and the plants can assemble 600 a month. The model has no solution: 50 bikes are short in April and 20 in May.
 
-Table 7. Capacity and demand with forecast 2 (bikes)
+Table 7. Capacity and demand with the seasonal demand peak (bikes)
 
 | | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|

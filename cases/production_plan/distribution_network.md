@@ -2,9 +2,9 @@
 
 This document is the fourth version, M3, of the production plan of an electric bicycle assembler. M0, in [`production_plan.md`](production_plan.md), is the linear model of the plants. In M1, in [`plant_stock.md`](plant_stock.md), each plant holds stock from one month to the next. In M2, in [`central_warehouse.md`](central_warehouse.md), the plants ship to a central warehouse, which holds stock and delivers the orders. M3 places the plants and the central warehouse in a distribution network in Spain, with a rail terminal, two regional warehouses and four local warehouses, which receive the orders. The network is a list of arcs, each with a transport cost and an arc capacity. The document contains all the data and all the results of M3, so that anyone can follow and check them.
 
-## 1. Infeasibility of M2 under forecast 4
+## 1. Infeasibility of M2 under the late demand peak
 
-Forecast 4 gives the orders of the four local warehouses together: 240; 440; 400; 800; 840 and 500 bikes from January to June. With it, M2 has no solution. From April to June 2.140 bikes are ordered, and the plants can assemble 1.800 in those three months, so 340 bikes have to be assembled before April; the plants also have to end June with their required final stock, 30 bikes. At the end of March 370 bikes have to be in stock as seasonal stock, and the plants and the central warehouse have a storage capacity of 240 bikes. Backorders do not change this count: every order has to be delivered by the end of June.
+The late demand peak gives the orders of the four local warehouses together: 240; 440; 400; 800; 840 and 500 bikes from January to June. Its peak, in the last three months, requires before it more seasonal stock than the plants and the central warehouse can hold, and with it M2 has no solution. From April to June 2.140 bikes are ordered, and the plants can assemble 1.800 in those three months, so 340 bikes have to be assembled before April; the plants also have to end June with their required final stock, 30 bikes. At the end of March 370 bikes have to be in stock as seasonal stock, and the plants and the central warehouse have a storage capacity of 240 bikes. Backorders do not change this count: every order has to be delivered by the end of June.
 
 The system can still meet those orders. The regional and local warehouses of the company can hold seasonal stock too. The problem is not in the system but in the model: M2 does not represent the warehouses below the central warehouse.
 
@@ -16,9 +16,9 @@ The train runs from the dry port of Zaragoza (Terminal Marítima de Zaragoza) to
 
 The network is given as a set of nodes and a list of arcs. Each arc goes from an origin node to a destination node and has a transport cost per bike, the same every month, and an arc capacity, the maximum flow on it in a month. The transport cost of an arc is its distance times the transport rate of its mode. The transport cost enters on every arc, also on those that leave the plants. Regional warehouse 2 also has a node capacity: the bikes it can receive in a month by any of its arcs.
 
-The regional and local warehouses have a holding cost and a storage capacity. Each local warehouse receives a share of forecast 4, the same every month, and has backorders with the backorder cost of M2. Planning the stock levels of the warehouses together with the shipments, within the storage and transport capacities and at the lowest holding and transport cost, is the task of mid-term distribution planning (Fleischmann et al., 2015, §4.2.3, p. 79).
+The regional and local warehouses have a holding cost and a storage capacity. Each local warehouse receives a share of the late demand peak, the same every month, and has backorders with the backorder cost of M2. Planning the stock levels of the warehouses together with the shipments, within the storage and transport capacities and at the lowest holding and transport cost, is the task of mid-term distribution planning (Fleischmann et al., 2015, §4.2.3, p. 79).
 
-## 3. Network data, forecast 4 and notation
+## 3. Network data, the late demand peak and notation
 
 Table 1 gives the nodes and their places. Each place is the point that Nominatim, the search engine of OpenStreetMap, gives for its name.
 
@@ -80,9 +80,9 @@ Table 3. Data of the nodes
 
 The plants keep their unit assembly costs and capacities of M0: 310; 340 and 390 €/bike, and 250; 200 and 150 bikes/month. The local warehouses keep the backorder cost of M2, 60 €/(bike·month), with no backorders at the end of December and none allowed at the end of June.
 
-Table 4 gives forecast 4 and the orders of each local warehouse: its share of the forecast, the same every month. Forecast 4 and the shares are invented.
+Table 4 gives the late demand peak and the orders of each local warehouse: its share of the forecast, the same every month. The late demand peak and the shares are invented.
 
-Table 4. Forecast 4 and the orders of each local warehouse, $d_{it}$ (bikes/month)
+Table 4. Late demand peak and the orders of each local warehouse, $d_{it}$ (bikes/month)
 
 | | Share | Jan | Feb | Mar | Apr | May | Jun |
 |---|---|---|---|---|---|---|---|
@@ -90,7 +90,7 @@ Table 4. Forecast 4 and the orders of each local warehouse, $d_{it}$ (bikes/mont
 | Local warehouse 2 (Tarragona) | 20 % | 48 | 88 | 80 | 160 | 168 | 100 |
 | Local warehouse 3 (Valencia) | 30 % | 72 | 132 | 120 | 240 | 252 | 150 |
 | Local warehouse 4 (Seville) | 35 % | 84 | 154 | 140 | 280 | 294 | 175 |
-| Forecast 4 | 100 % | 240 | 440 | 400 | 800 | 840 | 500 |
+| Late demand peak | 100 % | 240 | 440 | 400 | 800 | 840 | 500 |
 
 Table 5 gives the symbols of M0 to M3, with the term that names each concept. The column «From» gives the version where each symbol first appears. In M3 the warehouses are nodes of the network: the symbols $c^h_w$, $K^h_w$ and $h_{wt}$ of the central warehouse in M2 become $c^h_i$, $K^h_i$ and $h_{it}$ with $i$ the central warehouse, and the bikes shipped from plant $f$, $x_{ft}$, become the flow $x_{at}$ on the arc from plant $f$ to the central warehouse.
 
@@ -163,12 +163,12 @@ with $h_{i0}$ and $b_{i0}$ given. The objective is the cost of the plan, in euro
 2. Costs are proportional to the quantities: there is no fixed cost of using a plant, an arc or a warehouse.
 3. A bike shipped in a month arrives in that month at the end of its arc, and can go along several arcs and be delivered in that same month.
 4. The transport cost of an arc is the same every month, whatever the flow on it.
-5. Each local warehouse receives the same share of forecast 4 every month.
+5. Each local warehouse receives the same share of the late demand peak every month.
 6. Customers wait for their backorders: no sale is lost.
 
-## 6. Results under forecast 4
+## 6. Results under the late demand peak
 
-### 6.1 Optimal plan under forecast 4
+### 6.1 Optimal plan under the late demand peak
 
 The optimal plan costs 1.112.018,47 €, and it is the only optimal plan. Tables 6 to 8 give the bikes assembled, the flow on each arc and the stock of each node. Every month, each local warehouse delivers its orders of that month (Table 4), and there are no backorders: the backorder balance is in the model, and with these data no order is backordered.
 
@@ -259,7 +259,7 @@ The third test changes the node capacity of regional warehouse 2. From 300 bikes
 
 ## 7. Script and notebook
 
-The Python script `distribution_network_solver.py`, in this folder, prints every table of this document and checks that M2 has no solution with forecast 4. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
+The Python script `distribution_network_solver.py`, in this folder, prints every table of this document and checks that M2 has no solution with the late demand peak. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
 The notebook [`notebooks/distribution_network.ipynb`](notebooks/distribution_network.ipynb) solves the plan of §6.1, draws the network with the flows of the month the reader chooses, and runs the three tests of §6.4. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/distribution_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/distribution_network.py`), which reads the data of M0 to M3 from `src/plants/data.py`. The map of the places of the nodes draws the outline of the peninsula from Natural Earth.
 
