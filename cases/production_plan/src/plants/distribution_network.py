@@ -189,7 +189,7 @@ def show_data(show_tables: bool = False) -> None:
                         "stock → required final stock.\nWarehouses: holding cost · storage capacity"
                         + ("; each one starts and ends the six months with no stock" if figures.warehouses_empty(NODES)
                            else "") + ". Arcs: transport cost (€/bike) · arc capacity (bikes/month).",
-                        arc_list=ARCS)
+                        text_colour=figures.INK, arc_list=ARCS)
         figures.orders_figure({f"{i} ({PLACES[i][0]}), {_number(100 * SHARE[i])} %": orders[i] for i in LOCAL},
                               f"Orders of each local warehouse in each month: its share of {FORECAST.lower()}",
                               ylabel="Orders (bikes/month)")

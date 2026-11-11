@@ -474,16 +474,23 @@ def _covering_figure(plan: dict, max_time: float) -> None:
     fig, ax = plt.subplots(figsize=(9.5, 7.2))
     _map(ax, "Regional warehouses and the local warehouses within their reach")
     hours = f"{_number(max_time)} h"
+    sites_at = {_lon_lat(n) for n in SITES}
+
+    def square(l: str) -> tuple[float, float]:
+        """Where a local warehouse is drawn: at its place, or beside the candidate
+        site of the same city, so that both are seen."""
+        x, y = _lon_lat(l)
+        return (x + 0.17, y) if (x, y) in sites_at else (x, y)
+
     for n in plan["sites"]:
         for l in plan["sets"][n]:
-            (x0, y0), (x1, y1) = _lon_lat(n), _lon_lat(l)
+            (x0, y0), (x1, y1) = _lon_lat(n), square(l)
             ax.plot([x0, x1], [y0, y1], color="tab:green", lw=1, zorder=1)
     points = []
     for l in LOCAL_EXP:
-        x, y = _lon_lat(l)
-        ax.scatter(x + 0.17, y, s=55, marker="s", color=SHORT if len(plan["reached by"][l]) > 1 else "black",
+        ax.scatter(*square(l), s=55, marker="s", color=SHORT if len(plan["reached by"][l]) > 1 else "black",
                    zorder=3)
-        points.append((x + 0.17, y, 9))
+        points.append((*square(l), 9))
     for n in SITES:
         x, y = _lon_lat(n)
         ax.scatter(x, y, s=140, marker="^", color="tab:green" if n in plan["sites"] else "white",
@@ -498,10 +505,10 @@ def _covering_figure(plan: dict, max_time: float) -> None:
                label=f"Local warehouse within {hours} of two or more regional warehouses")
     ax.legend(fontsize=7.5, loc="lower right", framealpha=0.9)
     fig.tight_layout()
-    cities = {PLACES_EXP[l][0]: (_lon_lat(l)[0] + 0.17, _lon_lat(l)[1]) for l in LOCAL_EXP}
+    cities = {PLACES_EXP[l][0]: square(l) for l in LOCAL_EXP}
     for n in SITES:
         cities.setdefault(PLACES_EXP[n][0], _lon_lat(n))
-    lines = [[_lon_lat(n), _lon_lat(l)] for n in plan["sites"] for l in plan["sets"][n]]
+    lines = [[_lon_lat(n), square(l)] for n in plan["sites"] for l in plan["sets"][n]]
     figures.place_labels(ax, list(cities.items()), points, lines)
     plt.show()
 

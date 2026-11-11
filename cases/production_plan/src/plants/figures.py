@@ -33,6 +33,7 @@ from .show import COLOURS, SHORT, _light, _number
 NETWORK_FIGURE = Path(__file__).with_name("network_m4.json")
 INK, TEXT, FILL = "#034854", "#444444", "#F2F6F6"
 IDLE = "0.78"                     # an arc with no flow
+PRICE_BAR = "0.3"                 # the bars of the shadow prices: a colour that marks nothing else
 
 # Outline of Spain, Portugal, France and Andorra: Natural Earth, 1:50m Cultural
 # Vectors, Admin 0 - Countries, version 5.1.1 (public domain, naturalearthdata.com;
@@ -538,7 +539,7 @@ def shadow_prices(ax, prices: list, month: str) -> None:
         return
     names = [name for name, _ in prices][::-1]
     values = [value for _, value in prices][::-1]
-    ax.barh(range(len(names)), values, 0.6, color=["tab:green" if v < 0 else "0.6" for v in values])
+    ax.barh(range(len(names)), values, 0.6, color=PRICE_BAR)
     ax.axvline(0, color="black", lw=0.8)
     low = min(min(values), 0)
     ax.set_xlim(low * 1.35 - 1, max(max(values), 0) * 1.35 + 1)

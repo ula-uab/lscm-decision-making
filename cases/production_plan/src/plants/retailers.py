@@ -179,7 +179,7 @@ def show_data(show_tables: bool = False) -> None:
                         + ("; each one starts and ends the six months with no stock" if figures.warehouses_empty(NODES)
                            else "") + ".\nRetailers: backorder share; lost-sale cost. Arcs: transport cost (€/bike) · "
                         "arc capacity (bikes/month); the arcs to the retailers have an arc capacity of "
-                        f"{_number(ARCS_M4[-1]['capacity'])} bikes/month.")
+                        f"{_number(ARCS_M4[-1]['capacity'])} bikes/month.", text_colour=figures.INK)
         figures.orders_figure({f"{_name(r)}, {_number(100 * SHARE_M4[r])} %": [order[r, t] for t in T]
                                for r in RETAILERS},
                               f"Orders of each retailer in each month: its share of {FORECAST.lower()}",
@@ -306,7 +306,8 @@ def _arc_figure(solution: dict, arc: int) -> None:
         x = [i + (k - 0.5) * 0.38 for i in range(len(months))]
         values = [solution["flow"][a, t] for t in months]
         ax.bar(x, values, 0.36, color=colours(k),
-               label=f"arc {a + 1}: {_name(arc_list[a]['origin'])}, transport cost {_number(arc_list[a]['cost'], 2)} €/bike")
+               label=f"arc {a + 1}: {_name(arc_list[a]['origin'])}, "
+                     f"transport cost {_number(arc_list[a]['cost'], 2)} €/bike")
         for xi, v in zip(x, values):
             ax.text(xi, v + top * 0.01, _number(v), ha="center", va="bottom", fontsize=7)
     ax.set_ylim(0, top)
@@ -354,8 +355,8 @@ def _report(data: dict, heading: str, month: str = "May", full: bool = True, sho
     if arc is not None:
         _arc_figure(solution, arc)
     title = (f"Plan of M4 in {month}. On each arc, its flow (bikes). Under each node, its stock at the end of {month} "
-             f"(bikes);\nat each retailer, its orders, deliveries and lost sales in {month} and its backorders at the end "
-             f"of {month} (bikes).")
+             f"(bikes);\nat each retailer, its orders, deliveries and lost sales in {month} and its backorders "
+             f"at the end of {month} (bikes).")
     node_capacity = data.get("node_capacity", K_n)
     if full:
         figures.flow_network(solution, month, NODES_M4, _network_text(solution, month), title)
