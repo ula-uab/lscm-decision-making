@@ -5,7 +5,8 @@
 # with stock at the plants only, has no solution with forecast 3; the plan of
 # M2 with forecast 3 (Table 5); the shadow prices of the backorder balance
 # and of the storage capacities (Tables 6 and 7); and the plans of M1, M1 with
-# the storage capacities of the plants and M2 under forecast 2 (Table 8).
+# the storage capacities of the plants and M2 under forecast 2 (Table 8), and
+# what each plant assembles in May and June in that plan of M2 (Table 9).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -268,3 +269,9 @@ if __name__ == "__main__":
     for t, month in (("Apr", "April"), ("May", "May")):
         row(f"Assembled at plant 3 in {month}", [eu(v[1]["p"]["Plant 3", t], 0) for v in plans.values()])
     row("Cost of the plan (EUR)", [eu(v[0], 0) for v in plans.values()])
+    print()
+    print("Table 9. Assembly at each plant in May and June, M2 under forecast 2 (bikes)")
+    print(f"{'':<10}{'May':>9}{'Jun':>9}{'Capacity (bikes/month)':>26}")
+    for f in F:
+        print(f"{f:<10}" + "".join(f"{eu(plans['M2'][1]['p'][f, t], 0):>9}" for t in ("May", "Jun"))
+              + f"{eu(K[f]['May'], 0):>26}")

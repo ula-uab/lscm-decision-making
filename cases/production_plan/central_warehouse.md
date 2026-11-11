@@ -200,6 +200,16 @@ Table 8. M1, M1 with the storage capacities of the plants and M2 under forecast 
 
 The plan of M1 holds 250 bikes at plant 1 at the end of March, and plant 1 can hold 40. With the storage capacities of the plants, M1 still has a plan: plants 1 and 2 hold the stock that fits, 40 and 30 bikes, plant 3 assembles at its capacity in April and May, and the plan costs 6.580 € more. M2 holds at the warehouse 150 bikes that do not fit at the plants, plant 3 assembles only in May, and the plan costs 1.800 € more than M1 and 4.780 € less than M1 with the storage capacities of the plants.
 
+Table 9 gives the bikes that each plant assembles in May and June in the plan of M2 of Table 8, and the capacity of each plant. In May the three plants assemble at their capacity. In June plant 1 assembles at its capacity, and plant 2 assembles only its required final stock, 10 bikes, so it has spare capacity.
+
+Table 9. Assembly at each plant in May and June, M2 under forecast 2 (bikes)
+
+| | May | Jun | Capacity (bikes/month) |
+|---|---|---|---|
+| Plant 1 | 250 | 250 | 250 |
+| Plant 2 | 200 | 10 | 200 |
+| Plant 3 | 150 | 0 | 150 |
+
 ## 7. Script and notebook
 
 The Python script `central_warehouse_solver.py`, in this folder, prints every table of this document and checks that M1 has no solution with forecast 3. For Table 8 it also solves M1 and M1 with the storage capacities of the plants under forecast 2. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.

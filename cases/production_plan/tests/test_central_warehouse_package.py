@@ -11,7 +11,7 @@ matplotlib.use("Agg")
 
 from plants import central_warehouse as cw  # noqa: E402
 from plants import plant_stock as ps  # noqa: E402
-from plants.data import F, FORECAST_3, FORECASTS, K_h, T  # noqa: E402
+from plants.data import F, FORECAST_3, FORECASTS, K, K_h, T  # noqa: E402
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "central_warehouse.ipynb"
 
@@ -118,6 +118,16 @@ def test_table8_plans_are_the_only_optimal_plans():
     assert ps.only_plan(demand=demand) is True
     assert ps.only_plan(demand=demand, storage=K_h) is True
     assert cw.only_plan(demand=demand) is True
+
+
+def test_table9_assembly_in_may_and_june_with_forecast_2():
+    # M2 under forecast 2, the plan of Table 8: what each plant assembles in May and June
+    plan = cw.solve(demand=FORECASTS["Forecast 2"])
+    assert {f: [plan["assembly"][f, t] for t in ("May", "Jun")] for f in F} == {
+        "Plant 1": [250, 250], "Plant 2": [200, 10], "Plant 3": [150, 0]}
+    assert {f: [K[f][t] for t in ("May", "Jun")] for f in F} == {
+        "Plant 1": [250, 250], "Plant 2": [200, 200], "Plant 3": [150, 150]}
+
 
 def test_notebook_runs():
     nbformat = pytest.importorskip("nbformat")
