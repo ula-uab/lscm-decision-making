@@ -661,9 +661,10 @@ def run(plant: str, name: str, check: bool = False) -> dict | None:
 # What the notebook shows
 # ---------------------------------------------------------------------------
 
-# The colour of each bike model in the figures, by its position in MODELS. Red is
+# The colour of each bike model in the figures, by its position in MODELS: none is
+# the colour of a plant (blue, orange, purple), of a run of part d) or red, which is
 # kept for the capacity overload
-MODEL_COLOURS = ["tab:blue", "tab:orange", "tab:green", "tab:brown"]
+MODEL_COLOURS = ["#C51B7D", "#8C564B", "#B8860B", "#17BECF"]
 
 
 def _model_colour(k: int) -> str:
