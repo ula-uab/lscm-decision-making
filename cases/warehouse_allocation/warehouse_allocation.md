@@ -1,6 +1,6 @@
 # Which warehouse serves each customer — T1 running example
 
-This document explains the example used in the T1 slides. It contains all the data and all the results shown on the slides, so that anyone can follow and check them. The data are invented for this course (2026); they do not describe a real company.
+This document explains the example used in the T1 slides. It contains all the data and all the results shown on the slides, so that anyone can follow and check them.
 
 ## 1. The situation
 
@@ -214,7 +214,7 @@ The forecast for week 13 is $(36 + 34 + 35 + 35)/4 = 35$ pallets, the value used
 
 §6 looks at one week: the forecast of C3 fails in week 13, and a reserve of capacity costs money. This section keeps a plan for several weeks while the orders of two customers change. It checks every feasible plan week by week, measures the forecast error of two customers, and computes what each plan costs over a period when a pallet that is not served has a cost.
 
-**The data.** The orders of C1 are now also data of the example (Table 9). They are invented for this course (2026), like the rest of the example. C2 and C4 order the same every week, by contract: 30 and 25 pallets. Only C1 and C3 have orders that change. In week 13, C1 orders 40 pallets, the same as its forecast, and C3 orders 46, as in §6.
+**The data.** The orders of C1 are now also data of the example (Table 9). C2 and C4 order the same every week, by contract: 30 and 25 pallets. Only C1 and C3 have orders that change. In week 13, C1 orders 40 pallets, the same as its forecast, and C3 orders 46, as in §6.
 
 Table 9. Orders of C1 and C3 (pallets/week)
 
@@ -310,3 +310,7 @@ Two Python scripts in this folder reproduce every table of this document. Runnin
 Both print the same results. With 16 plans, checking them all is quick. With $10^{200}$ plans (§4) it is impossible. A solver does not need to list the plans, so it can often solve problems of that size: how it does so is the subject of the optimisation methods of T2.
 
 The notebook [`notebooks/warehouse_allocation.ipynb`](notebooks/warehouse_allocation.ipynb) goes through §3–§7 step by step, with forms to try your own plans, the value of a faster delivery, other orders of C3, other safety margins and, in its section 7, plans kept for several weeks under uncertain demand. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/warehouse_allocation/notebooks/warehouse_allocation.ipynb). Its code is in the package `warehouses` of this folder (`src/warehouses/`).
+
+---
+
+Original case by J. J. Ramos (UAB, 2026). The data are synthetic and were generated specifically for this case study.

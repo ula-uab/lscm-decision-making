@@ -234,4 +234,4 @@ The notebook [`notebooks/capacity_scenarios.ipynb`](notebooks/capacity_scenarios
 
 ---
 
-The network, the places and the distances are those of M4, with the sources given in `retailers.md` and `distribution_network.md`. The data added in M4B are invented (2026); they do not describe a real company.
+Original case by J. J. Ramos (UAB, 2026). The locations were obtained from Nominatim (OpenStreetMap), the road distances from OSRM and the rail distance from OpenRailRouting. The remaining data are synthetic and were generated specifically for this case study.

@@ -246,4 +246,4 @@ The notebook [`notebooks/revenue_management.ipynb`](notebooks/revenue_management
 
 ---
 
-The data of this case are invented (2026); they do not describe a real airline. The model is that of Ivanov et al. (2025, §18.5.2).
+Original case by J. J. Ramos (UAB, 2026), based on the model of Ivanov et al. (2025, §18.5.2). The data are synthetic and were generated specifically for this case study.

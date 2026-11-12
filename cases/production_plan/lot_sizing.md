@@ -487,4 +487,4 @@ Stadtler, H. (2015). Production planning and scheduling. In H. Stadtler, C. Kilg
 
 ---
 
-The places and the distances of the network have the sources given in `retailers.md`. Original case by J. J. Ramos (UAB, 2026).
+Original case by J. J. Ramos (UAB, 2026). The locations were obtained from Nominatim (OpenStreetMap), the road distances from OSRM and the rail distance from OpenRailRouting. The remaining data are synthetic and were generated specifically for this case study.

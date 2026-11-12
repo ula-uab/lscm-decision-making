@@ -14,7 +14,7 @@ The assignment and the covering are long-term decisions, and they use the quanti
 
 Table 1 gives the retailers. Retailers 1 to 6 are those of M4, with the same numbers; the other 40 are in 40 more cities of the peninsula, one per city. Each place is the point that Nominatim, the search engine of OpenStreetMap, gives for its name: the places of M3 and M4 keep the points of those documents, consulted on 23 October 2026, and the other places were consulted on 10 November 2026. For Huesca, Guadalajara, Ciudad Real and León the search by name gives the province, and the point is that of the city.
 
-The orders of each retailer are its expected orders in the design year, $d_r$, in bikes a year. They are invented. There is one retailer per city, and what a shop sells does not grow in proportion to the population of its city; the orders therefore grow with the population, but less than in proportion: 1.300 bikes a year for a city of 150.000 inhabitants, times the square root of the population over 150.000, rounded to ten bikes. A city with four times the population orders twice as many bikes. With this constant each of the six retailers of M4 orders in the design year at least twice its orders of January to June in M4 (Table 3 of `retailers.md`), so that the retailers the manufacturer already had do not order less after the expansion: Lleida 1.280 bikes a year (497 from January to June in M4), Sabadell 1.590 (781), Alicante 2.030 (639), Murcia 2.320 (568), Córdoba 1.910 (710) and Granada 1.620 (355). Sabadell sets the constant: the lowest that meets the condition is 1.280, rounded up to 1.300; with 1.270 Sabadell would order 1.560, less than twice 781. The population is that of the official figures of the municipal register (Padrón) at 1 January 2025, published by the Spanish statistical office (INE, table 29005).
+The orders of each retailer are its expected orders in the design year, $d_r$, in bikes a year. There is one retailer per city, and what a shop sells does not grow in proportion to the population of its city; the orders therefore grow with the population, but less than in proportion: 1.300 bikes a year for a city of 150.000 inhabitants, times the square root of the population over 150.000, rounded to ten bikes. A city with four times the population orders twice as many bikes. With this constant each of the six retailers of M4 orders in the design year at least twice its orders of January to June in M4 (Table 3 of `retailers.md`), so that the retailers the manufacturer already had do not order less after the expansion: Lleida 1.280 bikes a year (497 from January to June in M4), Sabadell 1.590 (781), Alicante 2.030 (639), Murcia 2.320 (568), Córdoba 1.910 (710) and Granada 1.620 (355). Sabadell sets the constant: the lowest that meets the condition is 1.280, rounded up to 1.300; with 1.270 Sabadell would order 1.560, less than twice 781. The population is that of the official figures of the municipal register (Padrón) at 1 January 2025, published by the Spanish statistical office (INE, table 29005).
 
 Table 1. Retailers
 
@@ -68,7 +68,7 @@ Table 1. Retailers
 | 46 | Cáceres | 96.651 | 1.040 |
 | Total | | | 77.000 |
 
-Table 2 gives the local warehouses. Local warehouses 1 to 4 are those of M3, with the same numbers. The node capacity of a local warehouse, $K^n_l$, is the number of bikes it can receive and send on in a year: what it can move, not what it can hold. The capacities are invented. Together they exceed the orders of all the retailers by 12,3 %.
+Table 2 gives the local warehouses. Local warehouses 1 to 4 are those of M3, with the same numbers. The node capacity of a local warehouse, $K^n_l$, is the number of bikes it can receive and send on in a year: what it can move, not what it can hold. Together they exceed the orders of all the retailers by 12,3 %.
 
 Table 2. Local warehouses
 
@@ -258,7 +258,7 @@ Local warehouse 2 (Tarragona) receives six retailers from the assignment: Lleida
 
 ### 4.1 Data and candidate sets
 
-The manufacturer considers eight candidate sites where it can contract capacity for a regional warehouse: Barcelona and Getafe, the regional warehouses of M3, and Zaragoza, Valencia, Seville, Antequera, Valladolid and León. Every local warehouse must be within 4 hours by road of at least one regional warehouse. Table 8 gives the fixed cost of contracting capacity at each site for a year, $c^F_n$, invented and different at each site, and the road travel time from each site to each local warehouse, $\theta_{nl}$: the fastest road route computed with OSRM, consulted on 10 November 2026. The 4 hours are measured in these travel times, those of a car. Three pairs are just above the limit and are therefore not within reach: the site of Getafe and the local warehouse of Valencia, 4,01 h; the site of Barcelona and the local warehouse of Valencia, 4,03 h; and the site of Valencia and the local warehouse of Alcalá de Henares, 4,07 h.
+The manufacturer considers eight candidate sites where it can contract capacity for a regional warehouse: Barcelona and Getafe, the regional warehouses of M3, and Zaragoza, Valencia, Seville, Antequera, Valladolid and León. Every local warehouse must be within 4 hours by road of at least one regional warehouse. Table 8 gives the fixed cost of contracting capacity at each site for a year, $c^F_n$, different at each site, and the road travel time from each site to each local warehouse, $\theta_{nl}$: the fastest road route computed with OSRM, consulted on 10 November 2026. The 4 hours are measured in these travel times, those of a car. Three pairs are just above the limit and are therefore not within reach: the site of Getafe and the local warehouse of Valencia, 4,01 h; the site of Barcelona and the local warehouse of Valencia, 4,03 h; and the site of Valencia and the local warehouse of Alcalá de Henares, 4,07 h.
 
 Table 8. Candidate sites: fixed cost and road travel time to each local warehouse (h)
 
@@ -322,7 +322,7 @@ The model does not say which regional warehouse supplies each local warehouse: t
 
 ### 5.1 Data and candidate routes
 
-Local warehouse 2, in Tarragona, delivers each week the orders of the six retailers that the assignment gives it. A small truck leaves the local warehouse, visits some of the retailers and returns. The truck carries 90 bikes and can drive at most 600 km in a working day. A route costs 200 € (the driver and the truck for the day) plus 0,80 €/km. Each retailer receives its weekly order in one delivery. Table 10 gives the weekly orders, $d^{\text{w}}_r$: the yearly orders of Table 1 divided by 52, rounded to a whole bike. Each fits in the truck. The truck, the working day and the costs are invented.
+Local warehouse 2, in Tarragona, delivers each week the orders of the six retailers that the assignment gives it. A small truck leaves the local warehouse, visits some of the retailers and returns. The truck carries 90 bikes and can drive at most 600 km in a working day. A route costs 200 € (the driver and the truck for the day) plus 0,80 €/km. Each retailer receives its weekly order in one delivery. Table 10 gives the weekly orders, $d^{\text{w}}_r$: the yearly orders of Table 1 divided by 52, rounded to a whole bike. Each fits in the truck.
 
 Table 10. Weekly orders of the retailers of local warehouse 2
 
@@ -440,4 +440,4 @@ Ruinelli, L., Salani, M., & Gambardella, L. M. (2012). Hybrid column generation-
 
 ---
 
-The places, the populations, the distances and the travel times have the origins given in §2, §4.1 and §5.1. The other data of this document are invented (2026); they do not describe a real company.
+Original case by J. J. Ramos (UAB, 2026). The locations were obtained from Nominatim (OpenStreetMap), the populations from the INE (Padrón municipal, 1 January 2025), and the road distances and travel times from OSRM. The remaining data are synthetic and were generated specifically for this case study.

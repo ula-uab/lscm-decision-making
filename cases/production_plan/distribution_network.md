@@ -38,7 +38,7 @@ Table 1. Nodes of the network
 | Local warehouse 3 | Warehouse, demand node | Valencia |
 | Local warehouse 4 | Warehouse, demand node | Seville |
 
-Table 2 is the list of arcs. Road distances are those of the fastest road route between the two places, computed with OSRM on OpenStreetMap data. The rail distance is that of the rail route between the two dry ports, computed with OpenRailRouting on conventional lines of Iberian gauge, the network that freight trains use. The transport rates are invented: 0,010 €/(bike·km) by road and 0,006 €/(bike·km) by rail. The transport cost of each arc is its distance times the transport rate of its mode, rounded to the cent. The arc capacities are invented. The arc capacities of arcs 4, 6, 7 and 8 shape the routes to regional warehouse 2; those of the other arcs are above the flow on them in every month of the plan.
+Table 2 is the list of arcs. Road distances are those of the fastest road route between the two places, computed with OSRM on OpenStreetMap data. The rail distance is that of the rail route between the two dry ports, computed with OpenRailRouting on conventional lines of Iberian gauge, the network that freight trains use. The transport rates are 0,010 €/(bike·km) by road and 0,006 €/(bike·km) by rail. The transport cost of each arc is its distance times the transport rate of its mode, rounded to the cent. The arc capacities of arcs 4, 6, 7 and 8 shape the routes to regional warehouse 2; those of the other arcs are above the flow on them in every month of the plan.
 
 Table 2. List of arcs
 
@@ -60,7 +60,7 @@ Table 2. List of arcs
 
 Regional warehouse 2 is reached by three routes from the plants. By rail through the rail terminal, arcs 6 and 7 cost 2,30 €/bike from the central warehouse. By road from the central warehouse, arc 8 costs 3,30 €/bike. Directly from plant 3, arc 4 costs 4,27 €/bike, against 3,23 + 2,30 = 5,53 €/bike through the central warehouse.
 
-Table 3 gives the data of each node. The plants and the central warehouse keep the data of M2. The holding costs of the regional and local warehouses are invented: higher than at the central warehouse, and different at each warehouse, so that there is only one optimal plan. The storage capacities of the regional and local warehouses are invented too. Each node ends the horizon with its initial stock.
+Table 3 gives the data of each node. The plants and the central warehouse keep the data of M2. The holding costs of the regional and local warehouses are higher than at the central warehouse, and different at each warehouse, so that there is only one optimal plan. Each node ends the horizon with its initial stock.
 
 Table 3. Data of the nodes
 
@@ -80,7 +80,7 @@ Table 3. Data of the nodes
 
 The plants keep their unit assembly costs and capacities of M0: 310; 340 and 390 €/bike, and 250; 200 and 150 bikes/month. The local warehouses keep the backorder cost of M2, 60 €/(bike·month), with no backorders at the end of December and none allowed at the end of June.
 
-Table 4 gives the late demand peak and the orders of each local warehouse: its share of the forecast, the same every month. The late demand peak and the shares are invented.
+Table 4 gives the late demand peak and the orders of each local warehouse: its share of the forecast, the same every month.
 
 Table 4. Late demand peak and the orders of each local warehouse, $d_{it}$ (bikes/month)
 
@@ -279,4 +279,4 @@ OpenRailRouting. (2026). *OpenRailRouting* [Rail routing on OpenStreetMap data, 
 
 ---
 
-The places and the distances have the sources given above. The other data of this example are invented (2026); they do not describe a real company.
+Original case by J. J. Ramos (UAB, 2026). The locations were obtained from Nominatim (OpenStreetMap), the road distances from OSRM and the rail distance from OpenRailRouting. The remaining data are synthetic and were generated specifically for this case study.

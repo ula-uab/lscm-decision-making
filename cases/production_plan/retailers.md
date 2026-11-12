@@ -31,7 +31,7 @@ Table 1. Retailers
 | Retailer 5 | Córdoba | Local warehouse 4 (Seville); local warehouse 3 (Valencia) |
 | Retailer 6 | Granada | Local warehouse 4 (Seville); local warehouse 3 (Valencia) |
 
-Table 2 gives the arcs from the local warehouses to the retailers, numbered after the 13 arcs of M3. The distances are those of the fastest road route, computed with OSRM on OpenStreetMap data. The transport cost of each arc is its distance times the transport rate of road of M3, 0,010 €/(bike·km), rounded to the cent. The arc capacities are invented: 150 bikes a month on the arc from Seville to Córdoba, and 1.000 on the others, more than any retailer orders in a month.
+Table 2 gives the arcs from the local warehouses to the retailers, numbered after the 13 arcs of M3. The distances are those of the fastest road route, computed with OSRM on OpenStreetMap data. The transport cost of each arc is its distance times the transport rate of road of M3, 0,010 €/(bike·km), rounded to the cent. The arc capacities are 150 bikes a month on the arc from Seville to Córdoba, and 1.000 on the others, more than any retailer orders in a month.
 
 Table 2. Arcs from the local warehouses to the retailers
 
@@ -50,7 +50,7 @@ Table 2. Arcs from the local warehouses to the retailers
 | 24 | Local warehouse 4 (Seville) | Retailer 6 (Granada) | 254,3 | 2,54 | 1.000 |
 | 25 | Local warehouse 3 (Valencia) | Retailer 6 (Granada) | 478,4 | 4,78 | 1.000 |
 
-Table 3 gives the higher late demand peak, the share of it that each retailer orders, the same every month, and the backorder share of each retailer. All are invented, and different between retailers. The lost-sale cost is 700 €/bike for every retailer: one bike, one price. It is invented, and it is above what assembling a bike and taking it to any retailer costs, at most 390 € of assembly and less than 20 € of transport. The backorder cost is that of M2, 60 €/(bike·month), with no backorders at the end of December.
+Table 3 gives the higher late demand peak, the share of it that each retailer orders, the same every month, and the backorder share of each retailer. They are different between retailers. The lost-sale cost is 700 €/bike for every retailer: one bike, one price. It is above what assembling a bike and taking it to any retailer costs, at most 390 € of assembly and less than 20 € of transport. The backorder cost is that of M2, 60 €/(bike·month), with no backorders at the end of December.
 
 Table 3. Higher late demand peak, the orders of each retailer $d_{rt}$ (bikes/month) and the backorder share $\beta_r$
 
@@ -283,4 +283,4 @@ Open Source Routing Machine (OSRM). (2026). *OSRM demo server* [Road routing on 
 
 ---
 
-The places and the distances have the sources given above; the network of M3 keeps those of `distribution_network.md`. The other data of this example are invented (2026); they do not describe a real company.
+Original case by J. J. Ramos (UAB, 2026). The locations were obtained from Nominatim (OpenStreetMap), the road distances from OSRM and the rail distance from OpenRailRouting. The remaining data are synthetic and were generated specifically for this case study.

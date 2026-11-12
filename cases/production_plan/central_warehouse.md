@@ -224,4 +224,4 @@ Fleischmann, B., Meyr, H., & Wagner, M. (2015). Advanced planning. In H. Stadtle
 
 ---
 
-The data of this example are invented (2026); they do not describe a real company.
+Original case by J. J. Ramos (UAB, 2026). The data are synthetic and were generated specifically for this case study.

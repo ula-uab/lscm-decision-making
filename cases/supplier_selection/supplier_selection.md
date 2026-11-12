@@ -337,7 +337,7 @@ A decision tree compares strategies whose result depends on events that the comp
 
 The tree compares two strategies of §3: buying everything from E (2,580 k€/year) and the buyer's rule (2,630 k€/year). It rests on one assumption: in each strategy, only a supplier that serves more than one component is uncertain, and the suppliers that serve one component are treated as reliable. With everything from E, E serves the six components and is the uncertain supplier. With the buyer's rule, C serves three components (frames, batteries and wheels) and is the uncertain supplier; A, B and D serve one each.
 
-The probability that a supplier stops delivering during the year is 0.05 for E and 0.10 for C; C has the lower delivery reliability rating of the two, 8 against 9 (Table 3). When a supplier stops, each of its components is moved to another supplier at short notice, at a cost of 100 k€ per component for lost assembly, urgent transport and the qualification of the new supplier. The cost of a year in which a supplier stops is the planned cost plus 100 k€ for each component of that supplier. These data are invented.
+The probability that a supplier stops delivering during the year is 0.05 for E and 0.10 for C; C has the lower delivery reliability rating of the two, 8 against 9 (Table 3). When a supplier stops, each of its components is moved to another supplier at short notice, at a cost of 100 k€ per component for lost assembly, urgent transport and the qualification of the new supplier. The cost of a year in which a supplier stops is the planned cost plus 100 k€ for each component of that supplier.
 
 Table 12 gives the four branches of the tree, two per strategy.
 
@@ -400,4 +400,4 @@ Stadtler, H. (2015). Purchasing and material requirements planning. In H. Stadtl
 
 ---
 
-The data of this example are invented (2026); they do not describe a real company. The probabilities that a supplier stops delivering and the cost of moving a component to another supplier are also invented.
+Original case by J. J. Ramos (UAB, 2026). The data are synthetic and were generated specifically for this case study.
