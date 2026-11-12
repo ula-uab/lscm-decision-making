@@ -6,7 +6,7 @@ opening more or fewer lanes. Two parameters describe the screening lanes (lectur
 
 - ``lanes_available``: the number of lanes, L (10 by default);
 - ``lane_capacity``: the passengers that one lane serves in a 5-minute slot,
-  C_L (50 by default), a whole number.
+  C_L (50 by default), an integer.
 
 The maximum capacity is ``Cmax = L * C_L`` passengers per slot (500 by
 default). A plan divides the day into periods that start on the hour; each
@@ -60,7 +60,7 @@ class CapacityPlan:
                 raise ValueError(f"A period must start on the hour, from 00:00 to 23:00, not at {start}.")
             lanes = period["lanes"]
             if isinstance(lanes, bool) or not float(lanes).is_integer():
-                raise ValueError(f"The period that starts at {start} needs a whole number of lanes.")
+                raise ValueError(f"The period that starts at {start} needs an integer number of lanes.")
             if not 1 <= int(lanes) <= self.lanes_available:
                 raise ValueError(f"The period that starts at {start} has {lanes} lanes; it needs "
                                  f"from 1 to {self.lanes_available}.")
@@ -125,5 +125,5 @@ class CapacityPlan:
 
 def _whole(value, what: str) -> int:
     if isinstance(value, bool) or not float(value).is_integer() or value < 1:
-        raise ValueError(f"{what} must be a whole number greater than 0.")
+        raise ValueError(f"{what} must be an integer greater than 0.")
     return int(value)

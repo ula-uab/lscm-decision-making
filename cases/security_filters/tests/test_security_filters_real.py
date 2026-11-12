@@ -1,4 +1,4 @@
-"""Real PPPs in the public package: the 16 days, 288 whole and non-negative
+"""Real PPPs in the public package: the 16 days, 288 non-negative integer
 values each, and nothing else (no rules, no values of the flights)."""
 
 import pandas as pd

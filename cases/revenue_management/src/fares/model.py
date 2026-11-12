@@ -177,7 +177,7 @@ def validity_range(side: str, key, capacity: dict = C, demand: dict = D,
 
     The revenue is a concave piecewise linear function of each right-hand side, so the
     values that pass form an interval. Its ends are found by doubling the step and then
-    halving it; an end between two whole numbers is found by halving further, to a
+    halving it; an end between two integers is found by halving further, to a
     millionth."""
     base = solve(capacity, demand)
     if side == "seats":

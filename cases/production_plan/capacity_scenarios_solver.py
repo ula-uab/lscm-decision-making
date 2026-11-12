@@ -288,7 +288,7 @@ def solve_promotion(months, discount, growth, rented=0.0):
 
 
 def largest_growth_delivered(months, discount=0.0, top=150):
-    """The largest whole growth (%) of the orders of the months given with which every
+    """The largest integer growth (%) of the orders of the months given with which every
     order is delivered, raising it one percentage point at a time from 0, and the
     plan with one point more, the first with lost sales."""
     for growth in range(top + 1):
@@ -299,7 +299,7 @@ def largest_growth_delivered(months, discount=0.0, top=150):
 
 
 def smallest_growth_reaching(months, discount, reference, rented=0.0, top=80):
-    """The smallest whole growth (%) of the orders of the months given with which the
+    """The smallest integer growth (%) of the orders of the months given with which the
     margin reaches the reference, raising it one percentage point at a time from 0
     up to ``top``, and its plan; if none reaches it, None, and the growth with the
     highest margin with its plan."""
@@ -418,7 +418,7 @@ if __name__ == "__main__":
     print("Table 7. Plans under a price promotion, with plant 3 open and without overtime. Growth: of the")
     print("orders of the months of the promotion; rented storage: up to 200 bikes, or none; margin without")
     print("the fixed cost of plant 3; Plant 3: its capacity utilization; lost sales: bikes in the six months.")
-    print("Each growth is the smallest whole percentage with which the margin reaches the margin under the")
+    print("Each growth is the smallest integer percentage with which the margin reaches the margin under the")
     print("baseline forecast, except 17 % with a discount of 7,5 %, the largest growth with which every order is")
     print("delivered. With rented storage, the margin is compared with the margin under the baseline forecast with")
     print("the same rented storage.")

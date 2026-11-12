@@ -83,7 +83,7 @@ with $h_{f0}$ given. The objective is the cost of the plan, in euros: the bikes 
 
 ## 5. Assumptions of M1
 
-1. Fractional quantities are allowed, as in M0. With these data the optimal plans of §6 are in whole numbers.
+1. Fractional quantities are allowed, as in M0. With these data the optimal plans of §6 are integer.
 2. Costs are proportional to the quantities: there is no fixed cost of using a plant or of holding stock.
 3. A bike shipped in a month arrives in that month.
 4. A plant can hold any number of bikes: M1 has no storage capacity at the plants.

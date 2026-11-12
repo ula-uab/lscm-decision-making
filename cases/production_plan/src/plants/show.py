@@ -33,7 +33,7 @@ def _light(func):
 
 def _number(x: float, decimals: int | None = None) -> str:
     """A number in European format: point for thousands and comma for decimals
-    (1.235,25). Without ``decimals``, a whole number has none and any other number
+    (1.235,25). Without ``decimals``, an integer has none and any other number
     has up to two."""
     trim = decimals is None
     if trim:

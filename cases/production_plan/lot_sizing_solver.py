@@ -177,7 +177,7 @@ def holding_cost(f):
 
 
 def cumulative(values):
-    """Whole numbers whose sums from the first are the sums of values rounded
+    """Integers whose sums from the first are the sums of values rounded
     half up."""
     out, total, before = [], Fraction(0), 0
     for v in values:
@@ -189,7 +189,7 @@ def cumulative(values):
 
 
 def largest_remainder(total, share):
-    """total split in whole numbers in proportion to share, keeping the total."""
+    """total split in integers in proportion to share, keeping the total."""
     raw = {j: total * share[j] for j in MODELS}
     out = {j: math.floor(raw[j]) for j in MODELS}
     for j in sorted(MODELS, key=lambda j: raw[j] - out[j], reverse=True)[:total - sum(out.values())]:

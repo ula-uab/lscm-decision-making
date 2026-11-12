@@ -113,7 +113,7 @@ with $h_{f0}$, $h_{w0}$ and $b_0$ given. The objective is the cost of the plan, 
 
 ## 5. Assumptions of M2
 
-1. Fractional quantities are allowed, as in M0 and M1. With these data the optimal plan of §6 is in whole numbers.
+1. Fractional quantities are allowed, as in M0 and M1. With these data the optimal plan of §6 is integer.
 2. Costs are proportional to the quantities: there is no fixed cost of using a plant, of holding stock or of backordering.
 3. A bike shipped in a month arrives at the warehouse in that month, and the warehouse can deliver it that month.
 4. The cost of transport from the plants to the warehouse is left out. With one warehouse it would only add an amount per bike to the cost of each plant, and the model would be written in the same way.

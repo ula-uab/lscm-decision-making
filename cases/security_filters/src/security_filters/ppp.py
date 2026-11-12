@@ -14,7 +14,7 @@ The calculations follow §6 of the design of the case:
   the closing of the gate and the STD and ``c`` its surge offset. For a
   flight of the next day, ``d`` is its slot plus 288.
 
-Round gives the nearest whole number, and 0.5 is rounded up. Passengers who
+Round gives the nearest integer, and 0.5 is rounded up. Passengers who
 would arrive before 00:00 or after 24:00 are not in the PPP of the day; they
 are counted apart, so that no passenger is lost.
 """
@@ -37,7 +37,7 @@ _TOLERANCE = 1e-9
 
 
 def round_half_up(x) -> np.ndarray:
-    """Nearest whole number, with 0.5 rounded up."""
+    """Nearest integer, with 0.5 rounded up."""
     return np.floor(np.asarray(x, dtype=float) + 0.5 + _TOLERANCE)
 
 

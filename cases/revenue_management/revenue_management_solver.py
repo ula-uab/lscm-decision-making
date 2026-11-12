@@ -167,8 +167,8 @@ def seats_used(plan):
 # forecast demand of a fare of a trip - while the revenue changes by exactly
 # the shadow price for each unit. The revenue is a concave piecewise linear
 # function of each right-hand side, so the values that pass form an interval:
-# the search doubles the step, then halves it. An end between two whole
-# numbers is found by halving further, to a millionth.
+# the search doubles the step, then halves it. An end between two
+# integers is found by halving further, to a millionth.
 # ---------------------------------------------------------------------------
 
 def validity_range(side, key, capacity, demand, limit=1e6):

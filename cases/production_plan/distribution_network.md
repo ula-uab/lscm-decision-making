@@ -159,7 +159,7 @@ with $h_{i0}$ and $b_{i0}$ given. The objective is the cost of the plan, in euro
 
 ## 5. Assumptions of M3
 
-1. Fractional quantities are allowed, as in M0 to M2. With these data the optimal plan of §6 is in whole numbers.
+1. Fractional quantities are allowed, as in M0 to M2. With these data the optimal plan of §6 is integer.
 2. Costs are proportional to the quantities: there is no fixed cost of using a plant, an arc or a warehouse.
 3. A bike shipped in a month arrives in that month at the end of its arc, and can go along several arcs and be delivered in that same month.
 4. The transport cost of an arc is the same every month, whatever the flow on it.

@@ -53,7 +53,7 @@ The objective is the assembly cost of the plan, in euros: the bikes assembled in
 
 **Assumptions.**
 
-1. Fractional quantities are allowed: a plan of 130,5 bikes is a valid plan. With these data the optimal plans are whole numbers.
+1. Fractional quantities are allowed: a plan of 130,5 bikes is a valid plan. With these data the optimal plans are integer.
 2. The cost of a plant is proportional to the bikes it assembles: no fixed cost of using a plant.
 3. The demand of a month is assembled in that month: there is no stock carried from one month to the next and no order is served late.
 

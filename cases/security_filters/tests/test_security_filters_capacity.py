@@ -46,7 +46,7 @@ def test_periods_are_kept_in_order_of_start():
     ([{"start": "00:00", "lanes": 2}, {"start": "05:30", "lanes": 3}], "on the hour"),
     ([{"start": "00:00", "lanes": 0}], "from 1 to 10"),
     ([{"start": "00:00", "lanes": 11}], "from 1 to 10"),
-    ([{"start": "00:00", "lanes": 2.5}], "whole number"),
+    ([{"start": "00:00", "lanes": 2.5}], "integer number of lanes"),
 ])
 def test_plans_that_break_the_rules_are_rejected(periods, message):
     with pytest.raises(ValueError, match=message):
@@ -55,7 +55,7 @@ def test_plans_that_break_the_rules_are_rejected(periods, message):
 
 @pytest.mark.parametrize("lanes, lane_capacity", [(0, 50), (10, 0), (10, 12.5)])
 def test_parameters_must_be_whole_and_positive(lanes, lane_capacity):
-    with pytest.raises(ValueError, match="whole number"):
+    with pytest.raises(ValueError, match="integer greater than 0"):
         CapacityPlan([{"start": "00:00", "lanes": 1}], lanes, lane_capacity)
 
 

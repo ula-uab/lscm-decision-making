@@ -64,7 +64,7 @@ def half_up(x, decimals: int = 0) -> Fraction:
 
 
 def _cumulative(values) -> list[int]:
-    """Whole numbers whose sums from the first add up to the sums of ``values``
+    """Integers whose sums from the first add up to the sums of ``values``
     rounded half up: each value is the difference between two consecutive
     rounded sums."""
     out, total, before = [], Fraction(0), 0
@@ -77,7 +77,7 @@ def _cumulative(values) -> list[int]:
 
 
 def _largest_remainder(total: int, share: dict) -> dict:
-    """``total`` split in whole numbers in proportion to ``share``, keeping the
+    """``total`` split in integers in proportion to ``share``, keeping the
     total: each part is rounded down, and what is left over goes to the parts
     with the largest remainders."""
     raw = {j: total * share[j] for j in share}
