@@ -153,6 +153,55 @@ def test_plans_without_a_constraint():
     assert dn.solve(node_capacity={})["flow"][7, "May"] + 260 == pytest.approx(294)
 
 
+@pytest.mark.parametrize("month, cost, supply_nodes", [
+    ("Jan", 2396.76, ["Plant 1", "Plant 2"]),
+    ("Feb", 3686.68, ["Plant 1", "Plant 2"]),
+    ("Mar", 4408.30, ["Plant 1", "Plant 2", "Plant 3"]),
+    ("Apr", 5508.58, ["Plant 1", "Plant 2", "Plant 3", "Central warehouse", "Regional warehouse 1",
+                      "Regional warehouse 2"]),
+    ("May", 6736.40, ["Plant 1", "Plant 2", "Plant 3", "Central warehouse", "Regional warehouse 2"]),
+    ("Jun", 4103.75, ["Plant 1", "Plant 2", "Plant 3"])])
+def test_table10_minimum_cost_flow_problem_of_each_month(month, cost, supply_nodes):
+    # §7.1: the problem of each month gives the transport cost and the flows of M3 in that month
+    problem = dn.month_problem(month)
+    assert problem["cost"] == pytest.approx(cost)
+    assert problem["m3 cost"] == pytest.approx(cost)
+    assert [problem["flow"][a] for a in range(13)] == pytest.approx([problem["m3 flow"][a] for a in range(13)])
+    assert [i for i in NODES if problem["kind"][i] == dn.SUPPLY_NODE] == supply_nodes
+    assert sum(problem["supply"].values()) == pytest.approx(0)
+
+
+def test_net_supply_in_january_and_may():
+    # §7.1: the central warehouse is a demand node in January; in May it and regional
+    # warehouse 2 put into the network the 136 and 14 bikes they held at the end of April
+    january, may = dn.month_problem("Jan"), dn.month_problem("May")
+    assert january["supply"]["Central warehouse"] == pytest.approx(-150)
+    assert january["kind"]["Plant 3"] == dn.TRANSHIPMENT_NODE
+    assert may["supply"]["Central warehouse"] == pytest.approx(136)
+    assert may["supply"]["Regional warehouse 2"] == pytest.approx(14)
+
+
+@pytest.mark.parametrize("destination, node_capacity, value, limits", [
+    ("Regional warehouse 2", {}, 410, [("arc", 3, 60), ("arc", 6, 200), ("arc", 7, 150)]),
+    ("Regional warehouse 2", {"Regional warehouse 2": 280}, 280, [("node", "Regional warehouse 2", 280)]),
+    ("Local warehouse 4", {}, 300, [("arc", 12, 300)]),
+    ("Local warehouse 4", {"Regional warehouse 2": 280}, 280, [("node", "Regional warehouse 2", 280)])])
+def test_table11_maximum_flow(destination, node_capacity, value, limits):
+    problem = dn.max_flow(destination, node_capacity=node_capacity)
+    assert problem["value"] == pytest.approx(value)
+    assert problem["limits"] == limits
+
+
+def test_orders_of_seville_above_the_maximum_flow():
+    # §7.2: only in May do the orders of Seville exceed the maximum flow to Seville, by
+    # 14 bikes, which the plan holds at regional warehouse 2 at the end of April
+    most = dn.max_flow("Local warehouse 4")["value"]
+    assert [max(SHARE["Local warehouse 4"] * FORECAST_4[t] - most, 0) for t in T] == pytest.approx([0, 0, 0, 0, 14, 0])
+    solution = dn.solve()
+    assert solution["stock"]["Regional warehouse 2", "Apr"] == pytest.approx(14)
+    assert solution["stock"]["Local warehouse 4", "Apr"] == pytest.approx(0)
+
+
 def test_notebook_runs():
     nbformat = pytest.importorskip("nbformat")
     nbclient = pytest.importorskip("nbclient")

@@ -5,7 +5,9 @@
 # the late demand peak (Tables 1 to 4); that M2, with the plants and the central
 # warehouse only, has no solution with the late demand peak; the plan of M3 with
 # the late demand peak (Tables 6 to 8); and the shadow prices of the capacities
-# that are full (Table 9).
+# that are full (Table 9). In a part of its own, it prints the two analyses of
+# the plan of M3 in §7: the minimum cost flow problem of each month (Table 10)
+# and the maximum flow problems (Table 11).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -194,6 +196,75 @@ def solve_model(nodes, arcs, share, storage):
 
 
 # ---------------------------------------------------------------------------
+# §7 Two analyses of the plan of M3: they are not versions of the model
+# ---------------------------------------------------------------------------
+
+def net_supply(v, t):
+    """Net supply q[i] of each node in month t of the plan v of M3 (bikes): the
+    stock at the start, plus what the node assembles, less what it delivers and
+    its stock at the end of the month."""
+    k = T.index(t)
+    q = {}
+    for i in NODES:
+        before = h_0[i] if k == 0 else v["h"][i, T[k - 1]]
+        q[i] = before + v["p"].get((i, t), 0) - v["s"].get((i, t), 0) - v["h"][i, t]
+        if abs(q[i]) < 1e-9:
+            q[i] = 0.0
+    return q
+
+
+def min_cost_flow(q):
+    """§7.1 Minimum cost flow problem of one month: the net supply q of each node,
+    the arc capacities, the node capacity and the transport cost. Returns the
+    transport cost (EUR) and the flow on each arc (bikes)."""
+    model = pulp.LpProblem("min_cost_flow", pulp.LpMinimize)
+    A = range(len(ARCS))
+    # x[a] = bikes on arc a in the month
+    x = {a: model.add_variable(f"x_{a}", lowBound=0, upBound=ARCS[a][4]) for a in A}
+    model += pulp.lpSum(ARCS[a][5] * x[a] for a in A)
+    for i in NODES:
+        # Flow balance: what leaves the node less what enters it is its net supply
+        model += (pulp.lpSum(x[a] for a in A if ARCS[a][0] == i)
+                  - pulp.lpSum(x[a] for a in A if ARCS[a][1] == i) == q[i], f"balance_{i.replace(' ', '')}")
+    for i in K_n:
+        model += (pulp.lpSum(x[a] for a in A if ARCS[a][1] == i) <= K_n[i], f"node_capacity_{i.replace(' ', '')}")
+    model.solve(pulp.HiGHS(msg=False))
+    return pulp.value(model.objective), {a: x[a].value() for a in A}
+
+
+def max_flow(destination, node_capacity):
+    """§7.2 Maximum flow problem of one month, from a fictitious origin o joined to
+    the three plants by arcs with no capacity, to one destination node; costs,
+    stock and orders do not enter. Returns the maximum flow (bikes) and the
+    capacities whose shadow price is not 0, the ones that limit it."""
+    model = pulp.LpProblem("max_flow", pulp.LpMaximize)
+    A = range(len(ARCS))
+    # y[i] = bikes on the arc from o to plant i; x[a] = bikes on arc a; flow = value
+    y = {i: model.add_variable(f"y_{i.replace(' ', '')}", lowBound=0) for i in F}
+    x = {a: model.add_variable(f"x_{a}", lowBound=0) for a in A}
+    flow = model.add_variable("flow", lowBound=0)
+    model += flow
+    model += (pulp.lpSum(y.values()) == flow, "balance_o")
+    for i in NODES:
+        into = pulp.lpSum(x[a] for a in A if ARCS[a][1] == i) + (y[i] if i in F else 0)
+        out = pulp.lpSum(x[a] for a in A if ARCS[a][0] == i)
+        model += (into - out == (flow if i == destination else 0), f"balance_{i.replace(' ', '')}")
+    for a in A:
+        model += (x[a] <= ARCS[a][4], f"arc_capacity_{a}")
+    for i in node_capacity:
+        model += (pulp.lpSum(x[a] for a in A if ARCS[a][1] == i) <= node_capacity[i],
+                  f"node_capacity_{i.replace(' ', '')}")
+    model.solve(pulp.HiGHS(msg=False))
+    constraints = model.constraints() if callable(model.constraints) else model.constraints
+    if not isinstance(constraints, dict):
+        constraints = {con.name: con for con in constraints}
+    limits = [f"arc {a + 1}" for a in A if abs(constraints[f"arc_capacity_{a}"].pi) > 1e-9]
+    limits += [f"node capacity of {i}" for i in node_capacity
+               if abs(constraints[f"node_capacity_{i.replace(' ', '')}"].pi) > 1e-9]
+    return pulp.value(model.objective), limits
+
+
+# ---------------------------------------------------------------------------
 # Printing
 # ---------------------------------------------------------------------------
 
@@ -293,3 +364,34 @@ if __name__ == "__main__":
     for i in NODES:
         if i != TERMINAL and any(prices["storage"][i, t] for t in T):
             by_month(f"Storage capacity, {i}", [prices["storage"][i, t] for t in T])
+
+    # §7 The two analyses of the plan of M3
+    title("§7 Analyses of the plan of M3: minimum cost flow and maximum flow")
+    print("Table 10. Minimum cost flow problem of each month, from the plan of M3")
+    header()
+    problems = {t: min_cost_flow(net_supply(v, t)) for t in T}
+    by_month("Transport cost of the problem (EUR)", [problems[t][0] for t in T])
+    by_month("Transport cost of the plan of M3 (EUR)",
+             [sum(ARCS[a][5] * v["x"][a, t] for a in range(len(ARCS))) for t in T])
+    same = all(abs(problems[t][1][a] - v["x"][a, t]) < 1e-6 for t in T for a in range(len(ARCS)))
+    print(f"The flows of the problem equal those of M3 (Table 7) on every arc and in every month: "
+          f"{'yes' if same else 'no'}")
+    for t in T:
+        q = net_supply(v, t)
+        print(f"Supply nodes in {t}: {', '.join(i for i in NODES if q[i] > 1e-9)}")
+    print()
+    print("Table 11. Maximum flow in one month from the plants (bikes/month)")
+    for destination, place in (("Regional warehouse 2", "Getafe"), ("Local warehouse 4", "Seville")):
+        for capacity in ({}, K_n):
+            value, limits = max_flow(destination, capacity)
+            print(f"{destination + ' (' + place + ')':<32}{'with' if capacity else 'without':<8} node capacity"
+                  f"{eu(value, 0):>6}   limited by {', '.join(limits)}")
+    seville = [SHARE["Local warehouse 4"] * d[t] for t in T]
+    most = max_flow("Local warehouse 4", K_n)[0]
+    print()
+    print("Orders of Seville against the maximum flow to Seville (bikes)")
+    header()
+    by_month("Orders of Seville", seville)
+    by_month("Orders above the maximum flow", [max(o - most, 0) for o in seville])
+    print(f"Stock at regional warehouse 2 and at Seville at the end of April (Table 8): "
+          f"{eu(v['h']['Regional warehouse 2', 'Apr'], 0)} and {eu(v['h']['Local warehouse 4', 'Apr'], 0)}")

@@ -74,16 +74,23 @@ def _on(point, route) -> bool:
 
 @_light
 def network(nodes: list, arcs: list, node_text: dict, arc_text: dict, title: str, full=(), idle=(),
-            text_colour: str = SHORT, arc_list: list = ARCS_M4, legend: bool = False) -> None:
+            text_colour: str = SHORT, arc_list: list = ARCS_M4, legend: bool = False, fill: dict | None = None,
+            red_text=(), extra=None, handles: list | None = None, ax=None) -> None:
     """The network by stages, as figure CS-F1 of the statement. ``nodes`` are the
     nodes drawn and ``arcs`` the positions in ``arc_list`` of the arcs drawn;
     ``node_text`` gives the text under the label of each node and ``arc_text`` the
     text on each arc. The arcs in ``full`` are drawn in red, those in ``idle`` in
-    light grey and with no text. With ``legend``, a legend of the arcs."""
+    light grey and with no text. With ``legend``, a legend of the arcs. ``fill``
+    gives the colour of some nodes, the text of the nodes in ``red_text`` is red,
+    ``extra(ax)`` draws what is not part of the network, and ``handles`` are the
+    entries of the legend instead of those of the arcs. With ``ax``, the network is
+    drawn on those axes and the caller shows the figure."""
     g = json.loads(NETWORK_FIGURE.read_text(encoding="utf-8"))
     places = {g["nodes"][n]["place"] for n in nodes}
     right = 1664 if any(n in RETAILERS for n in nodes) else 1320
-    fig, ax = plt.subplots(figsize=(16.6 * right / 1664, 7.6))
+    show = ax is None
+    if show:
+        fig, ax = plt.subplots(figsize=(16.6 * right / 1664, 7.6))
     for node in nodes:
         d = g["nodes"][node]
         x0, y0, x1, y1 = d["bbox"]
@@ -92,7 +99,7 @@ def network(nodes: list, arcs: list, node_text: dict, arc_text: dict, title: str
                  "stock": lambda: Polygon([(cx, y0), (x1, y1), (x0, y1)]),
                  "transit": lambda: Circle((cx, cy), (x1 - x0) / 2),
                  "demand": lambda: Polygon([(cx, y0), (x1, cy), (cx, y1), (x0, cy)])}[d["kind"]]()
-        shape.set(facecolor=FILL, edgecolor=INK, linewidth=1.4, zorder=3)
+        shape.set(facecolor=(fill or {}).get(node, FILL), edgecolor=INK, linewidth=1.4, zorder=3)
         ax.add_patch(shape)
     drawn = []
     for a in arcs:
@@ -135,21 +142,25 @@ def network(nodes: list, arcs: list, node_text: dict, arc_text: dict, title: str
             where, va = (name["x"], name["y"] - 22), "bottom"
         else:
             where, va = (place["x"], place["y"] + 12), "top"
-        ax.text(*where, node_text.get(node, ""), fontsize=8, color=text_colour, ha=align[place["anchor"]], va=va,
-                linespacing=1.15)
-    if legend:
+        ax.text(*where, node_text.get(node, ""), fontsize=8, color=SHORT if node in red_text else text_colour,
+                ha=align[place["anchor"]], va=va, linespacing=1.15)
+    if extra:
+        extra(ax)
+    if legend and handles is None:
         handles = [Line2D([], [], color=INK, lw=1.2, label="road"),
                    Line2D([], [], color=INK, lw=1.2, ls=(0, (5, 3)), label="rail"),
                    Line2D([], [], color=SHORT, lw=1.6, label="arc capacity full"),
                    Line2D([], [], color=IDLE, lw=1.2, label="no flow")]
+    if handles:
         ax.legend(handles=handles, fontsize=8, loc="lower left", frameon=False)
     ax.set_xlim(0, right)
     ax.set_ylim(650, -40)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title(title, fontsize=10, color=TEXT)
-    fig.tight_layout()
-    plt.show()
+    if show:
+        fig.tight_layout()
+        plt.show()
 
 
 def data_text(node: str, stock: bool = False, lost_sale: bool = False) -> str:

@@ -9,7 +9,10 @@ The notebook calls one function per step:
 1. ``show_data``: the nodes, the list of arcs and forecast 4;
 2. ``network_plan``: the plan with forecast 4, with the flows of one month;
 3. ``rail_capacity_test``, ``rail_rate_test`` and ``node_capacity_test``: the plan
-   when one datum changes.
+   when one datum changes;
+4. ``month_flows`` and ``max_flows``: two analyses of the plan, not versions of the
+   model: the minimum cost flow problem of one month, and the maximum flow to
+   regional warehouse 2 and to Seville.
 
 Each one shows figures or, with ``show_tables``, the same data in tables.
 
@@ -22,6 +25,8 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, Patch
 import pulp
 
 from .central_warehouse import SEVERAL, only_optimal
@@ -30,7 +35,7 @@ from .data import (ARCS, CENTRAL, F, FORECAST_4, FORECAST_4_NAME, K, K_h_node, K
                    h_node_0, h_node_end)
 from .model import TOL, _constraints, _optimal
 from . import figures
-from .show import _display, _european_axes, _light, _number
+from .show import SHORT, _display, _european_axes, _light, _number
 
 FORECAST = FORECAST_4_NAME               # M3 is solved with forecast 4
 DEMAND = FORECAST_4
@@ -406,3 +411,269 @@ def node_capacity_test(node_capacity: float = 280, month: str = "May", show_tabl
     print(f"Node capacity of regional warehouse 2: {_number(node_capacity)} bikes/month.")
     return _report({"node_capacity": {"Regional warehouse 2": node_capacity}}, FORECAST, month, prices=False,
                    routes=True, show_tables=show_tables)
+
+
+# ---------------------------------------------------------------------------
+# Two classical network problems within the plan of M3: analyses of the plan,
+# not versions of the model (distribution_network.md §7)
+# ---------------------------------------------------------------------------
+
+SUPPLY_NODE, TRANSHIPMENT_NODE, DEMAND_NODE = "supply node", "transhipment node", "demand node"
+DESTINATIONS = {"Regional warehouse 2": "Getafe", "Local warehouse 4": "Seville"}
+
+
+def net_supply(solution: dict, month: str) -> dict:
+    """The net supply q[i] of each node in a month of a plan of M3 (bikes): the stock
+    at the start of the month, plus what the node assembles, less what it delivers
+    and its stock at the end of the month. Positive at a supply node, negative at a
+    demand node."""
+    k = T.index(month)
+    q = {}
+    for i in NODES:
+        before = h_node_0[i] if k == 0 else solution["stock"][i, T[k - 1]]
+        q[i] = (before + solution["assembly"].get((i, month), 0) - solution["deliveries"].get((i, month), 0)
+                - solution["stock"][i, month])
+        q[i] = 0.0 if abs(q[i]) < TOL else q[i]
+    return q
+
+
+def node_kind(q: float) -> str:
+    """The kind of a node in the minimum cost flow problem of a month, from its net supply."""
+    return SUPPLY_NODE if q > TOL else (DEMAND_NODE if q < -TOL else TRANSHIPMENT_NODE)
+
+
+def transport_cost(solution: dict, month: str) -> float:
+    """The transport cost of a plan of M3 in a month (EUR)."""
+    return sum(arc["cost"] * solution["flow"][a, month] for a, arc in enumerate(solution["arcs"]))
+
+
+def min_cost_flow(supply: dict, arc_list: list = ARCS, node_capacity: dict = K_n) -> dict | None:
+    """The minimum cost flow problem of one month on the network of M3: the net
+    supply of each node given (bikes), the arc capacities, the node capacities and
+    the transport cost as objective. Returns the transport cost (EUR) and the flow
+    on each arc (bikes), or None if it has no solution."""
+    model = pulp.LpProblem("min_cost_flow", pulp.LpMinimize)
+    # x[a] = bikes shipped on arc a in the month
+    x = {a: model.add_variable(f"x_{a}", lowBound=0, upBound=arc["capacity"]) for a, arc in enumerate(arc_list)}
+    model += pulp.lpSum(arc["cost"] * x[a] for a, arc in enumerate(arc_list))
+    for i in supply:
+        # Flow balance: what leaves the node less what enters it is its net supply
+        model += (pulp.lpSum(x[a] for a in leaving(i, arc_list)) - pulp.lpSum(x[a] for a in entering(i, arc_list))
+                  == supply[i], f"balance_{_key(i)}")
+    for i, capacity in node_capacity.items():
+        model += (pulp.lpSum(x[a] for a in entering(i, arc_list)) <= capacity, f"node_capacity_{_key(i)}")
+    if not _optimal(model.solve(pulp.HiGHS(msg=False))):
+        return None
+    flow = {a: 0.0 if abs(v.value()) < TOL else v.value() for a, v in x.items()}
+    return {"cost": pulp.value(model.objective), "flow": flow}
+
+
+def month_problem(month: str, solution: dict | None = None) -> dict:
+    """The minimum cost flow problem of one month taken from the optimal plan of M3:
+    the net supply and the kind of each node, and its solution, with the transport
+    cost and the flows of M3 in that month to compare."""
+    solution = solution or solve()
+    q = net_supply(solution, month)
+    flows = min_cost_flow(q)
+    return {"month": month, "supply": q, "kind": {i: node_kind(v) for i, v in q.items()},
+            "cost": flows["cost"], "flow": flows["flow"], "m3 cost": transport_cost(solution, month),
+            "m3 flow": {a: solution["flow"][a, month] for a in range(len(ARCS))}}
+
+
+def max_flow(destination: str, arc_list: list = ARCS, node_capacity: dict = K_n) -> dict:
+    """The maximum flow problem of one month on the network of M3, from a fictitious
+    origin o joined to the three plants by arcs with no capacity, to one destination
+    node. Costs, stock and orders do not enter. Returns the maximum flow (bikes) and
+    the capacities that limit it: those whose shadow price is not 0, as (kind, arc
+    position or node, capacity)."""
+    model = pulp.LpProblem("max_flow", pulp.LpMaximize)
+    # y[f] = bikes from the origin o to plant f; x[a] = bikes on arc a; value = flow f
+    y = {f: model.add_variable(f"y_{_key(f)}", lowBound=0) for f in F}
+    x = {a: model.add_variable(f"x_{a}", lowBound=0) for a in range(len(arc_list))}
+    value = model.add_variable("f", lowBound=0)
+    model += value
+    model += (pulp.lpSum(y.values()) == value, "balance_o")
+    for i in NODES:
+        into = pulp.lpSum(x[a] for a in entering(i, arc_list)) + (y[i] if i in F else 0)
+        out = pulp.lpSum(x[a] for a in leaving(i, arc_list))
+        # Flow balance: at the destination, what enters less what leaves is the flow f
+        model += (into - out == (value if i == destination else 0), f"balance_{_key(i)}")
+    for a, arc in enumerate(arc_list):
+        model += (x[a] <= arc["capacity"], f"arc_capacity_{a}")
+    for i, capacity in node_capacity.items():
+        model += (pulp.lpSum(x[a] for a in entering(i, arc_list)) <= capacity, f"node_capacity_{_key(i)}")
+    if not _optimal(model.solve(pulp.HiGHS(msg=False))):
+        raise RuntimeError("The maximum flow problem has no optimal solution.")
+    cons = _constraints(model)
+    limits = [("arc", a, arc["capacity"]) for a, arc in enumerate(arc_list) if abs(cons[f"arc_capacity_{a}"].pi) > TOL]
+    limits += [("node", i, capacity) for i, capacity in node_capacity.items()
+               if abs(cons[f"node_capacity_{_key(i)}"].pi) > TOL]
+    return {"destination": destination, "value": pulp.value(model.objective), "limits": limits}
+
+
+# The colour of each kind of node, as in figure F32a of the presentation of T3
+KIND_FILL = {SUPPLY_NODE: "#C6DDDF", TRANSHIPMENT_NODE: figures.FILL, DEMAND_NODE: "#8FB9C0"}
+# The fictitious origin of the maximum flow problem and its arcs: a colour that
+# marks nothing else in the notebook, and dotted, so that they are not taken for
+# part of the network
+ORIGIN_COLOUR = "darkgoldenrod"
+SEVILLE = "Local warehouse 4"
+
+
+def _kind_handles() -> list:
+    return [Patch(facecolor=KIND_FILL[k], edgecolor=figures.INK, label=k) for k in KIND_FILL]
+
+
+def month_flows(month: str = "May", show_tables: bool = False) -> dict:
+    """The minimum cost flow problem of one month taken from the optimal plan of M3:
+    the network with the kind and the net supply of each node and the flow on each
+    arc; and its transport cost against that of M3 in the month. With
+    ``show_tables``, the same in two tables."""
+    if month not in T:
+        raise ValueError(f"The month must be one of {', '.join(T)}.")
+    problem = month_problem(month)
+    q, flow = problem["supply"], problem["flow"]
+    same = all(abs(flow[a] - problem["m3 flow"][a]) < 1e-6 for a in flow)
+    if show_tables:
+        _display(pd.DataFrame({i: {"Net supply q (bikes)": q[i], "Kind of node": problem["kind"][i]} for i in NODES})
+                 .T.rename_axis(f"Node, {month}"))
+        _display(pd.DataFrame({f"{a + 1}. {arc_name(arc)}": {"Minimum cost flow problem": flow[a],
+                                                             "Plan of M3": problem["m3 flow"][a]}
+                               for a, arc in enumerate(ARCS)}).T.rename_axis(f"Flow on each arc in {month} (bikes)"))
+    else:
+        full = [a for a, arc in enumerate(ARCS) if flow[a] > TOL and abs(flow[a] - arc["capacity"]) < 1e-6]
+        handles = _kind_handles() + [Line2D([], [], color=figures.INK, lw=1.2, label="road"),
+                                     Line2D([], [], color=figures.INK, lw=1.2, ls=(0, (5, 3)), label="rail"),
+                                     Line2D([], [], color=SHORT, lw=1.6, label="arc capacity full"),
+                                     Line2D([], [], color=figures.IDLE, lw=1.2, label="no flow")]
+        figures.network(NODES, range(len(ARCS)), {i: f"q = {_number(q[i])}" for i in NODES if i != RAIL_TERMINAL},
+                        {a: _number(v) for a, v in flow.items()},
+                        f"Minimum cost flow problem of {month}, from the plan of M3. On each arc, its flow (bikes). "
+                        f"Under each node, its net supply q in {month} (bikes):\npositive at a supply node, negative "
+                        "at a demand node and 0 at a transhipment node; at the rail terminal, which holds no stock, "
+                        "it is always 0.",
+                        full=full, idle=[a for a, v in flow.items() if v <= TOL], text_colour=figures.INK,
+                        arc_list=ARCS, fill={i: KIND_FILL[k] for i, k in problem["kind"].items()}, handles=handles)
+    print(f"Transport cost in {month}: minimum cost flow problem {_number(problem['cost'], 2)} €; plan of M3 "
+          f"{_number(problem['m3 cost'], 2)} €. The flows are the same on every arc: {'yes' if same else 'no'}.")
+    return problem
+
+
+def _limit_text(limits: list) -> str:
+    """The capacities that limit a maximum flow, in one sentence."""
+    texts = [f"the node capacity of {where.lower()}, {_number(capacity)} bikes/month" if kind == "node" else
+             f"the arc capacity of arc {where + 1} ({arc_name(ARCS[where])}), {_number(capacity)} bikes/month"
+             for kind, where, capacity in limits]
+    if len(texts) == 1:
+        return f"It is limited by {texts[0]}."
+    return (f"It is limited by {'; '.join(texts[:-1])}; and {texts[-1]}: together, "
+            f"{_number(sum(capacity for *_, capacity in limits))} bikes/month.")
+
+
+def _towards(destination: str) -> list:
+    """The arcs on some path from the plants to the destination (positions)."""
+    reached, ahead = set(F), list(F)
+    while ahead:
+        i = ahead.pop()
+        for a in leaving(i, ARCS):
+            if ARCS[a]["destination"] not in reached and ARCS[a]["origin"] != destination:
+                reached.add(ARCS[a]["destination"])
+                ahead.append(ARCS[a]["destination"])
+    back, ahead = {destination}, [destination]
+    while ahead:
+        j = ahead.pop()
+        for a in entering(j, ARCS):
+            if ARCS[a]["origin"] not in back:
+                back.add(ARCS[a]["origin"])
+                ahead.append(ARCS[a]["origin"])
+    return [a for a, arc in enumerate(ARCS) if arc["origin"] in reached and arc["destination"] in back
+            and arc["origin"] != destination]
+
+
+def _origin(ax) -> None:
+    """The fictitious origin o, left of the plants, and its arcs to the top of each plant."""
+    x, y, r = 60, 245, 15
+    ax.add_patch(Circle((x, y), r, facecolor="white", edgecolor=ORIGIN_COLOUR, lw=1.4, ls=(0, (2, 2)), zorder=3))
+    ax.text(x, y, "o", ha="center", va="center", fontsize=10, style="italic", color=ORIGIN_COLOUR, zorder=4)
+    for (top, bend), side in zip(((52, 30), (174, 141), (392, 370)), (-1, -1, 1)):
+        points = [(x, y + side * r), (x, bend), (330, bend), (330, top)]
+        xs, ys = zip(*points)
+        ax.plot(xs, ys, color=ORIGIN_COLOUR, lw=1.2, ls=(0, (1, 2)), zorder=2)
+        ax.annotate("", xy=points[-1], xytext=points[-2],
+                    arrowprops=dict(arrowstyle="-|>", color=ORIGIN_COLOUR, lw=1.2), zorder=2)
+
+
+@_light
+def _max_flow_figure(problem: dict, seville: dict, node_capacity: bool) -> None:
+    """The network with the fictitious origin and the arc capacities of the arcs
+    that lead to the destination, the capacities that limit the maximum flow in
+    red; beside it, the orders of Seville in each month against the maximum flow
+    to Seville."""
+    destination = problem["destination"]
+    fig, (left, right) = plt.subplots(1, 2, figsize=(17.5, 7.0), gridspec_kw={"width_ratios": [3.3, 1]})
+    towards = _towards(destination)
+    full = [where for kind, where, _ in problem["limits"] if kind == "arc"]
+    getafe = "Regional warehouse 2"
+    text = {destination: "destination e"}
+    if getafe in K_n:
+        capacity = f"node capacity {_number(K_n[getafe])}" if node_capacity else "node capacity not applied"
+        text[getafe] = " · ".join(filter(None, [text.get(getafe), capacity]))
+    red = [where for kind, where, _ in problem["limits"] if kind == "node"]
+    handles = [Line2D([], [], color=figures.INK, lw=1.2, label="road"),
+               Line2D([], [], color=figures.INK, lw=1.2, ls=(0, (5, 3)), label="rail"),
+               Line2D([], [], color=ORIGIN_COLOUR, lw=1.2, ls=(0, (1, 2)),
+                      label="fictitious origin o and its arcs to the plants, with no capacity:\nnot part of the network"),
+               Line2D([], [], color=SHORT, lw=1.6, label="capacity that limits the maximum flow"),
+               Line2D([], [], color=figures.IDLE, lw=1.2, label="arc that does not lead to the destination")]
+    figures.network(NODES, range(len(ARCS)), text, {a: _number(ARCS[a]["capacity"]) for a in towards},
+                    f"Maximum flow problem of one month, from the fictitious origin o to "
+                    f"{destination.lower()} ({DESTINATIONS[destination]}): {_number(problem['value'])} bikes.\n"
+                    "On each arc, its arc capacity (bikes/month).",
+                    full=full, idle=[a for a in range(len(ARCS)) if a not in towards], text_colour=figures.INK,
+                    arc_list=ARCS, red_text=red, extra=_origin, handles=handles, ax=left)
+    orders = [SHARE[SEVILLE] * DEMAND[t] for t in T]
+    most = seville["value"]
+    within = [min(v, most) for v in orders]
+    above = [v - w for v, w in zip(orders, within)]
+    # the colour of the orders of Seville in section 1
+    right.bar(range(len(T)), within, 0.62, color=plt.get_cmap("Set2")(3), label="orders of Seville")
+    right.bar(range(len(T)), above, 0.62, bottom=within, color=SHORT, label="orders above the maximum flow")
+    for k, v in enumerate(orders):
+        right.text(k, v + 4, _number(v), ha="center", va="bottom", fontsize=8)
+    figures.step(right, T, [most] * len(T), color=figures.INK, lw=1.2, ls="--",
+                 label=f"maximum flow to Seville in a month, {_number(most)} bikes")
+    right.set_xticks(range(len(T)), T)
+    right.set_ylim(0, max(max(orders), most) * 1.25)
+    right.set_ylabel("Bikes/month")
+    right.set_title("Orders of local warehouse 4 (Seville)\nand the maximum flow to Seville", fontsize=10)
+    right.legend(fontsize=7.5, loc="upper left", frameon=False)
+    right.spines[["top", "right"]].set_visible(False)
+    _european_axes(fig)
+    fig.tight_layout()
+    plt.show()
+
+
+def max_flows(destination: str = "Regional warehouse 2", node_capacity: bool = True,
+              show_tables: bool = False) -> dict:
+    """The maximum flow problem of one month on the network of M3, from a fictitious
+    origin joined to the plants to one destination, with or without the node
+    capacity of regional warehouse 2; and the orders of Seville in each month
+    against the maximum flow to Seville. With ``show_tables``, the same in tables."""
+    if destination not in DESTINATIONS:
+        raise ValueError(f"The destination must be one of {', '.join(DESTINATIONS)}.")
+    capacities = K_n if node_capacity else {}
+    problem = max_flow(destination, node_capacity=capacities)
+    seville = problem if destination == SEVILLE else max_flow(SEVILLE, node_capacity=capacities)
+    for p in (problem,) if destination == SEVILLE else (problem, seville):
+        print(f"Maximum flow in a month from the plants to {p['destination'].lower()} "
+              f"({DESTINATIONS[p['destination']]}), {'with' if node_capacity else 'without'} the node capacity of "
+              f"regional warehouse 2: {_number(p['value'])} bikes. {_limit_text(p['limits'])}")
+    orders = {t: SHARE[SEVILLE] * DEMAND[t] for t in T}
+    if show_tables:
+        _display(pd.DataFrame({"Orders of Seville (bikes)": orders,
+                               "Maximum flow to Seville (bikes)": {t: seville["value"] for t in T},
+                               "Orders above the maximum flow (bikes)":
+                                   {t: max(orders[t] - seville["value"], 0) for t in T}}).T.rename_axis("Month"))
+    else:
+        _max_flow_figure(problem, seville, node_capacity)
+    return problem
