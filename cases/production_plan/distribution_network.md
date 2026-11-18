@@ -92,7 +92,7 @@ Table 4. Late demand peak and the orders of each local warehouse, $d_{it}$ (bike
 | Local warehouse 4 (Seville) | 35 % | 84 | 154 | 140 | 280 | 294 | 175 |
 | Late demand peak | 100 % | 240 | 440 | 400 | 800 | 840 | 500 |
 
-Table 5 gives the symbols of M0 to M3, with the term that names each concept, and those of the two analyses of the plan of M3 in §7. The column «From» gives the version or the analysis where each symbol first appears. In M3 the warehouses are nodes of the network: the symbols $c^h_w$, $K^h_w$ and $h_{wt}$ of the central warehouse in M2 become $c^h_i$, $K^h_i$ and $h_{it}$ with $i$ the central warehouse, and the bikes shipped from plant $f$, $x_{ft}$, become the flow $x_{at}$ on the arc from plant $f$ to the central warehouse.
+Table 5 gives the symbols of M0 to M3, with the term that names each concept, and those of the analysis of the plan of M3 in §7. The column «From» gives the version or the analysis where each symbol first appears. In M3 the warehouses are nodes of the network: the symbols $c^h_w$, $K^h_w$ and $h_{wt}$ of the central warehouse in M2 become $c^h_i$, $K^h_i$ and $h_{it}$ with $i$ the central warehouse, and the bikes shipped from plant $f$, $x_{ft}$, become the flow $x_{at}$ on the arc from plant $f$ to the central warehouse.
 
 Table 5. Notation
 
@@ -125,12 +125,8 @@ Table 5. Notation
 | $x_{at}$ | Bikes shipped on arc $a$ in month $t$ | shipments | bikes/month | M1 |
 | $s_{it}$ | Bikes that node $i$ delivers in month $t$, to orders of that month or to backorders | deliveries | bikes/month | M2 |
 | $b_{it}$ | Orders received by node $i$ and not yet delivered at the end of month $t$ | backorders | bikes | M2 |
-| *Analyses of the plan of M3 (§7)* | | | | |
-| $q_{it}$ | Net supply of node $i$ in month $t$ in the plan of M3: the bikes that the plan makes it put into the network in that month; positive at a supply node, negative at a demand node | net supply | bikes/month | Analysis of M3 (§7.1) |
-| $o$ | Fictitious origin of the maximum flow problem, joined to each plant by an arc with no capacity | origin | — | Analysis of M3 (§7.2) |
-| $e$ | Destination node of the maximum flow problem | destination | — | Analysis of M3 (§7.2) |
-| $x_a$; $x_{oi}$ | Bikes on arc $a$ in one month; bikes on the arc from $o$ to plant $i$ | — | bikes/month | Analysis of M3 (§7.2) |
-| $\text{flow}$ | Bikes that reach the destination $e$ in one month: the value of the flow | — | bikes/month | Analysis of M3 (§7.2) |
+| *Analysis of the plan of M3 (§7)* | | | | |
+| $q_{it}$ | Net supply of node $i$ in month $t$ in the plan of M3: the bikes that the plan makes it put into the network in that month; positive at a supply node, negative at a demand node | net supply | bikes/month | Analysis of M3 (§7) |
 
 ## 4. Linear model of the distribution network
 
@@ -263,11 +259,9 @@ The second test changes the transport rate of rail. With 0,009 €/(bike·km), t
 
 The third test changes the node capacity of regional warehouse 2. From 300 bikes up it is never full, regional warehouse 2 receives 294 bikes in May, and the plan costs 1.111.994,39 €. With 250, the train carries 190 bikes a month from March, regional warehouse 2 holds 44 bikes at the end of April instead of 14, and regional warehouse 1 sends more bikes to Valencia; the plan costs 1.112.101,67 €. Below 223 bikes there is no solution: Seville is supplied only through regional warehouse 2.
 
-## 7. Minimum cost flow and maximum flow problems within the plan of M3
+## 7. Minimum cost flow problem of one month within the plan of M3
 
-The two problems of this section are analyses of the plan of M3, not versions of the model: M3, its data and its plan (§3 to §6) do not change. The minimum cost flow problem of one month shows that, once the plan fixes what each node assembles, holds and delivers in that month, the flows of the plan in that month are the cheapest that carry those bikes through the network. The maximum flow problem gives the most that the network can carry in one month to one node, whatever the costs, and shows why the plan holds stock at regional warehouse 2 at the end of April.
-
-### 7.1 Minimum cost flow problem of one month
+The problem of this section is an analysis of the plan of M3, not a version of the model: M3, its data and its plan (§3 to §6) do not change. It shows that, once the plan fixes what each node assembles, holds and delivers in one month, the flows of the plan in that month are the cheapest that carry those bikes through the network.
 
 Take the optimal plan of M3 and one month $t$. The plan fixes, at each node, the stock at the start and at the end of the month, the bikes assembled and the deliveries; what remains to decide in that month are the flows on the arcs. The stock balance of M3 (§4), written for node $i$ and month $t$, gives what leaves the node on its arcs less what enters it:
 
@@ -302,45 +296,11 @@ Table 10. Minimum cost flow problem of each month, from the plan of M3
 
 From January to March only the plants are supply nodes; a warehouse that builds up seasonal stock in the month is a demand node. In April and May the warehouses that release seasonal stock are supply nodes too: in May the central warehouse puts into the network the 136 bikes it held at the end of April, and regional warehouse 2 its 14. In January and February plant 3 assembles nothing and is a transhipment node.
 
-### 7.2 Maximum flow to regional warehouse 2 and to Seville
-
-The maximum flow problem takes from M3 only the network and its capacities: the arc capacities of Table 2 and the node capacity of regional warehouse 2 (Table 3). It ignores the costs, the stock and the orders, and gives a capacity of the network, not a plan: the most that the network can carry in one month from the plants to one destination node $e$.
-
-The bikes enter the network at the three plants. To write the problem with a single origin, a fictitious origin $o$ is joined to each plant by an arc with no capacity, so that the flow is limited by the network and not by what the plants assemble. The origin $o$ and its arcs are part of the analysis, not of the network of M3. With $x_a$ the bikes on arc $a$ in the month and $x_{oi}$ those on the arc from $o$ to plant $i$, the problem is
-
-$$
-\begin{aligned}
-\max \quad & \text{flow} \\
-\text{s.t.} \quad & \sum_{i \in F} x_{oi} = \text{flow} && && \text{(flow balance at the origin)} \\
-& x_{oi} + \sum_{a \in A^{\text{in}}_i} x_a - \sum_{a \in A^{\text{out}}_i} x_a = 0 && \forall i \in F && \text{(flow balance at the plants)} \\
-& \sum_{a \in A^{\text{in}}_i} x_a - \sum_{a \in A^{\text{out}}_i} x_a = 0 && \forall i \in V \setminus F,\ i \ne e && \text{(flow balance at the other nodes)} \\
-& \sum_{a \in A^{\text{in}}_e} x_a - \sum_{a \in A^{\text{out}}_e} x_a = \text{flow} && && \text{(flow balance at the destination)} \\
-& x_a \le K^x_a && \forall a \in A && \text{(arc capacity)} \\
-& \sum_{a \in A^{\text{in}}_i} x_a \le K^n_i && \forall i \text{ with a node capacity} && \text{(node capacity)} \\
-& x_a,\ x_{oi} \ge 0
-\end{aligned}
-$$
-
-Table 11 gives the maximum flow to regional warehouse 2, in Getafe, and to local warehouse 4, in Seville, with and without the node capacity of regional warehouse 2. The capacities that limit it are those whose shadow price is not 0: one more bike of any of them would raise the maximum flow.
-
-Table 11. Maximum flow in one month from the plants (bikes/month)
-
-| Destination $e$ | Node capacity of regional warehouse 2 | Maximum flow | Capacities that limit it |
-|---|---|---|---|
-| Regional warehouse 2 (Getafe) | Not applied | 410 | Arc capacities of arcs 4, 7 and 8: 60 + 200 + 150 |
-| Regional warehouse 2 (Getafe) | 280 | 280 | Node capacity of regional warehouse 2 |
-| Local warehouse 4 (Seville) | Not applied | 300 | Arc capacity of arc 13 |
-| Local warehouse 4 (Seville) | 280 | 280 | Node capacity of regional warehouse 2 |
-
-The three arcs that enter regional warehouse 2 can carry 410 bikes a month together. Its node capacity, 280, is lower, so it is the node capacity, not the arcs, that limits what reaches Getafe in a month. Seville receives only from regional warehouse 2, by arc 13, so it cannot receive in a month more than regional warehouse 2 receives: 280 bikes.
-
-Seville orders 294 bikes in May (Table 4), 14 more than the network can carry to it in a month. The node capacity limits only the bikes that enter regional warehouse 2 in May, not those that are already there or in Seville at the start of the month. To deliver all the orders of Seville in May, the plan has to hold at least 14 bikes at regional warehouse 2 or at Seville at the end of April; otherwise it backorders them, at 60 €/(bike·month). The plan of M3 holds them at regional warehouse 2: 14 bikes at the end of April (Table 8), where holding costs 10 €/(bike·month), against 14 €/(bike·month) at Seville.
-
 ## 8. Script and notebook
 
-The Python script `distribution_network_solver.py`, in this folder, prints every table of this document, including those of the two analyses of §7, and checks that M2 has no solution with the late demand peak. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
+The Python script `distribution_network_solver.py`, in this folder, prints every table of this document, including Table 10 of the analysis of §7, and checks that M2 has no solution with the late demand peak. It writes the model of §4 with the library PuLP and solves it with the solver HiGHS (`pip install pulp highspy`); the top of the file explains how to install and run it. Running it is optional: it is support material, not part of what is assessed.
 
-The notebook [`notebooks/distribution_network.ipynb`](notebooks/distribution_network.ipynb) solves the plan of §6.1, draws the network with the flows of the month the reader chooses, and runs the three tests of §6.4. Its sections 7 and 8 solve the minimum cost flow problem of the month the reader chooses and the maximum flow problems of §7. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/distribution_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/distribution_network.py`), which reads the data of M0 to M3 from `src/plants/data.py`. The map of the places of the nodes draws the outline of the peninsula from Natural Earth.
+The notebook [`notebooks/distribution_network.ipynb`](notebooks/distribution_network.ipynb) solves the plan of §6.1, draws the network with the flows of the month the reader chooses, and runs the three tests of §6.4. Its section 7 solves the minimum cost flow problem of §7 for the month the reader chooses. It opens in Google Colab without installing anything: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ula-uab/lscm-decision-making/blob/main/cases/production_plan/notebooks/distribution_network.ipynb). Its code is in the package `plants` of this folder (`src/plants/distribution_network.py`), which reads the data of M0 to M3 from `src/plants/data.py`. The map of the places of the nodes draws the outline of the peninsula from Natural Earth.
 
 ## References
 

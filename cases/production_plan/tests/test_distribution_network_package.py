@@ -181,27 +181,6 @@ def test_net_supply_in_january_and_may():
     assert may["supply"]["Regional warehouse 2"] == pytest.approx(14)
 
 
-@pytest.mark.parametrize("destination, node_capacity, value, limits", [
-    ("Regional warehouse 2", {}, 410, [("arc", 3, 60), ("arc", 6, 200), ("arc", 7, 150)]),
-    ("Regional warehouse 2", {"Regional warehouse 2": 280}, 280, [("node", "Regional warehouse 2", 280)]),
-    ("Local warehouse 4", {}, 300, [("arc", 12, 300)]),
-    ("Local warehouse 4", {"Regional warehouse 2": 280}, 280, [("node", "Regional warehouse 2", 280)])])
-def test_table11_maximum_flow(destination, node_capacity, value, limits):
-    problem = dn.max_flow(destination, node_capacity=node_capacity)
-    assert problem["value"] == pytest.approx(value)
-    assert problem["limits"] == limits
-
-
-def test_orders_of_seville_above_the_maximum_flow():
-    # §7.2: only in May do the orders of Seville exceed the maximum flow to Seville, by
-    # 14 bikes, which the plan holds at regional warehouse 2 at the end of April
-    most = dn.max_flow("Local warehouse 4")["value"]
-    assert [max(SHARE["Local warehouse 4"] * FORECAST_4[t] - most, 0) for t in T] == pytest.approx([0, 0, 0, 0, 14, 0])
-    solution = dn.solve()
-    assert solution["stock"]["Regional warehouse 2", "Apr"] == pytest.approx(14)
-    assert solution["stock"]["Local warehouse 4", "Apr"] == pytest.approx(0)
-
-
 def test_notebook_runs():
     nbformat = pytest.importorskip("nbformat")
     nbclient = pytest.importorskip("nbclient")
