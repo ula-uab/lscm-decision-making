@@ -56,14 +56,16 @@ def show(fig: go.Figure) -> None:
     display(HTML(fig.to_html(include_plotlyjs="cdn", full_html=False, config={"displaylogo": False})))
 
 
-LEGEND_SPACE = 64  # px under the axis for the legend: it is anchored to the bottom of the figure, so that it
-                   # never covers the axis, also when Plotly first draws the figure
+LEGEND_SPACE = 56  # px under the axis for the legend and for a blank band that separates the figure from the next
+LEGEND_TOP = 58  # px from the bottom of the figure to the top of the legend: just under the month labels, so the
+                 # legend never covers the axis, also when Plotly first draws the figure
 
 
 def _legend_below(fig: go.Figure) -> None:
-    fig.update_layout(height=(fig.layout.height or MONTH_HEIGHT) + LEGEND_SPACE, margin_b=40 + LEGEND_SPACE,
-                      legend=dict(orientation="h", yref="container", yanchor="bottom", y=0, x=0, font_size=11,
-                                  traceorder="normal"))
+    height = (fig.layout.height or MONTH_HEIGHT) + LEGEND_SPACE
+    fig.update_layout(height=height, margin_b=40 + LEGEND_SPACE,
+                      legend=dict(orientation="h", yref="container", yanchor="top", y=LEGEND_TOP / height, x=0,
+                                  font_size=11, traceorder="normal"))
 
 
 def _get(layout, path: str):
