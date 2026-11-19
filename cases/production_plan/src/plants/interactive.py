@@ -342,11 +342,21 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
     align = {"end": "right", "start": "left", "middle": "center"}
     names = []
     for L in g["labels"]:
-        if L["s"] in nodes:                       # at its place from the node, in px
-            cx, cy, _, _ = _box(g["nodes"][L["s"]])
-            names.append(dict(x=cx, y=cy, xshift=(L["x"] - cx) * SCALE, yshift=-(L["y"] - cy) * SCALE, text=L["s"],
-                              showarrow=False, xanchor=align.get(L["anchor"], "left"), yanchor="bottom",
-                              bgcolor="white", font=dict(size=11, color=TEXT)))
+        if L["s"] not in nodes:
+            continue
+        # beside the node, on the side where the geometry puts it, a few px from its edge
+        d = g["nodes"][L["s"]]
+        x0, y0, x1, y1 = d["bbox"]
+        cx, cy, w, h = _box(d)
+        xanchor = align.get(L["anchor"], "left")
+        place = dict(x=cx, y=cy, xanchor=xanchor)
+        if xanchor == "center":                   # under or over the node
+            below = L["y"] > (y0 + y1) / 2
+            place.update(yanchor="top" if below else "bottom", yshift=-(h / 2 + 2) if below else h / 2 + 2)
+        else:                                     # to its left or right, at the height of the geometry
+            side = -1 if xanchor == "right" else 1
+            place.update(xshift=side * (w / 2 + 6), yanchor="bottom", yshift=-(L["y"] - (y0 + y1) / 2) * SCALE)
+        names.append(dict(text=L["s"], showarrow=False, bgcolor="white", font=dict(size=11, color=TEXT), **place))
     fig = go.Figure()
     owner, layouts = [], []
     for k, option in enumerate(options.values()):
