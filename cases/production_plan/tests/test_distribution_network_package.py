@@ -177,33 +177,41 @@ def test_net_supply_in_january_and_may():
     assert may["supply"]["Regional warehouse 2"] == pytest.approx(14)
 
 
-@pytest.mark.parametrize("month, node, moves, supply", [
-    ("Jan", "Central warehouse", {"stock built up": 150}, -150),
-    ("Feb", "Central warehouse", {}, 0),
-    ("Mar", "Central warehouse", {}, 0),
-    ("Apr", "Central warehouse", {"stock used": 14}, 14),
-    ("Apr", "Regional warehouse 1", {"stock used": 60}, 60),
-    ("Apr", "Regional warehouse 2", {"stock used": 46}, 46),
-    ("Apr", "Local warehouse 1", {"delivered": 120, "stock used": 20}, -100),
-    ("May", "Plant 1", {"assembled": 250, "stock used": 40}, 290),
-    ("May", "Regional warehouse 2", {"stock used": 14}, 14)])
-def test_arrows_of_the_nodes(month, node, moves, supply):
-    # The arrows of a node in the network of section 5 of the notebook: only those
-    # whose bikes are not 0, with their bikes
+@pytest.mark.parametrize("month, node, moves, arrows, supply", [
+    ("Jan", "Plant 1", {"assembled": 250, "to stock": 20}, {("250", "down", "solid")}, 230),
+    ("Jan", "Central warehouse", {"to stock": 150}, {("150", "up", "dashed")}, -150),
+    ("Feb", "Central warehouse", {}, set(), 0),
+    ("Mar", "Central warehouse", {}, set(), 0),
+    ("Mar", "Local warehouse 1", {"delivered": 60, "to stock": 20}, {("60", "up", "solid"), ("20", "up", "dashed")}, -80),
+    ("Apr", "Central warehouse", {"from stock": 14}, {("14", "down", "dashed")}, 14),
+    ("Apr", "Regional warehouse 1", {"from stock": 60}, {("60", "down", "dashed")}, 60),
+    ("Apr", "Regional warehouse 2", {"from stock": 46}, {("46", "down", "dashed")}, 46),
+    ("Apr", "Local warehouse 1", {"from stock": 20, "delivered": 120}, {("20", "down", "dashed"), ("120", "up", "solid")},
+     -100),
+    ("May", "Plant 1", {"assembled": 250, "from stock": 40}, {("250", "down", "solid"), ("40", "down", "dashed")}, 290),
+    ("May", "Regional warehouse 2", {"from stock": 14}, {("14", "down", "dashed")}, 14)])
+def test_arrows_of_the_nodes(month, node, moves, arrows, supply):
+    # The arrows of a node in the network of section 5 of the notebook: pointing down
+    # what it puts into the network, pointing up what it takes out of it; solid what a
+    # plant assembles or a local warehouse delivers, dashed stock. A plant has no
+    # arrow of what it puts into its stock
     p = dn.month_problem(month)
     assert {m: v for m, v in p["moves"][node].items() if v} == pytest.approx(moves)
     assert p["supply"][node] == pytest.approx(supply)
-    drawn = [a for a in dn.move_arrows(p["moves"]) if a["node"] == node]
-    assert sorted(a["text"] for a in drawn) == sorted(dn._number(v) for v in moves.values())
+    drawn = {(a["text"], "down" if a["head"][1] > a["tail"][1] else "up", "dashed" if a["dash"] else "solid")
+             for a in dn.move_arrows(p["moves"]) if a["node"] == node}
+    assert drawn == arrows
 
 
 def test_moves_give_the_net_supply():
-    # In every node and month: assembled - delivered + stock used - stock built up
+    # In every node and month, with the terms of its kind (no "assembled" at a
+    # warehouse): assembled + from stock - delivered - to stock
     for t in T:
         p = dn.month_problem(t)
         for i in NODES:
             m = p["moves"][i]
-            assert m["assembled"] - m["delivered"] + m["stock used"] - m["stock built up"] == \
+            assert ("assembled" in m) == (i in F) and ("delivered" in m) == (i in LOCAL)
+            assert m.get("assembled", 0) + m.get("from stock", 0) - m.get("delivered", 0) - m.get("to stock", 0) == \
                 pytest.approx(p["supply"][i])
 
 

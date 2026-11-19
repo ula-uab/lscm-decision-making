@@ -579,20 +579,31 @@ def net_supply(solution: dict, month: str) -> dict:
     return q
 
 
-MOVES = ("assembled", "delivered", "stock used", "stock built up")
+# What gives a node its net supply in a month, by kind of node: a plant assembles,
+# a local warehouse delivers to its orders, and a node that holds stock takes bikes
+# from its stock or puts them into it; the rail terminal holds no stock
+MOVES = ("assembled", "from stock", "delivered", "to stock")
+
+
+def node_terms(i: str) -> tuple:
+    """The terms of the net supply of node ``i``."""
+    if i == RAIL_TERMINAL:
+        return ()
+    return ("assembled",) * (i in F) + ("from stock",) + ("delivered",) * (i in LOCAL) + ("to stock",)
 
 
 def node_moves(solution: dict, month: str) -> dict:
-    """What gives each node its net supply in a month of a plan of M3 (bikes): what
-    it assembles, what it delivers, and the stock it uses (its stock goes down) or
-    builds up (its stock goes up). The net supply is assembled - delivered + stock
-    used - stock built up."""
+    """What gives each node its net supply in a month of a plan of M3 (bikes), only
+    the terms of its kind: what it assembles, what it delivers, and the bikes it
+    takes from its stock (its stock goes down) or puts into it (its stock goes up).
+    The net supply is assembled + from stock - delivered - to stock."""
     k = T.index(month)
     out = {}
     for i in NODES:
         change = solution["stock"][i, month] - (h_node_0[i] if k == 0 else solution["stock"][i, T[k - 1]])
-        out[i] = dict(zip(MOVES, (solution["assembly"].get((i, month), 0), solution["deliveries"].get((i, month), 0),
-                                  -change if change < -TOL else 0.0, change if change > TOL else 0.0)))
+        every = dict(zip(MOVES, (solution["assembly"].get((i, month), 0), -change if change < -TOL else 0.0,
+                                 solution["deliveries"].get((i, month), 0), change if change > TOL else 0.0)))
+        out[i] = {term: every[term] for term in node_terms(i)}
     return out
 
 
@@ -645,55 +656,59 @@ def month_problem(month: str, solution: dict | None = None) -> dict:
 KIND_FILL = {SUPPLY_NODE: "#C6DDDF", TRANSHIPMENT_NODE: figures.FILL, DEMAND_NODE: "#8FB9C0"}
 
 # The arrows at the nodes that are not arcs, in orange as in figure F34 of the
-# presentation of T3: solid what a node assembles or delivers, dashed the stock it
-# uses or builds up, as in figure F31
+# presentation of T3. Every arrow is read the same at every node: pointing down, the
+# bikes the node puts into the network in the month; pointing up, the bikes it
+# takes out of it. Solid, what a plant assembles or a local warehouse delivers;
+# dashed, stock, as in figure F31. A plant only puts bikes into the network: the
+# bikes it puts into its stock are in its label, not in an arrow
 MOVE_COLOUR = interactive.colour("tab:orange")
 # a short dash, so that an arrow of 20 px still reads as dashed
 MOVE_DASH = "3px,2px"
-_SOLID, _DASHED = dict(color=MOVE_COLOUR, width=1.6), dict(color=MOVE_COLOUR, width=1.6, dash=MOVE_DASH)
-MOVE_KEYS = [("assembled (into the node)", _SOLID), ("delivered (out of the node)", _SOLID),
-             ("stock used (into the node)", _DASHED), ("stock built up (out of the node)", _DASHED)]
-MOVE_SPACE = 1420  # right end of the axis: room for the arrows on the right of the local warehouses
+MOVE_KEYS = [("assembled (↓) or delivered (↑)", dict(color=MOVE_COLOUR, width=1.6)),
+             ("from stock (↓) or to stock (↑)", dict(color=MOVE_COLOUR, width=1.6, dash=MOVE_DASH))]
+MOVE_DOWN = ("assembled", "from stock")    # into the network
+MOVE_SPACE = 1460  # right end of the axis: room for the arrows on the right of the local warehouses
 
 # Where the arrows of each node go, on a side that the network leaves free, the same
-# in every month: for each one, its outer end and the point where it touches the
-# node (px from the centre of the node, y down), and where its text goes
-_TOP = {"assembled": ((-12, -36), (-12, -19), (-16, -30), "right"),
-        "stock": ((12, -36), (12, -19), (16, -30), "left")}
-_RIGHT = {"delivered": ((42, -2), (11, -2), (46, -2), "left"),
-          "stock": ((42, 14), (20, 14), (46, 14), "left")}
-_LEFT = {"stock": ((-34, -13), (-4, -13), (-38, -13), "right")}
-_BELOW = {"stock": ((-12, 42), (-12, 19), (-16, 36), "right")}
+# in every month: for the solid and the dashed arrow, its top and bottom ends (px
+# from the centre of the node, y down) and where its text goes. Over a plant, the
+# arrows end on the plant; beside the other nodes, they do not touch them, so that
+# they are not read as arcs
+_TOP = {"solid": ((-12, -40), (-12, -19), (-16, -30), "right"), "dashed": ((12, -40), (12, -19), (16, -30), "left")}
+_RIGHT = {"solid": ((30, -11), (30, 11), (34, 0), "left"), "dashed": ((66, -11), (66, 11), (70, 0), "left")}
+_LEFT = {"dashed": ((-30, -32), (-30, -10), (-34, -21), "right")}
+_BELOW = {"dashed": ((-14, 24), (-14, 46), (-18, 35), "right")}
 MOVE_PLACES = {**{f: _TOP for f in F}, CENTRAL: _BELOW, **{i: _LEFT for i in REGIONAL}, **{i: _RIGHT for i in LOCAL}}
 
 
 def move_arrows(moves: dict) -> list:
-    """The arrows of the nodes in one month: into a node, what it assembles and the
-    stock it uses; out of it, what it delivers and the stock it builds up. An arrow
-    whose bikes are 0 is not drawn."""
+    """The arrows of the nodes in one month: pointing down, what a node puts into the
+    network (assembled, from stock); pointing up, what it takes out of it
+    (delivered, to stock). A plant has no arrow of what it puts into its stock, and
+    an arrow whose bikes are 0 is not drawn."""
     arrows = []
     for i, m in moves.items():
-        for move, into in (("assembled", True), ("delivered", False), ("stock used", True), ("stock built up", False)):
-            if m[move] <= TOL:
+        for move, bikes in m.items():
+            if bikes <= TOL or (i in F and move == "to stock"):
                 continue
-            outer, inner, at, align = MOVE_PLACES[i]["stock" if move.startswith("stock") else move]
-            tail, head = (outer, inner) if into else (inner, outer)
-            arrows.append(dict(node=i, tail=tail, head=head, dash=MOVE_DASH if move.startswith("stock") else None,
-                               colour=MOVE_COLOUR,
-                               text=_number(m[move]), at=at, align=align))
+            stock = move in ("from stock", "to stock")
+            top, bottom, at, align = MOVE_PLACES[i]["dashed" if stock else "solid"]
+            tail, head = (top, bottom) if move in MOVE_DOWN else (bottom, top)
+            arrows.append(dict(node=i, tail=tail, head=head, dash=MOVE_DASH if stock else None, colour=MOVE_COLOUR,
+                               text=_number(bikes), at=at, align=align))
     return arrows
 
 
 def _supply_label(i: str, p: dict, t: str) -> str:
-    """The label of a node in the network of a month: its kind and how its net supply
-    is made."""
+    """The label of a node in the network of a month: its kind, the terms of its net
+    supply and how they make it."""
     m, q = p["moves"][i], p["supply"][i]
-    before = p["stock before"][i]
-    return (f"{_node_name(i)}<br>{p['kind'][i]}<br>assembled {_number(m['assembled'])}; delivered "
-            f"{_number(m['delivered'])}; stock used {_number(m['stock used'])}; stock built up "
-            f"{_number(m['stock built up'])}<br>net supply q in {t} = stock at the start {_number(before)} + assembled "
-            f"{_number(m['assembled'])} − delivered {_number(m['delivered'])} − stock at the end "
-            f"{_number(before + m['stock built up'] - m['stock used'])} = {_number(q)} bikes")
+    if not m:
+        return f"{_node_name(i)}<br>{p['kind'][i]}<br>holds no stock<br>net supply q in {t} = 0 bikes"
+    terms = "; ".join(f"{move} {_number(v)}" for move, v in m.items())
+    sum_ = " ".join(("+ " if move in MOVE_DOWN else "− ") + f"{move} {_number(v)}" for move, v in m.items())
+    return (f"{_node_name(i)}<br>{p['kind'][i]}<br>{terms}<br>net supply q in {t} = {sum_.removeprefix('+ ')} = "
+            f"{_number(q)} bikes")
 
 
 def month_flows(show_tables: bool = False) -> dict:
@@ -704,10 +719,8 @@ def month_flows(show_tables: bool = False) -> dict:
     of each month."""
     solution = solve()
     problems = {t: month_problem(t, solution) for t in T}
-    for k, (t, p) in enumerate(problems.items()):
-        p["stock before"] = {i: h_node_0[i] if k == 0 else solution["stock"][i, T[k - 1]] for i in NODES}
     if show_tables:
-        _display(pd.DataFrame({t: {(i, move.capitalize()): p["moves"][i][move] for i in NODES for move in MOVES}
+        _display(pd.DataFrame({t: {(i, move.capitalize()): v for i in NODES for move, v in p["moves"][i].items()}
                                for t, p in problems.items()}).rename_axis(["Node", "Bikes"]))
         _display(pd.DataFrame({t: {i: p["supply"][i] for i in NODES} for t, p in problems.items()})
                  .rename_axis("Net supply q (bikes)"))
