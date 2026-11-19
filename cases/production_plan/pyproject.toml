@@ -11,7 +11,6 @@ dependencies = [
     "pulp>=3.3",
     "highspy>=1.7",
     "plotly>=5.20",
-    "ipywidgets>=7.6",
 ]
 
 [build-system]

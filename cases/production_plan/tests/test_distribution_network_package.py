@@ -1,7 +1,6 @@
 """Check that the package reproduces the numbers of distribution_network.md (M3),
 and that the notebook of M3 runs from start to end."""
 
-import os
 import re
 from pathlib import Path
 
@@ -9,8 +8,6 @@ import matplotlib
 import pytest
 
 matplotlib.use("Agg")
-# The notebooks run without a browser: the dropdown of the arcs is left out
-os.environ["PLANTS_NO_WIDGETS"] = "1"
 
 from plants import distribution_network as dn  # noqa: E402
 from plants.data import ARCS, F, FORECAST_4, FORECASTS, K_h_node, LOCAL, NODES, SHARE, T, arcs  # noqa: E402
@@ -193,6 +190,20 @@ def test_arc_flow_figure():
     assert dn.FULL_BAR not in rail.marker.color
     terminal = dn.arc_flow_figure(solution, dn.RAIL_ARC + 1).data[0]
     assert [colour == dn.FULL_BAR for colour in terminal.marker.color] == [False] + [True] * 5
+
+
+def test_arc_flow_dropdown():
+    # One figure with the 13 arcs, the rail arc shown first; each option of the
+    # dropdown shows its arc only, with its title and its arc capacity
+    fig = dn.arc_flow_selector(dn.solve())
+    menu = fig.layout.updatemenus[0]
+    assert len(fig.data) == len(menu.buttons) == 13
+    assert [trace.visible for trace in fig.data] == [a == dn.RAIL_ARC for a in range(13)]
+    assert menu.buttons[dn.RAIL_ARC].label == "6. Central warehouse → Rail terminal (rail)"
+    visible, layout = menu.buttons[dn.RAIL_ARC + 1].args
+    assert visible["visible"] == [a == dn.RAIL_ARC + 1 for a in range(13)]
+    assert layout["title.text"].startswith("Flow on arc 7 (Rail terminal → Regional warehouse 2")
+    assert layout["shapes"][0].y0 == 200
 
 
 def test_notebook_runs():

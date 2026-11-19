@@ -33,7 +33,7 @@ from .data import (ARCS, CENTRAL, F, FORECAST_4, FORECAST_4_NAME, K, K_h_node, K
                    RAIL_TERMINAL, REGIONAL, SHARE, TRANSPORT_RATE, T, arcs as make_arcs, b_0, b_max, c, c_b, c_h_node,
                    h_node_0, h_node_end)
 from .model import TOL, _constraints, _optimal
-from . import figures
+from . import figures, interactive
 from .show import SHORT, _display, _european_axes, _light, _number
 
 FORECAST = FORECAST_4_NAME               # M3 is solved with forecast 4
@@ -388,7 +388,7 @@ def arc_flow_figure(solution: dict, a: int):
     fig = go.Figure(go.Bar(
         x=months, y=flows, marker_color=[FULL_BAR if f else figures.INK for f in full],
         text=[_number(v) for v in flows], textposition="outside",
-        customdata=["arc capacity full" if f else f"{_number(arc['capacity'] - v)} bikes free" for v, f in
+        customdata=["arc capacity full" if f else f"{_number(arc['capacity'] - v)} bikes available" for v, f in
                     zip(flows, full)],
         hovertemplate="%{x}: %{y:,.0f} bikes (%{customdata})<extra></extra>", showlegend=False))
     fig.add_hline(y=arc["capacity"], line_dash="dash", line_color="black", line_width=1,
@@ -401,19 +401,19 @@ def arc_flow_figure(solution: dict, a: int):
     return fig
 
 
-def arc_flow_selector(solution: dict, first: int = RAIL_ARC) -> None:
-    """A dropdown of the arcs and the figure of the flow on the arc chosen in each
-    month; the plan is not solved again when the arc changes."""
-    from .widgets import select_plot
-    options = {f"{a + 1}. {arc_name(arc)}" + (" (rail)" if arc["mode"] == RAIL else ""): a
-               for a, arc in enumerate(solution["arcs"])}
-    select_plot(options, lambda a: arc_flow_figure(solution, a), value=first, description="Arc:")
+def arc_flow_selector(solution: dict, first: int = RAIL_ARC):
+    """The figure of the flow on one arc in each month, with a dropdown of the
+    arcs; the plan is not solved again when the arc changes."""
+    from .interactive import dropdown_figure
+    label = lambda a, arc: f"{a + 1}. {arc_name(arc)}" + (" (rail)" if arc["mode"] == RAIL else "")  # noqa: E731
+    return dropdown_figure({label(a, arc): arc_flow_figure(solution, a) for a, arc in enumerate(solution["arcs"])},
+                           first=label(first, solution["arcs"][first]))
 
 
 def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
     """The plan with forecast 4, with the flows of one month on the network; and,
-    first, whether M2 has a plan for forecast 4. Under the figures, a dropdown of
-    the arcs with the flow on the arc chosen in each month."""
+    first, whether M2 has a plan for forecast 4. Under the figures, the flow on
+    one arc in each month, with a dropdown of the arcs."""
     if m2_has_no_solution():
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
@@ -426,7 +426,7 @@ def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
         print()
     solution = _report({}, FORECAST, month, show_tables=show_tables)
     if solution is not None and not show_tables:
-        arc_flow_selector(solution)
+        interactive.show(arc_flow_selector(solution))
     return solution
 
 

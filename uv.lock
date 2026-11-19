@@ -2651,7 +2651,6 @@ version = "0.1.0"
 source = { editable = "cases/production_plan" }
 dependencies = [
     { name = "highspy" },
-    { name = "ipywidgets" },
     { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "matplotlib", version = "3.11.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -2664,7 +2663,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "highspy", specifier = ">=1.7" },
-    { name = "ipywidgets", specifier = ">=7.6" },
     { name = "matplotlib", specifier = ">=3.7" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "plotly", specifier = ">=5.20" },
