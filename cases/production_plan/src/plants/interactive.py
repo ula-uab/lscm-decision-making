@@ -10,11 +10,43 @@ a dropdown at its top left. The dropdown is part of the figure: changing the
 option runs no Python, so nothing is computed again, and every option is
 computed before the figure is drawn. A dropdown of ipywidgets would run Python
 at each change, but Google Colab does not draw a Plotly figure in a cell that
-shows an ipywidgets dropdown.
+shows an ipywidgets dropdown, and PyCharm does not draw it again inside an
+ipywidgets output: the notebooks use no ipywidgets.
+
+The functions:
+
+- ``bars``: stacked bars by month, with the total over each bar, an optional
+  capacity line (one value, or one per month) and the legend under the axis;
+- ``horizontal_bars``: one bar per name, for lists whose length changes with
+  the option of the dropdown (the space of the longest list is kept);
+- ``places_map``: the places of the case on a map of the peninsula, with
+  buttons to show or hide the names of the cities;
+- ``network``: the nodes and arcs of the distribution network, one option per
+  month or per value shown on the arcs;
+- ``dropdown_figure``: several figures in one, with a dropdown;
+- ``show``: draws a figure, in Colab and in PyCharm.
+
+How the figures are laid out, so that a figure reads well as Plotly first draws
+it, with no zoom:
+
+- the legend sits under the axis, anchored to the bottom of the figure, with a
+  blank band under it that separates the figure from the next one; it never
+  covers the axis;
+- with a dropdown, the dropdown goes at the top and the title under it;
+- in the network, the nodes and their names have a fixed size in pixels and
+  the distances between nodes stretch with the width of the cell; the names
+  are short and never cover a node, since the label of each node says which
+  node it is, and the arrows end at the edge of the node;
+- Plotly measures each text as it draws the figure, and a figure drawn out of
+  sight ("Run all" in Colab) measures every text as 0 px: ``show`` adds a
+  script that draws the figure again the first time it comes into sight.
 
 The colours are those of the figures drawn with matplotlib (``figures``), so that
 each colour keeps its meaning: red, a full capacity; light grey, an arc with no
 flow; one colour for each plant and for each stage of the network.
+
+A new figure, or a change to one, is checked in Colab (also with "Run all") and
+in PyCharm before it is pushed.
 """
 
 from __future__ import annotations

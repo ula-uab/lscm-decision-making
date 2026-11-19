@@ -23,6 +23,10 @@ One notebook per version of the model.
 
 In Colab nothing has to be installed: the first cell installs the example. The cells have forms (sliders, drop-down lists and tick boxes) to change the data that each notebook opens: in M0, the capacity of plant 1 and the demand in the reduced version, and the demand forecast; in M1, the holding cost, the demand of one month, the last month of the planning horizon and the required final stock; in M2, the limit on the backorders at the end, the storage capacities of the plants and of the warehouse, and the backorder cost; in M3, the arc capacity of arc 6 (rail), the transport rate of rail and the node capacity of regional warehouse 2 and, in the analysis of the plan, the month of the minimum cost flow problem; in M4, the backorder share of a retailer, the lost-sale cost, the orders of a retailer in one month and the transport cost of an arc to a retailer; and in M4B, five things: the demand growth; the months of a price promotion, its discount and the demand growth of those months; plant 3 open, closed or a binary variable; the fixed cost of plant 3; and the overtime and the rented storage, each with its cost. Outside Colab the forms are plain lines such as `forecast = "Demand below capacity"`: edit the value and run the cell again.
 
+## Interactive figures
+
+The figures of the notebooks are interactive, drawn with Plotly: they take the width of the cell, so that they can be read on a tablet or a phone, the values are in the label that appears on placing the pointer on a bar, a node or an arc (or on touching it), and a dropdown at the top left of a figure changes what it shows without running the cell again. The functions that draw them, and how they are laid out, are in [`src/plants/interactive.py`](src/plants/interactive.py).
+
 ## Files
 
 | File | What it is |
@@ -40,7 +44,7 @@ In Colab nothing has to be installed: the first cell installs the example. The c
 | [`capacity_scenarios.md`](capacity_scenarios.md) | The document of M4B, Master Planning for Electric Bicycles: Optimization Model and Scenario Analysis |
 | [`capacity_scenarios_solver.py`](capacity_scenarios_solver.py) | Script that prints the tables of `capacity_scenarios.md`. Needs PuLP and HiGHS |
 | [`notebooks/`](notebooks/) | The notebooks, one per version |
-| [`src/plants/`](src/plants/) | The code the notebooks call: the data of every version (`data.py`); for M0, the model, shadow prices and ranges (`model.py`) and the figures (`show.py`); for M1 to M4 and for M4B, the model and what its notebook shows (`plant_stock.py`, `central_warehouse.py`, `distribution_network.py`, `retailers.py`, `capacity_scenarios.py`) |
+| [`src/plants/`](src/plants/) | The code the notebooks call: the data of every version (`data.py`); for M0, the model, shadow prices and ranges (`model.py`) and the figures (`show.py`); for M1 to M4 and for M4B, the model and what its notebook shows (`plant_stock.py`, `central_warehouse.py`, `distribution_network.py`, `retailers.py`, `capacity_scenarios.py`); the interactive figures (`interactive.py`) |
 | [`tests/`](tests/) | Checks that the package gives the numbers of the documents and that the notebooks run |
 
 Running the script or the notebook is optional: it is support material, not part of the assessment.
