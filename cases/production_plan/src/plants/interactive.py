@@ -228,40 +228,125 @@ def places_map(places: list, title: str, window: tuple | None = None, height: in
 # The network by stages
 # ---------------------------------------------------------------------------
 
+SCALE = 0.62       # px per unit of the geometry of the network: the size of the nodes and of their names
+
+
+def _box(d: dict) -> tuple:
+    """The centre of a node in the geometry, and its width and height in px."""
+    x0, y0, x1, y1 = d["bbox"]
+    return d.get("centre", ((x0 + x1) / 2, (y0 + y1) / 2)) + ((x1 - x0) * SCALE, (y1 - y0) * SCALE)
+
+
+def _geometry(nodes: list, arcs: int) -> dict:
+    """The geometry of the network by stages, with the centre of each node. A node
+    reached by a straight vertical arc goes under the centre of its origin, so that
+    the arc stays vertical when the figure stretches."""
+    g = json.loads(figures.NETWORK_FIGURE.read_text(encoding="utf-8"))
+    for d in g["nodes"].values():
+        x0, y0, x1, y1 = d["bbox"]
+        d["centre"] = ((x0 + x1) / 2, (y0 + y1) / 2)
+    for route in g["arcs"][:arcs]:
+        # plant 3 reaches the central warehouse from the left, not from below, where
+        # the rail arc leaves it; plant 2 a little higher, to leave room for it
+        if (route["from"], route["to"]) == ("Plant 3", "Central warehouse"):
+            route["pts"] = [[384.0, 404], [420, 404], [420, 228], [540, 228]]
+        if (route["from"], route["to"]) == ("Plant 2", "Central warehouse"):
+            route["pts"] = [[384.0, 204], [540, 204]]
+        (xa, _), (xb, _) = route["pts"][0], route["pts"][-1]
+        if len(route["pts"]) == 2 and xa == xb:
+            d = g["nodes"][route["to"]]
+            d["centre"] = (g["nodes"][route["from"]]["centre"][0], d["centre"][1])
+    return g
+
+
 def _node_shapes(g: dict, nodes: list, fill: dict) -> list:
+    """The nodes, with their size in px around their centre, so that they keep their
+    shape whatever the width of the figure (the y of a path in px goes up)."""
     shapes = []
     for node in nodes:
         d = g["nodes"][node]
-        x0, y0, x1, y1 = d["bbox"]
-        cx, cy = d["pos"]
-        style = dict(fillcolor=fill.get(node, FILL), line=dict(color=INK, width=1.4), layer="above")
+        cx, cy, w, h = _box(d)
+        style = dict(fillcolor=fill.get(node, FILL), line=dict(color=INK, width=1.4), layer="above",
+                     xsizemode="pixel", ysizemode="pixel", xanchor=cx, yanchor=cy)
         if d["kind"] == "transform":
-            shapes.append(dict(type="rect", x0=x0, y0=y0, x1=x1, y1=y1, **style))
+            shapes.append(dict(type="rect", x0=-w / 2, y0=-h / 2, x1=w / 2, y1=h / 2, **style))
         elif d["kind"] == "stock":
-            shapes.append(dict(type="path", path=f"M {cx},{y0} L {x1},{y1} L {x0},{y1} Z", **style))
+            shapes.append(dict(type="path", path=f"M 0,{h / 2} L {w / 2},{-h / 2} L {-w / 2},{-h / 2} Z", **style))
         elif d["kind"] == "transit":
-            shapes.append(dict(type="circle", x0=x0, y0=y0, x1=x1, y1=y1, **style))
+            shapes.append(dict(type="circle", x0=-w / 2, y0=-h / 2, x1=w / 2, y1=h / 2, **style))
         else:
-            shapes.append(dict(type="path", path=f"M {cx},{y0} L {x1},{cy} L {cx},{y1} L {x0},{cy} Z", **style))
+            shapes.append(dict(type="path", path=f"M 0,{h / 2} L {w / 2},0 L 0,{-h / 2} L {-w / 2},0 Z", **style))
     return shapes
+
+
+def _edge(d: dict, way: str, across: float) -> float:
+    """The distance (px) from the centre of a node to its edge, for an arc that
+    reaches it going ``way`` ("right", "left", "down", "up") at ``across`` px from
+    its centre (down positive for a horizontal arc, right positive for a vertical
+    one)."""
+    _, _, w, h = _box(d)
+    kind, a = d["kind"], abs(across)
+    if kind == "transit":
+        return math.sqrt(max((w / 2) ** 2 - a ** 2, 0))
+    if way in ("right", "left"):
+        if kind == "stock":                       # the apex up: wider lower down
+            return w / 2 * min(max((across + h / 2) / h, 0), 1)
+        return w / 2 if kind == "transform" else w / 2 * max(1 - a / (h / 2), 0)
+    if kind == "transform" or (kind == "stock" and way == "up"):
+        return h / 2
+    if kind == "stock":                           # down onto a side of the apex
+        return h / 2 - h * min(a / (w / 2), 1)
+    return h / 2 * max(1 - a / (w / 2), 0)
+
+
+def _route(g: dict, a: int) -> tuple:
+    """The points of arc ``a`` from the centre of its origin to the centre of its
+    destination, along its first and last stretches, and the arrow at its end:
+    (points, the way it reaches its destination, standoff of the head in px)."""
+    route = g["arcs"][a]
+    pts = [list(p) for p in route["pts"]]
+    o, d = g["nodes"][route["from"]], g["nodes"][route["to"]]
+    ox, oy, _, _ = _box(o)
+    dx, dy, _, _ = _box(d)
+    # a horizontal end starts or ends at the centre of its node; a vertical end
+    # moves onto the centre of its node, with the point where it turns
+    if pts[0][1] == pts[1][1]:
+        pts[0][0] = ox
+    else:
+        pts[0][0] = pts[1][0] = ox
+        pts[0][1] = oy
+    (xa, ya), (xb, yb) = pts[-2], pts[-1]
+    if ya == yb:
+        way, across = ("right" if xb > xa else "left"), (yb - dy) * SCALE
+        pts[-1][0] = dx
+    else:
+        way, across = ("down" if yb > ya else "up"), 0.0
+        pts[-2][0] = pts[-1][0] = dx
+        pts[-1][1] = dy
+    return pts, way, _edge(d, way, across) + 1
 
 
 def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict | None = None,
             height: int = 500) -> go.Figure:
     """The network by stages, as figure CS-F1 of the statement, with the name of each
-    node beside it. ``options`` gives, by label of the dropdown (one option: no
+    node beside it. It takes the width of the cell: the distances between the nodes
+    stretch with it, and the nodes and their names keep their size in px. ``options`` gives, by label of the dropdown (one option: no
     dropdown), a dict with "title"; "arc_text" (arc: text written on it);
     "arc_hover" and "node_hover" (the label of each arc and node); and, optionally,
     "full" and "idle" (arcs drawn red and light grey, with no text) and "fill"
     (node: colour). ``legend`` adds, under the figure, a filled square for each
     label: colour."""
-    g = json.loads(figures.NETWORK_FIGURE.read_text(encoding="utf-8"))
+    g = _geometry(nodes, len(arc_list))
     labels = list(options)
     first = labels.index(first) if first is not None else 0
     align = {"end": "right", "start": "left", "middle": "center"}
-    names = [dict(x=L["x"], y=L["y"], text=L["s"], showarrow=False, xanchor=align.get(L["anchor"], "left"),
-                  yanchor="bottom", bgcolor="white", font=dict(size=11, color=TEXT))
-             for L in g["labels"] if L["s"] in nodes]
+    names = []
+    for L in g["labels"]:
+        if L["s"] in nodes:                       # at its place from the node, in px
+            cx, cy, _, _ = _box(g["nodes"][L["s"]])
+            names.append(dict(x=cx, y=cy, xshift=(L["x"] - cx) * SCALE, yshift=-(L["y"] - cy) * SCALE, text=L["s"],
+                              showarrow=False, xanchor=align.get(L["anchor"], "left"), yanchor="bottom",
+                              bgcolor="white", font=dict(size=11, color=TEXT)))
     fig = go.Figure()
     owner, layouts = [], []
     for k, option in enumerate(options.values()):
@@ -270,7 +355,7 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
         for a, arc in enumerate(arc_list):
             route = g["arcs"][a]
             assert (route["from"], route["to"]) == (arc["origin"], arc["destination"])
-            pts = route["pts"]
+            pts, way, standoff = _route(g, a)
             drawn.append(pts)
             c = FULL if a in full else (IDLE if a in idle else INK)
             xs, ys = zip(*pts)
@@ -278,9 +363,11 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
                             line=dict(color=c, width=2 if a in full else 1.4,
                                       dash="dash" if arc["mode"] == "Rail" else "solid"))
             owner.append(k)
-            (xa, ya), (xb, yb) = pts[-2], pts[-1]
-            notes.append(dict(x=xb, y=yb, ax=xa, ay=ya, xref="x", yref="y", axref="x", ayref="y", text="",
-                              showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.4, arrowcolor=c, standoff=0))
+            # only the head: its tail 12 px before it, in px from the centre of the destination
+            tail = standoff + 12
+            ax, ay = {"right": (-tail, 0), "left": (tail, 0), "down": (0, -tail), "up": (0, tail)}[way]
+            notes.append(dict(x=pts[-1][0], y=pts[-1][1], ax=ax, ay=ay, xref="x", yref="y", text="",
+                              showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.4, arrowcolor=c, standoff=standoff))
             p0, p1 = max(zip(pts[:-1], pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
             mx, my = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
             if option["arc_text"].get(a) and a not in idle:
@@ -293,11 +380,12 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
                         showlegend=False, visible=(k == first))
         owner.append(k)
         shown = [n for n in nodes if option["node_hover"].get(n)]
-        fig.add_scatter(x=[g["nodes"][n]["pos"][0] for n in shown], y=[g["nodes"][n]["pos"][1] for n in shown],
+        fig.add_scatter(x=[_box(g["nodes"][n])[0] for n in shown], y=[_box(g["nodes"][n])[1] for n in shown],
                         mode="markers", marker=dict(size=34, opacity=0), hovertext=[option["node_hover"][n] for n in shown],
                         hoverinfo="text", showlegend=False, visible=(k == first))
         owner.append(k)
-        dots = [dict(type="circle", x0=x - 3, y0=y - 3, x1=x + 3, y1=y + 3, fillcolor=INK, line_width=0)
+        dots = [dict(type="circle", x0=-3, y0=-3, x1=3, y1=3, xsizemode="pixel", ysizemode="pixel", xanchor=x,
+                     yanchor=y, fillcolor=INK, line_width=0)
                 for x, y in g["dots"] if sum(figures._on((x, y), p) for p in drawn) > 1]
         layouts.append({"annotations": names + notes, "shapes": _node_shapes(g, nodes, option.get("fill", {})) + dots,
                         "title.text": option["title"]})
@@ -316,8 +404,8 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
     fig.update_layout(**LAYOUT, height=height, dragmode="pan", hovermode="closest",
                       annotations=layouts[first]["annotations"], shapes=layouts[first]["shapes"],
                       title=dict(text=layouts[first]["title.text"], font_size=14),
-                      xaxis=dict(visible=False, range=[60, 1330]),
-                      yaxis=dict(visible=False, range=[680, 20], scaleanchor="x"))
+                      xaxis=dict(visible=False, range=[190, 1330]),
+                      yaxis=dict(visible=False, range=[690, 0]))
     fig.update_layout(margin=dict(t=56, l=4, r=4, b=4))
     fig.update_layout(legend=dict(orientation="h", yanchor="top", y=0, x=0, font_size=11))
     if len(options) > 1:
