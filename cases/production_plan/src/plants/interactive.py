@@ -46,14 +46,29 @@ def colour(name: str) -> str:
     return to_hex(name)
 
 
+# Plotly measures each text when it draws the figure. A figure drawn out of sight (with "Run all", for example)
+# measures every text as 0 px, and its legend and dropdown pile up; this script draws it again when it comes into
+# sight, keeping the option chosen
+REDRAW = """
+var gd = document.getElementById('{plot_id}');
+new IntersectionObserver(function (entries, observer) {
+    if (entries.some(function (e) { return e.isIntersecting; })) {
+        observer.disconnect();
+        Plotly.newPlot(gd, gd.data, gd.layout, gd._context);
+    }
+}).observe(gd);
+"""
+
+
 def show(fig: go.Figure) -> None:
     """Show a Plotly figure: in Colab, as Plotly shows it there; elsewhere as HTML,
     with the Plotly library from the internet, which PyCharm draws."""
+    config = {"displaylogo": False}
     if "google.colab" in sys.modules:
-        fig.show(config={"displaylogo": False})
+        fig.show(config=config, post_script=REDRAW)
         return
     from IPython.display import HTML, display
-    display(HTML(fig.to_html(include_plotlyjs="cdn", full_html=False, config={"displaylogo": False})))
+    display(HTML(fig.to_html(include_plotlyjs="cdn", full_html=False, config=config, post_script=REDRAW)))
 
 
 LEGEND_SPACE = 56  # px under the axis for the legend and for a blank band that separates the figure from the next
