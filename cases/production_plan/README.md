@@ -25,7 +25,7 @@ In Colab nothing has to be installed: the first cell installs the example. The c
 
 ## Interactive figures
 
-The figures of the notebooks are interactive, drawn with Plotly: they take the width of the cell, so that they can be read on a tablet or a phone, the values are in the label that appears on placing the pointer on a bar, a node or an arc (or on touching it), and a dropdown at the top left of a figure changes what it shows without running the cell again. The functions that draw them, and how they are laid out, are in [`src/plants/interactive.py`](src/plants/interactive.py).
+The figures of the M3 notebook are interactive, drawn with Plotly; the other notebooks draw static figures with matplotlib. The interactive figures take the width of the cell, so that they can be read on a tablet or a phone, the values are in the label that appears on placing the pointer on a bar, a node or an arc (or on touching it), and a dropdown at the top left of a figure changes what it shows without running the cell again. The functions that draw them, and how they are laid out, are in [`src/plants/interactive.py`](src/plants/interactive.py).
 
 ## Files
 
