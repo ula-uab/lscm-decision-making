@@ -7,6 +7,8 @@ one line of code.
 from __future__ import annotations
 
 import functools
+import re
+import textwrap
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -29,6 +31,24 @@ def _light(func):
         with plt.style.context("default"):
             return func(*args, **kwargs)
     return wrapper
+
+
+# Longest line of the text a cell prints: Colab does not wrap the output of a
+# cell, and a longer line needs a horizontal scroll bar
+WIDTH = 80
+
+
+def _say(text: str = "", **kwargs) -> None:
+    """Print a text in lines of at most WIDTH characters; each line of the text is
+    wrapped on its own, with its indentation, and a number is never parted from a
+    unit that starts with € or %."""
+    lines = []
+    for line in str(text).split("\n"):
+        indent = line[:len(line) - len(line.lstrip())]
+        line = re.sub(r" (?=[€%]|k€)", "\u00a0", line)
+        lines.append(textwrap.fill(line, WIDTH, subsequent_indent=indent, break_long_words=False,
+                                   break_on_hyphens=False).replace("\u00a0", " ") if line.strip() else line)
+    print("\n".join(lines), **kwargs)
 
 
 def _display(obj) -> None:
@@ -109,7 +129,7 @@ def show_data() -> None:
 def optimal_plan() -> dict:
     """Table 3: the optimal plan; Table 4: binding constraints and slack."""
     solution = m.solve()
-    print(f"Optimal plan: revenue {_euros(solution['revenue'])}. Seats used: {_seats_text(solution['seats'])}.")
+    _say(f"Optimal plan: revenue {_euros(solution['revenue'])}. Seats used: {_seats_text(solution['seats'])}.")
     _display(_grid({p: _num(solution["plan"][p]) for p in P}, "Tickets on sale"))
     rows = []
     for l in L:
@@ -143,17 +163,17 @@ def bid_prices(flight: str = "RIX → HEL") -> None:
     _display(pd.DataFrame({l: {"Seats of the aircraft": C[l], "Bid price (€/seat)": _num(bid[l])} for l in L})
              .T.rename_axis("Flight"))
     up, down = m.change_capacity(flight, 1), m.change_capacity(flight, -1)
-    print(f"{flight}: with {C[flight] + 1} seats the revenue changes by {_signed(up)} €; "
+    _say(f"{flight}: with {C[flight] + 1} seats the revenue changes by {_signed(up)} €; "
           f"with {C[flight] - 1} seats, by {_signed(down)} €. Bid price: {_num(bid[flight])} €/seat.")
     rows = m.seat_change(flight)
-    print(f"Fares of the trips whose tickets change with one seat less and one seat more on {flight}:")
+    _say(f"Fares of the trips whose tickets change with one seat less and one seat more on {flight}:")
     _display(pd.DataFrame([{"Trip": row["product"][0], "Fare": row["product"][1],
                             f"{C[flight] - 1} seats (tickets)": _num(row["less"]),
                             f"{C[flight]} seats, optimal plan (tickets)": _num(row["plan"]),
                             f"{C[flight] + 1} seats (tickets)": _num(row["more"]),
                             "Change with one seat more (€)": _signed(row["change"])} for row in rows])
              .set_index(["Trip", "Fare"]))
-    print(f"Total with one seat more: {_signed(sum(row['change'] for row in rows))} €, the bid price of {flight}.")
+    _say(f"Total with one seat more: {_signed(sum(row['change'] for row in rows))} €, the bid price of {flight}.")
     rows = []
     for p in P:
         product_bid = m.product_bid_price(p, bid)
@@ -163,7 +183,7 @@ def bid_prices(flight: str = "RIX → HEL") -> None:
                      "Price − bid price (€/ticket)": _num(r[p] - product_bid),
                      "Shadow price of the demand (€/ticket)": _num(solution["demand price"][p])})
     _display(pd.DataFrame(rows).set_index(["Trip", "Fare"]))
-    print("Seats of the aircraft for which the bid price of each flight holds:")
+    _say("Seats of the aircraft for which the bid price of each flight holds:")
     _display(pd.DataFrame([{"Flight": l, "Seats of the aircraft": _num(C[l]),
                             "Bid price (€/seat)": _num(bid[l]),
                             "Range of the seats": _range_text(*m.validity_range("seats", l))} for l in L])
@@ -181,14 +201,14 @@ def tour_operator_offer(seats: int = 10, price: float = 120) -> dict | None:
     seat, and the plan with the offer."""
     result = m.offer(seats, price)
     if result is None:
-        print(f"{seats} seats {OFFER_TRIP} do not fit in the flights: the model has no solution.")
+        _say(f"{seats} seats {OFFER_TRIP} do not fit in the flights: the model has no solution.")
         return None
     bid = result["trip bid price"]
-    print(f"Bid price of a seat {OFFER_TRIP}: {' + '.join(_num(result['base']['bid price'][l]) for l in USES[OFFER_TRIP])}"
+    _say(f"Bid price of a seat {OFFER_TRIP}: {' + '.join(_num(result['base']['bid price'][l]) for l in USES[OFFER_TRIP])}"
           f" = {_num(bid)} €/seat.")
-    print(f"Estimate with the bid prices: {seats} × ({_num(price)} − {_num(bid)}) = {_signed(result['estimate'])} €.")
-    print(f"Solving again with the {seats} seats in the plan: {_signed(result['change'])} €.")
-    print("Bid prices with the offer in the plan: "
+    _say(f"Estimate with the bid prices: {seats} × ({_num(price)} − {_num(bid)}) = {_signed(result['estimate'])} €.")
+    _say(f"Solving again with the {seats} seats in the plan: {_signed(result['change'])} €.")
+    _say("Bid prices with the offer in the plan: "
           + "; ".join(f"{l} {_num(result['new']['bid price'][l])} €/seat" for l in L) + ".")
     changed = m.changed_tickets(result["base"]["plan"], result["new"]["plan"])
     if changed:
@@ -228,22 +248,22 @@ def demand_change(product=CHANGE_PRODUCT, new_demand: float = CHANGE_DEMAND,
     result = m.demand_change(p, new_demand, cost)
     low, high = result["range"]
     where = "inside" if result["inside"] else "outside"
-    print(f"{p[0]} {p[1]}: forecast demand {_num(D[p])} tickets, shadow price of its demand "
+    _say(f"{p[0]} {p[1]}: forecast demand {_num(D[p])} tickets, shadow price of its demand "
           f"{_num(result['shadow price'])} €/ticket, which holds for a demand of "
           f"{_range_text(low, high)} tickets.")
-    print(f"With {_num(new_demand)} tickets of forecast demand ({_signed(new_demand - D[p])} tickets): "
+    _say(f"With {_num(new_demand)} tickets of forecast demand ({_signed(new_demand - D[p])} tickets): "
           f"revenue {_euros(result['new']['revenue'])} instead of {_euros(result['base']['revenue'])}.")
-    print(f"Estimate with the shadow price: {_num(result['shadow price'])} €/ticket × "
+    _say(f"Estimate with the shadow price: {_num(result['shadow price'])} €/ticket × "
           f"({_num(new_demand)} − {_num(D[p])}) tickets = {_signed(result['estimate'])} €. "
           f"Solving again: {_signed(result['change'])} €.")
-    print(f"{_num(new_demand)} tickets is {where} the range of the shadow price.")
-    print("Bid prices with the new demand: "
+    _say(f"{_num(new_demand)} tickets is {where} the range of the shadow price.")
+    _say("Bid prices with the new demand: "
           + "; ".join(f"{l} {_num(result['new']['bid price'][l])} €/seat" for l in L) + ".")
     if result["changed"]:
-        print("Fares of the trips whose tickets change:")
+        _say("Fares of the trips whose tickets change:")
         _changed_table(result["changed"], f"{_num(D[p])} tickets of demand",
                        f"{_num(new_demand)} tickets of demand")
-    print(f"Cost of the change: {_euros(cost)}. Net result: {_signed(result['change'])} − "
+    _say(f"Cost of the change: {_euros(cost)}. Net result: {_signed(result['change'])} − "
           f"({_signed(cost)}) = {_signed(result['net'])} €; with the estimate it would be "
           f"{_signed(result['net estimate'])} €.")
     return result

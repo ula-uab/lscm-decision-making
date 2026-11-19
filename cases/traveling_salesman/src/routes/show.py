@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import functools
 import math
+import re
+import textwrap
 import time
 from pathlib import Path
 
@@ -44,6 +46,24 @@ def _light(func):
         with plt.style.context("default"):
             return func(*args, **kwargs)
     return wrapper
+
+
+# Longest line of the text a cell prints: Colab does not wrap the output of a
+# cell, and a longer line needs a horizontal scroll bar
+WIDTH = 80
+
+
+def _say(text: str = "", **kwargs) -> None:
+    """Print a text in lines of at most WIDTH characters; each line of the text is
+    wrapped on its own, with its indentation, and a number is never parted from a
+    unit that starts with € or %."""
+    lines = []
+    for line in str(text).split("\n"):
+        indent = line[:len(line) - len(line.lstrip())]
+        line = re.sub(r" (?=[€%]|k€)", "\u00a0", line)
+        lines.append(textwrap.fill(line, WIDTH, subsequent_indent=indent, break_long_words=False,
+                                   break_on_hyphens=False).replace("\u00a0", " ") if line.strip() else line)
+    print("\n".join(lines), **kwargs)
 
 
 def _display(obj) -> None:
@@ -136,12 +156,12 @@ def distance_table() -> pd.DataFrame:
 @_light
 def show_data() -> None:
     """The cities, the distances, the number of routes and the map."""
-    print("The cities and their coordinates:")
+    _say("The cities and their coordinates:")
     _display(cities_table())
-    print("Distance between each pair of cities (km):")
+    _say("Distance between each pair of cities (km):")
     _display(distance_table())
     n = len(CITIES) - 1
-    print(f"From {NAME[HOME]} there are {n} cities to visit: {n}! = {math.factorial(n):,} orders of visit, "
+    _say(f"From {NAME[HOME]} there are {n} cities to visit: {n}! = {math.factorial(n):,} orders of visit, "
           f"{math.factorial(n) // 2:,} different round trips if a route and the same route in the "
           "other direction count once.")
     plot_route(title="The 14 cities")
@@ -165,11 +185,11 @@ def legs_table(route: list[int]) -> pd.DataFrame:
 def nearest_neighbor() -> list[int]:
     """§3: the route of the nearest neighbor, leg by leg, and its map."""
     route = co.nearest_neighbor()
-    print("From HH, each time to the nearest city not yet visited; at the end, back to HH.")
+    _say("From HH, each time to the nearest city not yet visited; at the end, back to HH.")
     _display(legs_table(route))
-    print(f"Route: {co.label(route)}. Length: {_km(co.length(route))}.")
+    _say(f"Route: {co.label(route)}. Length: {_km(co.length(route))}.")
     a, b, c = route[-3:]
-    print(f"The last two legs, {ABBR[a]} → {ABBR[b]} and {ABBR[b]} → {ABBR[c]}, are {d[a][b]} km and "
+    _say(f"The last two legs, {ABBR[a]} → {ABBR[b]} and {ABBR[b]} → {ABBR[c]}, are {d[a][b]} km and "
           f"{d[b][c]} km: the way back home was never taken into account.")
     plot_route(route, title=_route_title("Nearest neighbor", route))
     plt.show()
@@ -191,10 +211,10 @@ def angles_table() -> pd.DataFrame:
 def sweep() -> list[int]:
     """§4: the order of the sweep, the route and its map."""
     route = co.sweep()
-    print("Angle of the line from HH to each city, from north, counterclockwise; the cities are "
+    _say("Angle of the line from HH to each city, from north, counterclockwise; the cities are "
           "visited from the smallest angle to the largest:")
     _display(angles_table())
-    print(f"Route: {co.label(route)}. Length: {_km(co.length(route))}.")
+    _say(f"Route: {co.label(route)}. Length: {_km(co.length(route))}.")
     plot_route(route, title=_route_title("Sweep", route), rays=True)
     plt.show()
     return route
@@ -216,10 +236,10 @@ def ivanov_pass() -> list[int]:
     """§5: the pass of Ivanov et al. from the route of the nearest neighbor."""
     start = co.nearest_neighbor()
     route, rows = ls.ivanov_pass(start)
-    print("For k = 1, ..., 12: the sub-path of the four cities at positions k − 1 to k + 2, before and after "
+    _say("For k = 1, ..., 12: the sub-path of the four cities at positions k − 1 to k + 2, before and after "
           "swapping the cities at k and k + 1. The swap is kept if it shortens the sub-path.")
     _display(ivanov_table(rows))
-    print(f"Route: {co.label(route)}. Length: {_km(co.length(route))}, "
+    _say(f"Route: {co.label(route)}. Length: {_km(co.length(route))}, "
           f"{_km(co.length(start) - co.length(route))} less than the nearest neighbor.")
     plot_route(route, title=_route_title("After the pass", route))
     plt.show()
@@ -254,22 +274,22 @@ def local_search_steps(start: str = "nearest neighbor", move: str = "reversal", 
     route = starting_route(start, seed)
     steps = ls.search(route, key)
     name = STARTS[start] + (f" (seed {seed})" if start == "random" else "")
-    print(f"Start: {name}, {co.label(route)}, {_km(co.length(route))}.")
-    print(f"Move: {ls.MOVES[key]}, {len(ls.moves(key))} moves in the neighborhood.")
+    _say(f"Start: {name}, {co.label(route)}, {_km(co.length(route))}.")
+    _say(f"Move: {ls.MOVES[key]}, {len(ls.moves(key))} moves in the neighborhood.")
     _display(steps_table(steps))
     end = steps[-1]["route"]
     i, j, delta = ls.best_move(end, key)
     made = len(steps) - 1
-    print(f"The search stops after {made} step{'' if made == 1 else 's'} at {co.label(end)}, "
+    _say(f"The search stops after {made} step{'' if made == 1 else 's'} at {co.label(end)}, "
           f"{_km(co.length(end))}: "
           f"a local optimum. The best move from there, reversing {co.label(end[i:j + 1])}, "
           f"gives {_km(co.length(end) + delta)}"
           + (": the same route in the other direction." if (i, j) == (1, len(end) - 2) else "."))
     shortest, _ = _shortest()
     if co.length(end) == shortest:
-        print(f"It is as short as the shortest route, {_km(shortest)}.")
+        _say(f"It is as short as the shortest route, {_km(shortest)}.")
     else:
-        print(f"The shortest route is {_km(shortest)}: the search stopped "
+        _say(f"The shortest route is {_km(shortest)}: the search stopped "
               f"{_km(co.length(end) - shortest)} above it.")
     if step_by_step:
         for previous, step in zip(steps, steps[1:]):
@@ -306,12 +326,12 @@ def shortest_route() -> int:
     shortest, routes = ex.shortest_routes()
     seconds = time.perf_counter() - started
     different = ex.distinct(routes)
-    print(f"Dynamic programming over the 2^{len(CITIES) - 1} = {2 ** (len(CITIES) - 1):,} sets of cities "
+    _say(f"Dynamic programming over the 2^{len(CITIES) - 1} = {2 ** (len(CITIES) - 1):,} sets of cities "
           f"({seconds:.2f} s): the shortest route is {_km(shortest)}.")
-    print(f"{len(routes)} routes have that length: {len(different)} different round trips, each in both "
+    _say(f"{len(routes)} routes have that length: {len(different)} different round trips, each in both "
           "directions.")
     for r in different:
-        print(f"  {co.label(r)}")
+        _say(f"  {co.label(r)}")
     _display(heuristics_table())
     fig, axes = plt.subplots(1, len(different), figsize=(5.2 * len(different), 5.4))
     for k, (ax, r) in enumerate(zip(axes, different), start=1):
@@ -337,8 +357,8 @@ def local_optima(starts: int = 20000, seed: int = 1, move: str = "reversal") -> 
     seconds = time.perf_counter() - started
     shortest, _ = _shortest()
     table = optima_table(stops)
-    print(f"{starts:,} random starting routes (seed {seed}), move: {ls.MOVES[key]} ({seconds:.1f} s).")
-    print(f"The search stops at {len(stops)} different lengths; "
+    _say(f"{starts:,} random starting routes (seed {seed}), move: {ls.MOVES[key]} ({seconds:.1f} s).")
+    _say(f"The search stops at {len(stops)} different lengths; "
           f"{stops.get(shortest, 0):,} starts ({100 * stops.get(shortest, 0) / starts:.1f} %) reach the "
           f"shortest route, {_km(shortest)}.")
     _display(table)
@@ -401,7 +421,7 @@ def crossover(parent_1: str = "nearest neighbor", seed_1: int = 1, parent_2: str
     x = ga.chromosome(starting_route(parent_1, seed_1))
     y = ga.chromosome(starting_route(parent_2, seed_2))
     if not 0 <= cut_1 < cut_2 <= len(x):
-        print(f"The first cut must come before the second: cut_1 = {cut_1} and cut_2 = {cut_2}. "
+        _say(f"The first cut must come before the second: cut_1 = {cut_1} and cut_2 = {cut_2}. "
               "Change them and run the cell again.")
         return None
     c1, c2 = ga.crossover(x, y, cut_1, cut_2)
@@ -414,14 +434,14 @@ def crossover(parent_1: str = "nearest neighbor", seed_1: int = 1, parent_2: str
              [PARENT_1 if k in inside else PARENT_2 for k in range(len(c1))], (cut_1, cut_2 - 1)),
             (f"Child 2, {_km(ga.length(c2))}", c2,
              [PARENT_2 if k in inside else PARENT_1 for k in range(len(c2))], (cut_1, cut_2 - 1))]
-    print(f"Parent 1, {names[0]}: {_chain(x)}, {_km(ga.length(x))}.")
-    print(f"Parent 2, {names[1]}: {_chain(y)}, {_km(ga.length(y))}.")
-    print(f"Cuts after positions {cut_1} and {cut_2}: each child copies positions {cut_1 + 1} to {cut_2} "
+    _say(f"Parent 1, {names[0]}: {_chain(x)}, {_km(ga.length(x))}.")
+    _say(f"Parent 2, {names[1]}: {_chain(y)}, {_km(ga.length(y))}.")
+    _say(f"Cuts after positions {cut_1} and {cut_2}: each child copies positions {cut_1 + 1} to {cut_2} "
           "of one parent and takes the other cities in the order of the other parent, from position "
           f"{cut_2 + 1 if cut_2 < len(x) else 1}.")
-    print(f"Child 1: {_chain(c1)}, {_km(ga.length(c1))}.")
-    print(f"Child 2: {_chain(c2)}, {_km(ga.length(c2))}.")
-    print("Each box has the color of the parent the city comes from; the frame marks the positions "
+    _say(f"Child 1: {_chain(c1)}, {_km(ga.length(c1))}.")
+    _say(f"Child 2: {_chain(c2)}, {_km(ga.length(c2))}.")
+    _say("Each box has the color of the parent the city comes from; the frame marks the positions "
           "copied. Every route starts and ends in HH, which is not in the strips.")
     _strips(rows, cuts=(cut_1, cut_2))
     fig, axes = plt.subplots(1, 2, figsize=(9, 4.6))
@@ -445,7 +465,7 @@ def mutation(start: str = "nearest neighbor", seed: int = 1, first: int = 4, cit
     c = ga.chromosome(starting_route(start, seed))
     n = len(c)
     if not 1 <= first <= n - cities + 1:
-        print(f"A sub-path of {cities} cities can start at positions 1 to {n - cities + 1}; "
+        _say(f"A sub-path of {cities} cities can start at positions 1 to {n - cities + 1}; "
               f"first = {first}. Change it and run the cell again.")
         return None
     taken = c[first - 1:first - 1 + cities]
@@ -456,18 +476,18 @@ def mutation(start: str = "nearest neighbor", seed: int = 1, first: int = 4, cit
     elif code.get(insert_after) in rest:
         at = rest.index(code[insert_after]) + 1
     else:
-        print(f"{insert_after} is in the sub-path taken out ({_chain(taken)}): choose a city outside it.")
+        _say(f"{insert_after} is in the sub-path taken out ({_chain(taken)}): choose a city outside it.")
         return None
     m = ga.inversion_mutation(c, first - 1, first - 2 + cities, at)
     before, after = ga.length(c), ga.length(m)
     name = STARTS[start] + (f" (seed {seed})" if start == "random" else "")
     where = "at the start, just after HH" if at == 0 else f"after {insert_after}"
-    print(f"Route: {name}, {_chain(c)}, {_km(before)}.")
-    print(f"Sub-path taken out: positions {first} to {first + cities - 1}, {_chain(taken)}; reversed, "
+    _say(f"Route: {name}, {_chain(c)}, {_km(before)}.")
+    _say(f"Sub-path taken out: positions {first} to {first + cities - 1}, {_chain(taken)}; reversed, "
           f"{_chain(taken[::-1])}, and put back {where}.")
     if at == first - 1:
-        print("It goes back to the place it was taken from: this is the reversal of a sub-path of section 4.")
-    print(f"Mutated route: {_chain(m)}, {_km(after)}, {_km(abs(after - before))} "
+        _say("It goes back to the place it was taken from: this is the reversal of a sub-path of section 4.")
+    _say(f"Mutated route: {_chain(m)}, {_km(after)}, {_km(abs(after - before))} "
           f"{'longer' if after > before else 'shorter' if after < before else 'the same length'}"
           f"{'' if after == before else ' than before'}.")
     k = m.index(taken[-1])
@@ -481,7 +501,7 @@ def mutation(start: str = "nearest neighbor", seed: int = 1, first: int = 4, cit
                title=f"Mutated route: {_km(before)} → {_km(after)}")
     plt.show()
     longer, total = ga.mutations_that_lengthen(c)
-    print(f"Of the {total} mutations of this kind on this route (sub-paths of 2 to 4 cities, from any "
+    _say(f"Of the {total} mutations of this kind on this route (sub-paths of 2 to 4 cities, from any "
           f"position, put back anywhere except where they were), {longer} make it longer: "
           f"{100 * longer / total:.0f} %.")
     return m
@@ -496,7 +516,7 @@ def genetic_algorithm(population: int = 30, generations: int = 100, mutation: fl
     result = ga.genetic_algorithm(population, generations, mutation, local_search, seed)
     seconds = time.perf_counter() - started
     shortest, _ = _shortest()
-    print(f"Population {population}, {generations} generations, probability of mutation {mutation:g}, "
+    _say(f"Population {population}, {generations} generations, probability of mutation {mutation:g}, "
           f"local search {'on' if local_search else 'off'}, seed {seed} ({seconds:.1f} s).")
     fig, ax = plt.subplots(figsize=(7.5, 4))
     ax.plot(result["mean"], color="0.6", label="Mean length of the population")
@@ -509,7 +529,7 @@ def genetic_algorithm(population: int = 30, generations: int = 100, mutation: fl
     plt.show()
     best = result["length"]
     reached = next((g for g, v in enumerate(result["best"]) if v == shortest), None)
-    print(f"Shortest route found: {co.label(result['route'])}, {_km(best)}, "
+    _say(f"Shortest route found: {co.label(result['route'])}, {_km(best)}, "
           f"{ex.gap(result['route'], shortest):.1f} % above the shortest route of the case."
           + (f" The population first reaches it in generation {reached}." if reached is not None else ""))
     plot_route(result["route"], title=_route_title("Shortest route found by the genetic algorithm",

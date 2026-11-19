@@ -7,6 +7,8 @@ one line of code.
 from __future__ import annotations
 
 import functools
+import re
+import textwrap
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -31,6 +33,24 @@ def _light(func):
         with plt.style.context("default"):
             return func(*args, **kwargs)
     return wrapper
+
+
+# Longest line of the text a cell prints: Colab does not wrap the output of a
+# cell, and a longer line needs a horizontal scroll bar
+WIDTH = 80
+
+
+def _say(text: str = "", **kwargs) -> None:
+    """Print a text in lines of at most WIDTH characters; each line of the text is
+    wrapped on its own, with its indentation, and a number is never parted from a
+    unit that starts with € or %."""
+    lines = []
+    for line in str(text).split("\n"):
+        indent = line[:len(line) - len(line.lstrip())]
+        line = re.sub(r" (?=[€%]|k€)", "\u00a0", line)
+        lines.append(textwrap.fill(line, WIDTH, subsequent_indent=indent, break_long_words=False,
+                                   break_on_hyphens=False).replace("\u00a0", " ") if line.strip() else line)
+    print("\n".join(lines), **kwargs)
 
 
 def _display(obj) -> None:
@@ -211,10 +231,10 @@ def _summary(plan: dict, capacity: dict = K, demand: dict = d) -> None:
     load = m.loads(plan, demand)
     for w in W:
         status = "over capacity" if load[w] > capacity[w] else f"{capacity[w] - load[w]:g} spare"
-        print(f"  {w} ships {load[w]:g} of {capacity[w]:g} pallets ({status})")
-    print(f"  Cost: {_euros(m.cost(plan, demand))}/week")
+        _say(f"  {w} ships {load[w]:g} of {capacity[w]:g} pallets ({status})")
+    _say(f"  Cost: {_euros(m.cost(plan, demand))}/week")
     if demand is d:
-        print(f"  Average delivery time: {m.average_delivery_time(plan):.2f} days")
+        _say(f"  Average delivery time: {m.average_delivery_time(plan):.2f} days")
 
 
 @_light
@@ -230,22 +250,22 @@ def check_plan(plan: dict, title: str = "Your plan", capacity: dict = K,
     plt.show()
     feasible = m.is_feasible(plan, capacity, demand)
     name = m.name_of(plan)
-    print(title)
+    _say(title)
     if name and f"plan {name}" not in title:
-        print(f"  This is plan {name} of Table 6.")
+        _say(f"  This is plan {name} of Table 6.")
     _summary(plan, capacity, demand)
     if feasible:
-        print("  Feasible: every warehouse is within its capacity.")
+        _say("  Feasible: every warehouse is within its capacity.")
     else:
         too_many = ", ".join(f"{w} by {_pallets(e)}" for w, e in m.excess(plan, capacity, demand).items())
-        print(f"  Not feasible: over capacity in {too_many}.")
+        _say(f"  Not feasible: over capacity in {too_many}.")
     return feasible
 
 
 def rule_of_thumb() -> None:
     """§3: nearest warehouse (not feasible), then diverted by hand (plan M)."""
     check_plan(m.nearest_warehouse_plan(), "Rule of thumb: each customer from its nearest warehouse")
-    print()
+    _say()
     check_plan(m.diverted_by_hand_plan(), "Diverted by hand: plan M")
 
 
@@ -255,16 +275,16 @@ def challenge(plan: dict) -> None:
     feasible = check_plan(plan, "Your plan against plan M")
     target = m.cost(m.diverted_by_hand_plan())
     mine = m.cost(plan)
-    print()
+    _say()
     if not feasible:
-        print("A plan that does not fit in the warehouses cannot be used. Try again.")
+        _say("A plan that does not fit in the warehouses cannot be used. Try again.")
     elif mine < target:
-        print(f"Well done: your plan costs {_euros(target - mine)}/week less than plan M.")
-        print("Is it the cheapest of all? The model will tell, in the next step.")
+        _say(f"Well done: your plan costs {_euros(target - mine)}/week less than plan M.")
+        _say("Is it the cheapest of all? The model will tell, in the next step.")
     else:
-        print(f"Plan M costs {_euros(target)}/week; yours costs {_euros(mine)}. Not better yet.")
-        print("Hint: plan M diverts C3 because it happens to come last. Diverting a customer to W2")
-        print("costs (cost from W2 - cost from W1) x pallets. Which customer is cheapest to divert?")
+        _say(f"Plan M costs {_euros(target)}/week; yours costs {_euros(mine)}. Not better yet.")
+        _say("Hint: plan M diverts C3 because it happens to come last. Diverting a customer to W2 "
+             "costs (cost from W2 - cost from W1) x pallets. Which customer is cheapest to divert?")
 
 
 def solve_model() -> dict:
@@ -273,11 +293,11 @@ def solve_model() -> dict:
     plan_m = m.diverted_by_hand_plan()
     _display(plan_table({"M · diverted by hand": plan_m, "A · model": plan_a}))
     saving = m.cost(plan_m) - m.cost(plan_a)
-    print(f"The model saves {_euros(saving)}/week "
+    _say(f"The model saves {_euros(saving)}/week "
           f"({100 * saving / m.cost(plan_m):.0f} % of the cost of plan M).")
     for c in ("C3", "C2"):
         extra = k["W2"][c] - k["W1"][c]
-        print(f"  Diverting {c} to W2 costs {extra} € more per pallet on {d[c]} pallets: "
+        _say(f"  Diverting {c} to W2 costs {extra} € more per pallet on {d[c]} pallets: "
               f"{_euros(extra * d[c])}/week.")
     check_plan(plan_a, "The plan of the model: plan A")
     return plan_a
@@ -287,8 +307,8 @@ def compare_methods() -> None:
     """§4: checking all 16 plans and the solver give the same plan."""
     brute = m.best_by_brute_force()
     solver = m.solve()
-    print(f"Checking all 16 plans: plan {m.name_of(brute)}, {_euros(m.cost(brute))}/week")
-    print(f"Solver (PuLP + HiGHS): plan {m.name_of(solver)}, {_euros(m.cost(solver))}/week")
+    _say(f"Checking all 16 plans: plan {m.name_of(brute)}, {_euros(m.cost(brute))}/week")
+    _say(f"Solver (PuLP + HiGHS): plan {m.name_of(solver)}, {_euros(m.cost(solver))}/week")
 
 
 def pareto_table() -> pd.DataFrame:
@@ -376,7 +396,7 @@ def two_objectives(value_of_a_day: float) -> None:
     ax.legend(fontsize=8, loc="upper left")
     plt.show()
 
-    print(f"V = {v:g} €/week per day: the company would pay up to {_euros(v)} a week "
+    _say(f"V = {v:g} €/week per day: the company would pay up to {_euros(v)} a week "
           "to make the average delivery one day shorter.")
     feasible = sorted((p for p in m.all_plans() if m.is_feasible(p)), key=lambda p: m.total(p, v))
     _display(pd.DataFrame({
@@ -386,15 +406,15 @@ def two_objectives(value_of_a_day: float) -> None:
             f"V × time (€/week)": f"{v * m.average_delivery_time(p):.0f}",
             "Total (€/week)": f"{m.total(p, v):.0f}",
         } for p in feasible}).T.rename_axis("Plan"))
-    print(f"Best plan (solver, objective cost + V × time): {m.name_of(chosen)}, "
+    _say(f"Best plan (solver, objective cost + V × time): {m.name_of(chosen)}, "
           f"total {best_total:.0f} €/week.")
     a, b = m.NAMED_PLANS["A"], m.NAMED_PLANS["B"]
     extra = m.cost(b) - m.cost(a)
     saved = m.average_delivery_time(a) - m.average_delivery_time(b)
     switch = m.switch_value(a, b)
-    print(f"From A to B: {_euros(extra)}/week more, {saved:.3f} days faster on average. "
+    _say(f"From A to B: {_euros(extra)}/week more, {saved:.3f} days faster on average. "
           f"Each day saved costs {extra:g} / {saved:.3f} = {switch:.0f} €/week.")
-    print(f"So A is chosen when V is below {switch:.0f} €/week per day, and B when V is above.")
+    _say(f"So A is chosen when V is below {switch:.0f} €/week per day, and B when V is above.")
 
 
 def forecast_table() -> pd.DataFrame:
@@ -412,9 +432,9 @@ def show_forecast() -> None:
     """Table 8, its accuracy and a figure with orders, forecast and week 13."""
     _display(forecast_table())
     acc = fc.accuracy()
-    print(f"MAE {acc['MAE']:.2f} pallets/week · MAPE {acc['MAPE']:.1f} % · "
+    _say(f"MAE {acc['MAE']:.2f} pallets/week · MAPE {acc['MAPE']:.1f} % · "
           f"bias {acc['bias']:.2f} pallets/week (weeks 5-12)")
-    print(f"Forecast for week 13: {fc.next_week():g} pallets")
+    _say(f"Forecast for week 13: {fc.next_week():g} pallets")
     weeks = range(1, len(orders_C3) + 1)
     fig, ax = plt.subplots(figsize=(9, 3.6))
     ax.plot(weeks, orders_C3, marker="o", label="Orders")
@@ -434,17 +454,17 @@ def show_forecast() -> None:
 def large_error(c3_order: float) -> None:
     """§6: plan A when C3 orders c3_order pallets, and the plan recomputed with that order."""
     demand = dict(d, C3=c3_order)
-    print(f"C3 orders {c3_order:g} pallets; the forecast was {d['C3']} "
+    _say(f"C3 orders {c3_order:g} pallets; the forecast was {d['C3']} "
           f"({c3_order - d['C3']:+g}).")
     check_plan(m.NAMED_PLANS["A"], "Plan A with the new order of C3", demand=demand)
-    print()
+    _say()
     new = m.solve(demand=demand)
     if new is None:
-        print("Re-planning: no plan fits in the warehouses with this order.")
+        _say("Re-planning: no plan fits in the warehouses with this order.")
     elif new == m.NAMED_PLANS["A"]:
-        print("Re-planning with the new order: plan A is still the best plan.")
+        _say("Re-planning with the new order: plan A is still the best plan.")
     else:
-        print(f"Re-planning with the new order: the best plan is now {m.name_of(new) or 'another one'}, "
+        _say(f"Re-planning with the new order: the best plan is now {m.name_of(new) or 'another one'}, "
               f"at {_euros(m.cost(new, demand))}/week.")
         _display(plan_table({"Re-planned": new}, demand))
 
@@ -454,15 +474,15 @@ def safety_margin(reserve_percent: float, c3_order: float) -> None:
     capacity = m.with_reserve(reserve_percent / 100)
     plan = m.solve(capacity)
     cost_a = m.cost(m.NAMED_PLANS["A"])
-    print(f"Reserve {reserve_percent:g} %: W1 plans with {capacity['W1']:g} pallets, "
+    _say(f"Reserve {reserve_percent:g} %: W1 plans with {capacity['W1']:g} pallets, "
           f"W2 with {capacity['W2']:g}.")
     if plan is None:
-        print(f"No plan fits: the customers need {sum(d.values())} pallets and the warehouses "
+        _say(f"No plan fits: the customers need {sum(d.values())} pallets and the warehouses "
               f"can plan with only {sum(capacity.values()):g}.")
         return
-    print(f"Best plan: {m.name_of(plan)}, {_euros(m.cost(plan))}/week. "
+    _say(f"Best plan: {m.name_of(plan)}, {_euros(m.cost(plan))}/week. "
           f"The margin costs {_euros(m.cost(plan) - cost_a)}/week.")
-    print()
+    _say()
     check_plan(plan, f"Plan {m.name_of(plan)} when C3 orders {c3_order:g} pallets",
                demand=dict(d, C3=c3_order))
 
@@ -488,7 +508,7 @@ def orders_table() -> pd.DataFrame:
 def show_orders() -> None:
     """Table 9 and the orders of C2 and C4."""
     _display(orders_table())
-    print(f"C2 and C4 order the same every week, by contract: {d['C2']} and {d['C4']} pallets.")
+    _say(f"C2 and C4 order the same every week, by contract: {d['C2']} and {d['C4']} pallets.")
 
 
 def summary_table() -> pd.DataFrame:
@@ -516,7 +536,7 @@ def plan_by_week(plan_name: str, weeks: str = "1-12") -> None:
     plan = _plan(plan_name)
     weeks = range(1, 13) if weeks == "1-12" else [13]
     rows = u.week_by_week(plan, weeks)
-    print(f"Plan {plan_name}: " + ", ".join(f"{c} from {plan[c]}" for c in C))
+    _say(f"Plan {plan_name}: " + ", ".join(f"{c} from {plan[c]}" for c in C))
     _display(pd.DataFrame(rows).set_index("week").rename_axis("Week").T)
     fig, ax = plt.subplots(figsize=(9, 3.8))
     x = [r["week"] for r in rows]
@@ -535,7 +555,7 @@ def plan_by_week(plan_name: str, weeks: str = "1-12") -> None:
     ax.legend(fontsize=8, loc="lower right", ncol=3)
     ax.spines[["top", "right"]].set_visible(False)
     plt.show()
-    print("The five plans, weeks 1-12, and the pallets not served in week 13 (Table 10):")
+    _say("The five plans, weeks 1-12, and the pallets not served in week 13 (Table 10):")
     _display(summary_table())
 
 
@@ -554,22 +574,22 @@ def customer_forecast(customer: str, plan_name: str) -> None:
     _display(table.round(2).astype(object).where(table.notna(), "—"))
     acc = fc.accuracy(orders)
     largest, week = fc.largest_positive_error(orders)
-    print(f"{customer}, weeks 5-12: MAE {acc['MAE']:.2f} pallets/week · MAPE {acc['MAPE']:.1f} % · "
+    _say(f"{customer}, weeks 5-12: MAE {acc['MAE']:.2f} pallets/week · MAPE {acc['MAPE']:.1f} % · "
           f"bias {acc['bias']:.2f} pallets/week · largest positive error {largest:.2f} (week {week})")
-    print(f"Forecast for week 13: {fc.next_week(orders):.2f} pallets")
-    print()
+    _say(f"Forecast for week 13: {fc.next_week(orders):.2f} pallets")
+    _say()
     plan = _plan(plan_name)
     shared = u.shared_errors(plan)
     if not shared:
-        print(f"In plan {plan_name}, C1 and C3 are served from different warehouses: "
+        _say(f"In plan {plan_name}, C1 and C3 are served from different warehouses: "
               "their errors do not add up in any warehouse.")
         return
     for w, series in shared.items():
         names = " and ".join(c for c in u.ORDERS if plan[c] == w)
-        print(f"In plan {plan_name}, {w} serves {names}. Sum of their errors, weeks 5-12 (pallets):")
+        _say(f"In plan {plan_name}, {w} serves {names}. Sum of their errors, weeks 5-12 (pallets):")
         _display(pd.DataFrame({"Sum of errors": series}, index=pd.RangeIndex(5, 5 + len(series), name="Week")).T)
         top = max(series)
-        print(f"Largest sum: {top:.2f} (week {5 + series.index(top)})")
+        _say(f"Largest sum: {top:.2f} (week {5 + series.index(top)})")
 
 
 def period_cost_table(n_weeks: int, pallet_cost: float, surprise_weeks: int,
@@ -592,10 +612,10 @@ def period_costs(n_weeks: int, pallet_cost: float, surprise_weeks: int,
                  c1_order: float, c3_order: float) -> None:
     """Table 12 and a bar chart of the total cost of each plan."""
     if surprise_weeks > n_weeks:
-        print(f"The weeks with a surprise ({surprise_weeks}) cannot be more than the weeks of the "
+        _say(f"The weeks with a surprise ({surprise_weeks}) cannot be more than the weeks of the "
               f"period ({n_weeks}). Lower s or raise N.")
         return
-    print(f"N = {n_weeks} weeks · p = {_euros(pallet_cost)}/pallet · s = {surprise_weeks} weeks with a "
+    _say(f"N = {n_weeks} weeks · p = {_euros(pallet_cost)}/pallet · s = {surprise_weeks} weeks with a "
           f"surprise, in which C1 orders {c1_order:g} and C3 orders {c3_order:g} pallets")
     table = period_cost_table(n_weeks, pallet_cost, surprise_weeks, c1_order, c3_order)
     _display(table)

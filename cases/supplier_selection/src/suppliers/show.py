@@ -7,6 +7,8 @@ one line of code.
 from __future__ import annotations
 
 import functools
+import re
+import textwrap
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -32,6 +34,24 @@ def _light(func):
         with plt.style.context("default"):
             return func(*args, **kwargs)
     return wrapper
+
+
+# Longest line of the text a cell prints: Colab does not wrap the output of a
+# cell, and a longer line needs a horizontal scroll bar
+WIDTH = 80
+
+
+def _say(text: str = "", **kwargs) -> None:
+    """Print a text in lines of at most WIDTH characters; each line of the text is
+    wrapped on its own, with its indentation, and a number is never parted from a
+    unit that starts with € or %."""
+    lines = []
+    for line in str(text).split("\n"):
+        indent = line[:len(line) - len(line.lstrip())]
+        line = re.sub(r" (?=[€%]|k€)", "\u00a0", line)
+        lines.append(textwrap.fill(line, WIDTH, subsequent_indent=indent, break_long_words=False,
+                                   break_on_hyphens=False).replace("\u00a0", " ") if line.strip() else line)
+    print("\n".join(lines), **kwargs)
 
 
 def _display(obj) -> None:
@@ -75,14 +95,14 @@ def scorecard_table() -> pd.DataFrame:
 
 def show_data() -> None:
     """Prices, annual costs, fixed cost and scorecard."""
-    print(f"Prices (€/unit). The company assembles {VOLUME:,} bicycles a year.")
+    _say(f"Prices (€/unit). The company assembles {VOLUME:,} bicycles a year.")
     _display(price_table())
-    print(f"Annual cost of buying the whole volume of a component from a supplier (k€/year): "
+    _say(f"Annual cost of buying the whole volume of a component from a supplier (k€/year): "
           f"price × {VOLUME:,} / 1,000.")
     _display(cost_table())
-    print(f"Fixed cost of each contracted supplier: {f['A']} k€/year.")
-    print()
-    print("Scorecard (points, 0-10) and weighted score:")
+    _say(f"Fixed cost of each contracted supplier: {f['A']} k€/year.")
+    _say()
+    _say("Scorecard (points, 0-10) and weighted score:")
     _display(scorecard_table())
 
 
@@ -110,19 +130,19 @@ def batteries_matrix(price_weight_percent: float = 100 * PRICE_WEIGHT, include_f
     } for s in suppliers}).T.rename_axis("Supplier")
     _display(table.sort_values("Score with price", ascending=False))
     order = mx.ranking(with_price)
-    print("Ranking with the price: " + " > ".join(f"{s} ({with_price[s]:.2f})" for s in order))
+    _say("Ranking with the price: " + " > ".join(f"{s} ({with_price[s]:.2f})" for s in order))
     if "F" in order and order.index("F") < order.index("E"):
-        print(f"F, with a quality score of {SCORES['F']['Quality']}, is ranked above suppliers with a "
+        _say(f"F, with a quality score of {SCORES['F']['Quality']}, is ranked above suppliers with a "
               "much better scorecard: a low price makes up for poor quality.")
     if not include_f:
         prices = [PRICE[s]["batteries"] for s in suppliers]
-        print(f"Without F, the lowest price compared is {min(prices)} €/unit and the highest "
+        _say(f"Without F, the lowest price compared is {min(prices)} €/unit and the highest "
               f"{max(prices)} €/unit.")
         if w > 0:
             all_offers = mx.with_price("batteries", w)
-            print("Score with the price, with F → without F: "
+            _say("Score with the price, with F → without F: "
                   + "; ".join(f"{s} {all_offers[s]:.2f} → {with_price[s]:.2f}" for s in order) + ".")
-            print("Nothing has changed in B, C or E: only the offers compared.")
+            _say("Nothing has changed in B, C or E: only the offers compared.")
 
     fig, ax = plt.subplots(figsize=(7, 3.2))
     xs = range(len(suppliers))
@@ -168,8 +188,8 @@ def plot_cost(contracted, ax=None, title: str = ""):
 def _selection_summary(contracted) -> None:
     purchase = sel.assign(contracted)
     _display(_purchase_table(purchase))
-    print(f"Contracted: {sel.label(contracted)}")
-    print(f"Purchases {_k(sel.purchase_cost(purchase))} + fixed costs {_k(sel.fixed_cost(contracted))} "
+    _say(f"Contracted: {sel.label(contracted)}")
+    _say(f"Purchases {_k(sel.purchase_cost(purchase))} + fixed costs {_k(sel.fixed_cost(contracted))} "
           f"= {_k(sel.cost(contracted))}")
 
 
@@ -177,11 +197,11 @@ def buyer_rule() -> tuple:
     """§3: for each component, the cheapest acceptable supplier."""
     rule = sel.buyer_rule()
     contracted = sel.contracted_by(rule)
-    print("The buyer's rule: for each component, the cheapest acceptable supplier.")
+    _say("The buyer's rule: for each component, the cheapest acceptable supplier.")
     _selection_summary(contracted)
-    print()
+    _say()
     only_e = ("E",)
-    print(f"Everything from the distributor E: {_k(sel.cost(only_e))}, "
+    _say(f"Everything from the distributor E: {_k(sel.cost(only_e))}, "
           f"{_k(sel.cost(contracted) - sel.cost(only_e))} less than the rule. "
           "E is the cheapest for no component, so the rule never chooses it.")
     return contracted
@@ -193,19 +213,19 @@ def check_selection(suppliers) -> float | None:
     without a supplier."""
     contracted = sel.selection(suppliers)
     if not contracted:
-        print("Choose at least one supplier.")
+        _say("Choose at least one supplier.")
         return None
     if "F" in contracted:
-        print("F is not acceptable (score below 6): it is left out.")
+        _say("F is not acceptable (score below 6): it is left out.")
         contracted = tuple(s for s in contracted if s != "F")
     missing = sel.uncovered(contracted)
     if missing:
-        print(f"Not valid: no contracted supplier offers {', '.join(missing)}.")
+        _say(f"Not valid: no contracted supplier offers {', '.join(missing)}.")
         return None
     _selection_summary(contracted)
     rule = sel.contracted_by(sel.buyer_rule())
     difference = sel.cost(contracted) - sel.cost(rule)
-    print(f"Against the buyer's rule ({_k(sel.cost(rule))}): "
+    _say(f"Against the buyer's rule ({_k(sel.cost(rule))}): "
           + (f"{_k(-difference)} less." if difference < 0 else
              "the same." if difference == 0 else f"{_k(difference)} more."))
     plot_cost(contracted, title="Annual cost of the selection")
@@ -234,7 +254,7 @@ def selections_table() -> pd.DataFrame:
 def count_selections() -> pd.DataFrame:
     """§4: 31 sets of suppliers, 21 of them cover every component; and how 2^n grows."""
     n = len(sel.ACCEPTABLE)
-    print(f"With {n} acceptable suppliers there are 2^{n} − 1 = {len(sel.all_selections())} sets of "
+    _say(f"With {n} acceptable suppliers there are 2^{n} − 1 = {len(sel.all_selections())} sets of "
           f"contracted suppliers; {len(sel.covering_selections())} of them cover the six components.")
     _display(pd.DataFrame({"Suppliers": [5, 10, 20, 60],
                            "Sets of suppliers (2^n − 1)": [f"{2 ** k - 1:,}" if k < 40 else f"{2 ** k - 1:.2e}"
@@ -247,11 +267,11 @@ def solve_model() -> tuple:
     solution = mo.solve()
     best = mo.contracted(solution)
     rule = sel.contracted_by(sel.buyer_rule())
-    print(f"The model has {solution['variables']} binary variables "
+    _say(f"The model has {solution['variables']} binary variables "
           f"({len(sel.ACCEPTABLE)} y and {solution['variables'] - len(sel.ACCEPTABLE)} x).")
-    print("Optimum of the model (PuLP + HiGHS):")
+    _say("Optimum of the model (PuLP + HiGHS):")
     _display(_purchase_table(mo.purchase(solution)))
-    print(f"Contracted: {sel.label(best)}. Annual cost: {_k(solution['cost'])}, "
+    _say(f"Contracted: {sel.label(best)}. Annual cost: {_k(solution['cost'])}, "
           f"{_k(sel.cost(rule) - solution['cost'])} less than the buyer's rule.")
     fig, axes = plt.subplots(1, 2, figsize=(7, 3.6), sharey=True)
     plot_cost(rule, ax=axes[0], title="Buyer's rule")
@@ -276,29 +296,29 @@ def local_search_steps(suppliers) -> tuple | None:
     """§5: the local search from the suppliers chosen in the form, step by step."""
     start = tuple(s for s in sel.selection(suppliers) if s != "F")
     if not start:
-        print("Choose at least one acceptable supplier.")
+        _say("Choose at least one acceptable supplier.")
         return None
     missing = sel.uncovered(start)
     if missing:
-        print(f"The search must start from a valid selection: no supplier of {sel.label(start)} "
+        _say(f"The search must start from a valid selection: no supplier of {sel.label(start)} "
               f"offers {', '.join(missing)}.")
         return None
     steps = ls.search(start)
     for row in steps:
         current = row["selection"]
-        print(f"Step {row['step']}: {row['move']} → {sel.label(current)}, {_k(row['cost'])}")
+        _say(f"Step {row['step']}: {row['move']} → {sel.label(current)}, {_k(row['cost'])}")
     current = steps[-1]["selection"]
-    print()
-    print(f"No move lowers the cost of {sel.label(current)}: it is a local optimum. "
+    _say()
+    _say(f"No move lowers the cost of {sel.label(current)}: it is a local optimum. "
           "Its neighbours, from the cheapest:")
     _display(neighbours_table(current))
     for move, missing in ls.blocked(current):
-        print(f"  Not allowed: {move} leaves {', '.join(missing)} without a supplier.")
+        _say(f"  Not allowed: {move} leaves {', '.join(missing)} without a supplier.")
     optimum = sel.covering_selections()[0]
     if current == optimum:
-        print(f"{sel.label(current)} is also the optimum of the model.")
+        _say(f"{sel.label(current)} is also the optimum of the model.")
     else:
-        print(f"The optimum of the model is {sel.label(optimum)}, {_k(sel.cost(optimum))}: "
+        _say(f"The optimum of the model is {sel.label(optimum)}, {_k(sel.cost(optimum))}: "
               f"the search stopped {_k(sel.cost(current) - sel.cost(optimum))} above it.")
     fig, ax = plt.subplots(figsize=(7, 3.2))
     ax.plot([r["step"] for r in steps], [r["cost"] for r in steps], marker="o")
@@ -333,13 +353,13 @@ def reduced_data() -> None:
 def relaxation() -> None:
     """The linear relaxation of the reduced version and its rounding."""
     r = mo.solve(REDUCED_S, REDUCED_M, "pair", relax=True)
-    print("Linear relaxation (every variable between 0 and 1), one constraint per supplier and component:")
-    print("  y = " + ", ".join(f"{s} {v:g}" for s, v in r["y"].items()))
-    print("  x = " + ", ".join(f"{s}-{m} {v:g}" for (s, m), v in r["x"].items()))
-    print(f"  Bound: {r['cost']:,.1f} k€/year. No selection can cost less.")
+    _say("Linear relaxation (every variable between 0 and 1), one constraint per supplier and component:")
+    _say("  y = " + ", ".join(f"{s} {v:g}" for s, v in r["y"].items()))
+    _say("  x = " + ", ".join(f"{s}-{m} {v:g}" for (s, m), v in r["x"].items()))
+    _say(f"  Bound: {r['cost']:,.1f} k€/year. No selection can cost less.")
     up, down = mo.rounded(r, up=True), mo.rounded(r, up=False)
-    print(f"Rounding up: {sel.label(up)}, {_k(sel.cost(up, REDUCED_M))} (valid, not optimal).")
-    print(f"Rounding down: {sel.label(down)} contracted (not valid).")
+    _say(f"Rounding up: {sel.label(up)}, {_k(sel.cost(up, REDUCED_M))} (valid, not optimal).")
+    _say(f"Rounding down: {sel.label(down)} contracted (not valid).")
 
 
 def tree_table(nodes: list[dict]) -> pd.DataFrame:
@@ -414,7 +434,7 @@ def branch_and_bound() -> None:
     for formulation in mo.FORMULATIONS:
         nodes = mo.branch_and_bound(REDUCED_S, REDUCED_M, formulation)
         best = mo.best_of(nodes)
-        print(f"{titles[formulation]}: {len(nodes)} nodes. "
+        _say(f"{titles[formulation]}: {len(nodes)} nodes. "
               f"Optimum {sel.label(best['selection'])}, {_k(best['bound'])}.")
         _display(tree_table(nodes))
         plot_tree(nodes, title=titles[formulation])
@@ -496,28 +516,28 @@ def disruption_tree(stop_e: float = STOP_PROBABILITY["E"], stop_c: float = STOP_
     more than one component may stop delivering during the year."""
     probability = {"E": stop_e, "C": stop_c}
     for name, contracted in dt.strategies().items():
-        print(f"{name} ({sel.label(contracted)}): uncertain supplier {', '.join(dt.uncertain(contracted))}, "
+        _say(f"{name} ({sel.label(contracted)}): uncertain supplier {', '.join(dt.uncertain(contracted))}, "
               f"which serves {', '.join(dt.served(contracted)[dt.uncertain(contracted)[0]])}.")
-    print(f"Probability of stopping: E {stop_e:g}, C {stop_c:g}. "
+    _say(f"Probability of stopping: E {stop_e:g}, C {stop_c:g}. "
           f"Cost of moving a component to another supplier: {move_cost:g} k€.")
-    print()
-    print("Branches of each strategy:")
+    _say()
+    _say("Branches of each strategy:")
     _display(branches_table(probability, move_cost))
     table = strategies_table(probability, move_cost)
-    print("Planned cost, expected cost and worst case (k€/year):")
+    _say("Planned cost, expected cost and worst case (k€/year):")
     _display(table)
     lowest = table["Expected cost"].idxmin() if table["Expected cost"].nunique() > 1 else None
     safest = table["Worst case"].idxmin() if table["Worst case"].nunique() > 1 else None
-    print("Lowest expected cost: " + (lowest or "both strategies, the same") + ".")
-    print("Lowest worst case: " + (safest or "both strategies, the same") + ".")
+    _say("Lowest expected cost: " + (lowest or "both strategies, the same") + ".")
+    _say("Lowest worst case: " + (safest or "both strategies, the same") + ".")
     p = dt.threshold(probability=probability, move_cost=move_cost)
     if p is None:
-        print("Moving a component costs nothing: everything from E has the lower expected cost "
+        _say("Moving a component costs nothing: everything from E has the lower expected cost "
               "whatever the probability that E stops.")
     elif p >= 1:
-        print("Everything from E has the lower expected cost whatever the probability that E stops.")
+        _say("Everything from E has the lower expected cost whatever the probability that E stops.")
     else:
-        print(f"Everything from E has the lower expected cost while the probability that E stops "
+        _say(f"Everything from E has the lower expected cost while the probability that E stops "
               f"is below {p:.3f}.")
     plot_decision_tree(probability, move_cost)
     plt.show()

@@ -29,7 +29,7 @@ from .data import (F, FORECAST_3, FORECAST_3_NAME, FORECASTS, K, K_h, K_h_w, T, 
                    h_end, h_w_0, h_w_end)
 from .model import TOL, _constraints, _optimal
 from . import figures
-from .show import COLOURS, SHORT, _display, _euros, _european_axes, _light, _number
+from .show import COLOURS, SHORT, _display, _euros, _european_axes, _light, _number, _say
 
 FORECAST = FORECAST_3_NAME               # M2 is solved with forecast 3
 DEMAND = FORECAST_3
@@ -287,21 +287,21 @@ def _report(data: dict, heading: str, show_tables: bool = False) -> dict | None:
     tables."""
     solution = solve(**data)
     if solution is None:
-        print(f"{heading}: the model has no solution.")
+        _say(f"{heading}: the model has no solution.")
         return None
     months = solution["months"]
-    print(f"{heading}: optimal plan, cost {_euros(solution['cost'])}.")
+    _say(f"{heading}: optimal plan, cost {_euros(solution['cost'])}.")
     if not only_plan(**data):
-        print(SEVERAL)
+        _say(SEVERAL)
     if not show_tables:
-        print(_full_storage(solution, data))
+        _say(_full_storage(solution, data))
         _figure(solution, data.get("demand", DEMAND))
         return solution
     _display(_plan_table(solution))
-    print("Shadow price of the backorder balance of each month (€/bike): the change in the cost of the plan with one "
+    _say("Shadow price of the backorder balance of each month (€/bike): the change in the cost of the plan with one "
           "more order in that month.")
     _display(pd.DataFrame({t: {"Shadow price (€/bike)": solution["orders price"][t]} for t in months}))
-    print("Shadow price of each storage capacity (€/bike): the change in the cost of the plan with one more bike of "
+    _say("Shadow price of each storage capacity (€/bike): the change in the cost of the plan with one more bike of "
           "storage capacity in that month (negative: a saving).")
     table = {t: {f: solution["storage price"][f, t] for f in F} for t in months}
     for t in months:
@@ -314,8 +314,8 @@ def warehouse_plan(show_tables: bool = False) -> dict | None:
     """The plan with forecast 3; and, first, whether M1 has a plan for it."""
     reason = m1_has_no_solution()
     if reason:
-        print(f"M1, with stock at the plants only, has no solution with the {FORECAST.lower()}. {reason}")
-        print()
+        _say(f"M1, with stock at the plants only, has no solution with the {FORECAST.lower()}. {reason}")
+        _say()
     return _report({}, FORECAST, show_tables)
 
 
@@ -325,7 +325,7 @@ def backorders_at_the_end_test(limit_backorders_at_the_end: bool = True, show_ta
         return _report({}, f"{FORECAST}, no backorders at the end of June", show_tables)
     solution = _report({"owed_end": None}, f"{FORECAST}, without the limit on the backorders at the end", show_tables)
     if solution is not None:
-        print(f"Backorders at the end of June: {_number(solution['owed'][solution['months'][-1]])} bikes.")
+        _say(f"Backorders at the end of June: {_number(solution['owed'][solution['months'][-1]])} bikes.")
     return solution
 
 
@@ -333,19 +333,19 @@ def plant_storage_test(storage_plant_1: float = 40, show_tables: bool = False) -
     """The plan with the storage capacities of the three plants moved together:
     plant 2 holds 10 bikes less than plant 1, and plant 3 holds 20 less."""
     storage = {"Plant 1": storage_plant_1, "Plant 2": storage_plant_1 - 10, "Plant 3": storage_plant_1 - 20}
-    print("Storage capacity of the plants (bikes): "
+    _say("Storage capacity of the plants (bikes): "
           + "; ".join(f"{f.lower()} {_number(v)}" for f, v in storage.items()) + ".")
     return _report({"plant_storage": storage}, FORECAST, show_tables)
 
 
 def backorder_cost_test(backorder_cost: float = 60, show_tables: bool = False) -> dict | None:
     """The plan with forecast 2 and the backorder cost changed."""
-    print(f"Backorder cost: {_number(backorder_cost)} €/(bike·month).")
+    _say(f"Backorder cost: {_number(backorder_cost)} €/(bike·month).")
     return _report({"demand": FORECASTS["Seasonal demand peak"], "late_cost": backorder_cost}, "Seasonal demand peak",
                    show_tables)
 
 
 def warehouse_storage_test(warehouse_storage: float = 150, show_tables: bool = False) -> dict | None:
     """The plan with forecast 3 and the storage capacity of the warehouse changed."""
-    print(f"Storage capacity of the warehouse: {_number(warehouse_storage)} bikes.")
+    _say(f"Storage capacity of the warehouse: {_number(warehouse_storage)} bikes.")
     return _report({"warehouse_storage": warehouse_storage}, FORECAST, show_tables)

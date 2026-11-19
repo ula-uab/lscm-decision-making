@@ -33,7 +33,7 @@ from .data import (ARCS, CENTRAL, F, FORECAST_4, FORECAST_4_NAME, K, K_h_node, K
                    h_node_0, h_node_end)
 from .model import TOL, _constraints, _optimal
 from . import figures, interactive
-from .show import COLOURS, _display, _number
+from .show import COLOURS, _display, _number, _say
 
 FORECAST = FORECAST_4_NAME               # M3 is solved with forecast 4
 DEMAND = FORECAST_4
@@ -181,7 +181,7 @@ def show_data(show_tables: bool = False) -> None:
     """The places of the nodes on the map, the network with the data of each node
     and arc, and the orders of each local warehouse; with ``show_tables``, Tables 1
     to 4 of distribution_network.md instead of the figures."""
-    print(f"Transport rate (€/(bike·km)): road {_number(TRANSPORT_RATE['Road'], 3)}; "
+    _say(f"Transport rate (€/(bike·km)): road {_number(TRANSPORT_RATE['Road'], 3)}; "
           f"rail {_number(TRANSPORT_RATE['Rail'], 3)}.")
     orders = {i: [SHARE[i] * DEMAND[t] for t in T] for i in LOCAL}
     if not show_tables:
@@ -287,7 +287,7 @@ def _prices(solution: dict) -> None:
         if i != RAIL_TERMINAL and any(solution["storage price"][i, t] for t in months):
             rows[f"Storage capacity, {i}"] = {t: solution["storage price"][i, t] for t in months}
     if rows:
-        print(PRICES)
+        _say(PRICES)
         _display(pd.DataFrame(rows).T.rename_axis("Capacity"))
 
 
@@ -411,12 +411,12 @@ def _report(data: dict, heading: str, prices: bool = True, routes: bool = False,
     prices of the full capacities."""
     solution = solve(**data)
     if solution is None:
-        print(f"{heading}: the model has no solution: no plan delivers every order by the end of June within "
+        _say(f"{heading}: the model has no solution: no plan delivers every order by the end of June within "
               "the capacities of the network.")
         return None
-    print(f"{heading}: optimal plan, cost {_number(solution['cost'], 2)} €.")
+    _say(f"{heading}: optimal plan, cost {_number(solution['cost'], 2)} €.")
     if not only_plan(**data):
-        print(SEVERAL)
+        _say(SEVERAL)
     if show_tables:
         if routes:
             _display(_route_table(solution))
@@ -478,12 +478,12 @@ def network_plan(show_tables: bool = False) -> dict | None:
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
         ending = sum(h_node_end[f] for f in F)
-        print(f"M2, with the plants and the central warehouse only, has no solution with the {FORECAST.lower()}: "
+        _say(f"M2, with the plants and the central warehouse only, has no solution with the {FORECAST.lower()}: "
               f"from April to June {_number(ordered)} bikes are ordered and the plants can assemble "
               f"{_number(assembled)}, and the plants have to end June with {_number(ending)} bikes. At the end "
               f"of March {_number(ordered - assembled + ending)} bikes have to be in stock, and the plants and "
               f"the central warehouse can hold {_number(sum(K_h_node[f] for f in F) + K_h_node[CENTRAL])}.")
-        print()
+        _say()
     return _report({}, FORECAST, arc_flow=True, show_tables=show_tables)
 
 
@@ -491,7 +491,7 @@ def rail_capacity_test(rail_capacity: float = 400, show_tables: bool = False) ->
     """The plan with forecast 4 and the arc capacity of arc 6, the rail arc, changed."""
     arc_list = [dict(arc) for arc in ARCS]
     arc_list[RAIL_ARC]["capacity"] = rail_capacity
-    print(f"Arc capacity of arc 6 (rail): {_number(rail_capacity)} bikes/month.")
+    _say(f"Arc capacity of arc 6 (rail): {_number(rail_capacity)} bikes/month.")
     return _report({"arc_list": arc_list}, FORECAST, prices=False, routes=True, show_tables=show_tables)
 
 
@@ -499,14 +499,14 @@ def rail_rate_test(rail_rate: float = 0.006, show_tables: bool = False) -> dict 
     """The plan with forecast 4 and the transport rate of rail changed: the transport
     cost of the rail arc is its distance times that rate."""
     arc_list = make_arcs({**TRANSPORT_RATE, RAIL: rail_rate})
-    print(f"Transport rate of rail: {_number(rail_rate, 4)} €/(bike·km); transport cost of the rail arc: "
+    _say(f"Transport rate of rail: {_number(rail_rate, 4)} €/(bike·km); transport cost of the rail arc: "
           f"{_number(arc_list[RAIL_ARC]['cost'], 2)} €/bike.")
     return _report({"arc_list": arc_list}, FORECAST, prices=False, routes=True, show_tables=show_tables)
 
 
 def node_capacity_test(node_capacity: float = 280, show_tables: bool = False) -> dict | None:
     """The plan with forecast 4 and the node capacity of regional warehouse 2 changed."""
-    print(f"Node capacity of regional warehouse 2: {_number(node_capacity)} bikes/month.")
+    _say(f"Node capacity of regional warehouse 2: {_number(node_capacity)} bikes/month.")
     return _report({"node_capacity": {"Regional warehouse 2": node_capacity}}, FORECAST, prices=False,
                    routes=True, show_tables=show_tables)
 

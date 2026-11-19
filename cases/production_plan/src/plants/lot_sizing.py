@@ -45,7 +45,7 @@ from .data import (ARCS_M4, ASSEMBLY_TIME, AVERAGE_ORDERS, BACKORDER_SHARE, CENT
                    PRODUCT_MIX, RAIL_TERMINAL, REGIONAL, RETAILERS, SEASONAL_INDEX, SETUP_TIME, VALUE_FACTOR,
                    WEEK_FACTOR, WEEKS, F, K, K_h, K_h_node_m4, K_n, T, c_b, c_h, c_h_node_m4, c_l)
 from .model import _optimal
-from .show import COLOURS, SHORT, _display, _light, _number
+from .show import COLOURS, SHORT, _display, _light, _number, _say
 
 WEEKDAYS = 5                       # Monday to Friday
 WEEK_SHARE = Fraction(12, 52)      # the share of a month that a week is
@@ -722,12 +722,12 @@ def show_orders(retailer: str = "Retailer 1", show_table: bool = False) -> None:
     retailer = _retailer(retailer)
     data = _base()
     totals = {j: sum(q for (_, i, _), q in data["weekly orders"].items() if i == j) for j in MODELS}
-    print("Orders of the 26 weeks, all retailers (bikes): "
+    _say("Orders of the 26 weeks, all retailers (bikes): "
           + "; ".join(f"{j} {_number(totals[j])}" for j in MODELS)
           + "; product mix " + "; ".join(f"{fixed(100 * data['six-month mix'][j], 1)} %" for j in MODELS) + ".")
     if show_table:
         _display(orders_table(data["orders"]))
-        print(f"{_name(retailer)}: orders in each week, by model (bikes).")
+        _say(f"{_name(retailer)}: orders in each week, by model (bikes).")
         _display(weekly_orders_table(data["weekly orders"], retailer))
     else:
         _monthly_orders_figure(data["orders"])
@@ -849,7 +849,7 @@ def show_master_plan(show_tables: bool = False) -> None:
     Table 4: its cost, the figure of its plan at the plants and the stock of the
     network. With ``show_tables``, the data and the plan in tables (Table 7) instead
     of the figures."""
-    print(f"The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every warehouse starts and "
+    _say(f"The {RAIL_TERMINAL.lower()} ({PLACES_M4[RAIL_TERMINAL][0]}) holds no stock. Every warehouse starts and "
           "ends the six months with no stock. Node capacity: the bikes that the warehouse can receive in a month. "
           "Backorder share: of the orders that a retailer does not receive in their month, the share that is "
           f"backordered; the rest is lost sales. Backorder cost: {_number(c_b)} €/(bike·month); lost-sale cost: "
@@ -861,7 +861,7 @@ def show_master_plan(show_tables: bool = False) -> None:
         _network_figure()
     data = _base()
     master = data["master"]
-    print(f"M4 with the orders of the retailers: cost {_number(master['cost'], 2)} €; backorders "
+    _say(f"M4 with the orders of the retailers: cost {_number(master['cost'], 2)} €; backorders "
           f"{_number(float(sum(master['backorders'].values())))} and lost sales "
           f"{_number(float(sum(master['lost sales'].values())))} bikes.")
     if show_tables:
@@ -869,7 +869,7 @@ def show_master_plan(show_tables: bool = False) -> None:
             _display(master_plan_table(master, data["least stock"], f))
     else:
         _master_plan_figure(master, data["least stock"])
-    print("Stock of the network, plants and warehouses, at the end of each month (bikes): "
+    _say("Stock of the network, plants and warehouses, at the end of each month (bikes): "
           + "; ".join(f"{t} {_number(float(master['network stock'][t]))}" for t in T) + ".")
 
 
@@ -942,9 +942,9 @@ def show_shipments(plant: str = "Plant 1", show_tables: bool = False) -> None:
     if show_tables:
         for table in _mix_tables(data["mix"], data["split"], data["master"]):
             _display(table)
-        print(f"{_name(plant)}: shipments to the network in each week (bikes).")
+        _say(f"{_name(plant)}: shipments to the network in each week (bikes).")
         _display(_plant_shipments_table(data["shipments"], plant))
-        print(f"{_name(plant)}: least stock at the end of each month (bikes). Its total is the stock at the end of "
+        _say(f"{_name(plant)}: least stock at the end of each month (bikes). Its total is the stock at the end of "
               "the month of the master plan (§2).")
         _display(_least_stock_table(data["least stock"], plant))
     else:
@@ -1139,7 +1139,7 @@ def hours_table(plans: dict) -> pd.DataFrame:
 
 def _no_plan(plant: str, plan: dict) -> bool:
     if plan is not None and "no plan" in plan:
-        print(f"{plant}: the plan of {plan['no plan']} has no solution: the least stock at the end of the month "
+        _say(f"{plant}: the plan of {plan['no plan']} has no solution: the least stock at the end of the month "
               "does not fit in the storage capacity.")
         return True
     return False
@@ -1154,9 +1154,9 @@ def show_weekly_plan(plant: str = "Plant 1", check: bool = False, show_tables: b
     plan = weekly_plan(plant, check=check)
     if _no_plan(plant, plan):
         return None
-    print(f"{_name(plant)}: setup and holding cost of the six months {fixed(plan['cost'])} €.")
+    _say(f"{_name(plant)}: setup and holding cost of the six months {fixed(plan['cost'])} €.")
     if check:
-        print("Months with another optimal plan: "
+        _say("Months with another optimal plan: "
               + (", ".join(plan["other plans"]) if plan["other plans"] else "none") + ".")
     _show_plan(plant, plan, show_tables)
     return plan
@@ -1352,11 +1352,11 @@ def show_limit_case(plant: str = "Plant 1", case: str = LIMIT_CASES[0], show_tab
     tables."""
     plant = _plant(plant)
     if case == LIMIT_CASES[0]:
-        print(f"Limit case A: holding cost {_number(LIMIT_HOLDING)} €/(bike·week) for every model; available "
+        _say(f"Limit case A: holding cost {_number(LIMIT_HOLDING)} €/(bike·week) for every model; available "
               f"capacity {_number(LIMIT_CAPACITY)} h in every week.")
     elif case == LIMIT_CASES[1]:
         cost = setup_cost({j: LIMIT_SETUP_TIME for j in MODELS})[MODELS[0]]
-        print(f"Limit case B: setup time {_number(LIMIT_SETUP_TIME)} h and setup cost {fixed(cost, 0)} € for every "
+        _say(f"Limit case B: setup time {_number(LIMIT_SETUP_TIME)} h and setup cost {fixed(cost, 0)} € for every "
               f"model; available capacity {_number(LIMIT_CAPACITY)} h in every week; no limit on the storage "
               "capacity.")
     cases = {f: limit_case(f, case) for f in PLANTS}
@@ -1364,7 +1364,7 @@ def show_limit_case(plant: str = "Plant 1", case: str = LIMIT_CASES[0], show_tab
         overload = sum(row["overload"] for row in result["model"]["weeks"].values())
         verdict = ("is the expected plan in all 26 weeks" if not result["different weeks"] else
                    "differs from the expected plan in weeks " + ", ".join(map(str, result["different weeks"])))
-        print(f"{_name(f)}: the plan of the model {verdict}; capacity overload {fixed(overload)} h.")
+        _say(f"{_name(f)}: the plan of the model {verdict}; capacity overload {fixed(overload)} h.")
     result = cases[plant]
     if show_tables:
         _display(_limit_table(result))
@@ -1462,18 +1462,18 @@ def show_runs(show_tables: bool = False) -> dict:
     months. A line shows which run is being solved."""
     plans = {}
     for k, name in enumerate(RUNS, start=1):
-        print(f"Solving the weekly plans of the three plants, run {k} of {len(RUNS)}: {name}…", flush=True)
+        _say(f"Solving the weekly plans of the three plants, run {k} of {len(RUNS)}: {name}…", flush=True)
         for f in PLANTS:
             plan = run(f, name)
             if plan is not None:
                 plans[f, name] = plan
     as_planned = {f: plans[f, "As planned"] for f in PLANTS}
     if show_tables:
-        print("Hours of each month assumed by the master plan and needed by the weekly plans.")
+        _say("Hours of each month assumed by the master plan and needed by the weekly plans.")
         _display(_assumptions_table(as_planned))
-        print("Capacity overload (h) of each plant, by month, in each run.")
+        _say("Capacity overload (h) of each plant, by month, in each run.")
         _display(_run_rows(plans, "overload"))
-        print("Spare capacity (h) of each plant, by month, in each run.")
+        _say("Spare capacity (h) of each plant, by month, in each run.")
         _display(_run_rows(plans, "spare"))
     else:
         _assumptions_figure(as_planned)

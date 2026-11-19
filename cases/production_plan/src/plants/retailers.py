@@ -30,7 +30,7 @@ from .data import (ARCS_M4, BACKORDER_SHARE, CENTRAL, FORECAST_5, FORECAST_5_NAM
 from .distribution_network import PRICES, _kind, arc_name, entering, leaving, places_table, stage_stock
 from .model import TOL, _constraints, _optimal
 from . import figures
-from .show import _display, _european_axes, _light, _number
+from .show import _display, _european_axes, _light, _number, _say
 
 FORECAST = FORECAST_5_NAME               # M4 is solved with forecast 5
 DEMAND = FORECAST_5
@@ -171,7 +171,7 @@ def show_data(show_tables: bool = False) -> None:
     """The places of the network on the map, the network with the data of each node
     and arc, and the orders of each retailer; with ``show_tables``, the places of
     the network and Tables 1 to 3 of retailers.md instead of the figures."""
-    print(f"{FORECAST} (bikes/month): " + "; ".join(f"{t} {_number(DEMAND[t])}" for t in T) + ".")
+    _say(f"{FORECAST} (bikes/month): " + "; ".join(f"{t} {_number(DEMAND[t])}" for t in T) + ".")
     order = orders()
     if not show_tables:
         figures.places_map([(_kind(i), *PLACES_M4[i]) for i in NODES_M4], "Places of the nodes of the network of M4")
@@ -241,7 +241,7 @@ def _prices(solution: dict) -> None:
         if i != RAIL_TERMINAL and any(solution["storage price"][i, t] for t in months):
             rows[f"Storage capacity, {i}"] = {t: solution["storage price"][i, t] for t in months}
     if rows:
-        print(PRICES)
+        _say(PRICES)
         _display(pd.DataFrame(rows).T.rename_axis("Capacity"))
 
 
@@ -336,12 +336,12 @@ def _report(data: dict, heading: str, month: str = "May", full: bool = True, sho
         raise ValueError(f"The month must be one of {', '.join(T)}.")
     solution = solve(**data)
     if solution is None:
-        print(f"{heading}: the model has no solution.")
+        _say(f"{heading}: the model has no solution.")
         return None
     lost = sum(solution["lost sales"].values())
-    print(f"{heading}: optimal plan, cost {_number(solution['cost'], 2)} €; lost sales {_number(lost)} bikes.")
+    _say(f"{heading}: optimal plan, cost {_number(solution['cost'], 2)} €; lost sales {_number(lost)} bikes.")
     if not only_plan(**data):
-        print(SEVERAL)
+        _say(SEVERAL)
     if show_tables:
         if arc is not None:
             arc_list = solution["arcs"]
@@ -381,12 +381,12 @@ def retailer_plan(month: str = "May", show_tables: bool = False) -> dict | None:
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
         ending = sum(h_node_end_m4[f] for f in F)
-        print(f"M3, with the orders at the local warehouses, has no solution with the {FORECAST.lower()}: from April "
+        _say(f"M3, with the orders at the local warehouses, has no solution with the {FORECAST.lower()}: from April "
               f"to June {_number(ordered)} bikes are ordered and the plants can assemble {_number(assembled)}, "
               f"and the plants have to end June with {_number(ending)} bikes. At the end of March "
               f"{_number(ordered - assembled + ending)} bikes have to be in stock, and the network can hold "
               f"{_number(sum(K_h_node[i] for i in NODES))}.")
-        print()
+        _say()
     return _report({}, FORECAST, month, show_tables=show_tables)
 
 
@@ -396,7 +396,7 @@ def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 
     if retailer not in RETAILERS:
         raise ValueError(f"The retailer must be one of {', '.join(RETAILERS)}.")
     share = {**BACKORDER_SHARE, retailer: backorder_share}
-    print(f"Backorder share of {_name(retailer)}: {_number(backorder_share, 2)}; "
+    _say(f"Backorder share of {_name(retailer)}: {_number(backorder_share, 2)}; "
           f"lost sales, the rest: {_number(1 - backorder_share, 2)}.")
     return _report({"backorder_share": share}, FORECAST, month, full=False, show_tables=show_tables)
 
@@ -404,7 +404,7 @@ def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 
 def lost_sale_cost_test(lost_sale_cost: float = 700, month: str = "May", show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the lost-sale cost, the price that the retailers
     pay for a bike, changed for every retailer."""
-    print(f"Lost-sale cost: {_number(lost_sale_cost)} €/bike.")
+    _say(f"Lost-sale cost: {_number(lost_sale_cost)} €/bike.")
     return _report({"lost_sale_cost": {r: lost_sale_cost for r in RETAILERS}}, FORECAST, month, full=False,
                    show_tables=show_tables)
 
@@ -416,7 +416,7 @@ def promotion_test(retailer: str = "Retailer 2", month: str = "Jan", extra_order
         raise ValueError(f"The retailer must be one of {', '.join(RETAILERS)}.")
     order = orders()
     order[retailer, month] += extra_orders
-    print(f"Orders of {_name(retailer)} in {month}: {_number(order[retailer, month])} bikes, "
+    _say(f"Orders of {_name(retailer)} in {month}: {_number(order[retailer, month])} bikes, "
           f"{_number(extra_orders)} more than in the {FORECAST.lower()}.")
     return _report({"order": order}, FORECAST, month, full=False, show_tables=show_tables)
 
@@ -429,5 +429,5 @@ def transport_cost_test(arc: int = 17, transport_cost: float = 1.05, month: str 
         raise ValueError(f"The arc must be one of {FIRST_RETAILER_ARC + 1} to {len(ARCS_M4)}.")
     arc_list = [dict(a) for a in ARCS_M4]
     arc_list[arc - 1]["cost"] = transport_cost
-    print(f"Transport cost of arc {arc}, {arc_name(arc_list[arc - 1])}: {_number(transport_cost, 2)} €/bike.")
+    _say(f"Transport cost of arc {arc}, {arc_name(arc_list[arc - 1])}: {_number(transport_cost, 2)} €/bike.")
     return _report({"arc_list": arc_list}, FORECAST, month, full=False, show_tables=show_tables, arc=arc - 1)

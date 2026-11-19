@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import functools
 import numbers
+import re
+import textwrap
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -70,6 +72,24 @@ def _display(obj) -> None:
         print(obj)
 
 
+# Longest line of the text a cell prints: Colab does not wrap the output of a
+# cell, and a longer line needs a horizontal scroll bar
+WIDTH = 80
+
+
+def _say(text: str = "", **kwargs) -> None:
+    """Print a text in lines of at most WIDTH characters; each line of the text is
+    wrapped on its own, with its indentation, and a number is never parted from a
+    unit that starts with € or %."""
+    lines = []
+    for line in str(text).split("\n"):
+        indent = line[:len(line) - len(line.lstrip())]
+        line = re.sub(r" (?=[€%]|k€)", "\u00a0", line)
+        lines.append(textwrap.fill(line, WIDTH, subsequent_indent=indent, break_long_words=False,
+                                   break_on_hyphens=False).replace("\u00a0", " ") if line.strip() else line)
+    print("\n".join(lines), **kwargs)
+
+
 def _euros(x: float) -> str:
     return f"{_number(x, 0)} €"
 
@@ -128,7 +148,7 @@ def feasible_region(k1: float = 250, demand: float = 380) -> None:
         ax.legend(fontsize=8, loc="upper right")
         _european_axes(fig)
         plt.show()
-        print(f"No plan: the two plants can assemble at most {_number(k1 + k2)} bikes, "
+        _say(f"No plan: the two plants can assemble at most {_number(k1 + k2)} bikes, "
               f"and the demand is {_number(demand)}. The feasible region is empty.")
         return
     # Feasible region, its vertices and lines of equal cost through each vertex
@@ -154,8 +174,8 @@ def feasible_region(k1: float = 250, demand: float = 380) -> None:
 
     _display(pd.DataFrame([{"p1 (bikes)": v[0], "p2 (bikes)": v[1], "Cost (€)": m.reduced_cost_of(v)}
                            for v in corners]).rename_axis("Vertex"))
-    print(f"Optimum: p1 = {_number(best[0])}; p2 = {_number(best[1])}; cost {_euros(solution['cost'])}.")
-    print()
+    _say(f"Optimum: p1 = {_number(best[0])}; p2 = {_number(best[1])}; cost {_euros(solution['cost'])}.")
+    _say()
     capacity = {f: dict(K[f]) for f in REDUCED_F}
     capacity["Plant 1"]["Jan"] = k1
     rows = []
@@ -186,20 +206,20 @@ def production_plan(forecast: str = "Demand below capacity") -> dict | None:
     solution = m.solve(demand=demand)
     if solution is None:
         short = m.shortfall(demand)
-        print(f"{forecast}: the model has no solution. The total capacity is "
+        _say(f"{forecast}: the model has no solution. The total capacity is "
               f"{_number(m.monthly_capacity()['Jan'])} bikes/month and the demand is above it in "
               + "; ".join(f"{t} (by {_number(v)} bikes)" for t, v in short.items()) + ".")
-        print("The next cell compares capacity and demand month by month.")
+        _say("The next cell compares capacity and demand month by month.")
         return None
-    print(f"{forecast}: optimal plan, cost {_euros(solution['cost'])}.")
+    _say(f"{forecast}: optimal plan, cost {_euros(solution['cost'])}.")
     _display(_plan_table(solution))
-    print("Shadow price of the demand of each month (€/bike): what one more bike of demand costs.")
+    _say("Shadow price of the demand of each month (€/bike): what one more bike of demand costs.")
     _display(pd.DataFrame({t: {"Shadow price (€/bike)": solution["demand price"][t]} for t in T}))
-    print("Reduced cost of each plant and month (€/bike): how much cheaper the plant would have to be "
+    _say("Reduced cost of each plant and month (€/bike): how much cheaper the plant would have to be "
           "to assemble bikes that month. Zero where the plant is used.")
     _display(pd.DataFrame({t: {f: solution["reduced cost"][f, t] for f in F} for t in T})
              .rename_axis("Reduced cost"))
-    print("Shadow price of each capacity (€/bike): what one more bike of capacity saves (negative: a saving).")
+    _say("Shadow price of each capacity (€/bike): what one more bike of capacity saves (negative: a saving).")
     _display(pd.DataFrame({t: {f: solution["capacity price"][f, t] for f in F} for t in T})
              .rename_axis("Capacity shadow price"))
     return solution
@@ -248,10 +268,10 @@ def capacity_and_demand(forecast: str = "Seasonal demand peak") -> None:
                               "cumulative capacity": "Cumulative capacity"}).T)
     if short:
         never = all(r["cumulative capacity"] >= r["cumulative demand"] for r in rows)
-        print("Capacity falls short in " + "; ".join(f"{t} ({_number(v)} bikes)" for t, v in short.items()) + ".")
+        _say("Capacity falls short in " + "; ".join(f"{t} ({_number(v)} bikes)" for t, v in short.items()) + ".")
         if never:
-            print("The cumulative capacity is never below the cumulative demand: a plan that keeps "
+            _say("The cumulative capacity is never below the cumulative demand: a plan that keeps "
                   "bikes in stock from one month to the next would exist. The model has no such plan "
                   "because it does not represent stock.")
     else:
-        print("The capacity covers the demand every month.")
+        _say("The capacity covers the demand every month.")

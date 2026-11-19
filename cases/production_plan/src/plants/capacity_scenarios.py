@@ -32,7 +32,7 @@ from .data import (ARCS_M4, BACKORDER_SHARE, BASELINE_FORECAST, CENTRAL, F, K, K
 from .distribution_network import entering, leaving
 from .model import TOL, _optimal
 from . import figures
-from .show import _display, _european_axes, _light, _number
+from .show import _display, _european_axes, _light, _number, _say
 
 PLANT_3 = "Plant 3"
 OPEN, CLOSED, VARIABLE = "open", "closed", "variable"     # plant 3: a datum, open or closed, or a binary variable
@@ -266,14 +266,14 @@ def show_data() -> None:
     table.insert(0, "Share", [f"{_number(100 * SHARE_M4[r])} %" for r in RETAILERS])
     table.loc["Baseline forecast"] = ["100 %"] + [BASELINE_FORECAST[t] for t in T]
     table.loc["Price (€/bike)"] = [""] + [PRICE[t] for t in T]
-    print("Baseline forecast, share and orders of each retailer (bikes/month), and price (€/bike)")
+    _say("Baseline forecast, share and orders of each retailer (bikes/month), and price (€/bike)")
     _display(table)
     options = {f"Overtime limit at {f.lower()}": f"{_number(o_max[f])} bikes/month" for f in F}
     options["Overtime cost (over the unit assembly cost)"] = f"{_number(c_o)} €/bike"
     options["Rented storage limit, next to central warehouse"] = f"{_number(u_max)} bikes"
     options["Rented storage cost (over warehouse holding cost)"] = f"{_number(c_u)} €/(bike·month)"
     options["Fixed cost of plant 3 open"] = f"{_number(c_F[PLANT_3])} €/month"
-    print("Capacity options and fixed cost of plant 3")
+    _say("Capacity options and fixed cost of plant 3")
     _display(pd.DataFrame({"Value": options}))
 
 
@@ -302,7 +302,7 @@ def _price_and_orders(solution: dict) -> None:
     """The price of each month and the orders of the six retailers, under the
     scenario solved."""
     months, order = solution["months"], solution["orders"]
-    print("Price and orders of each month in the scenario")
+    _say("Price and orders of each month in the scenario")
     _display(pd.DataFrame({t: {"Price (€/bike)": solution["price"][t],
                                "Orders of the six retailers (bikes/month)": sum(order[r, t] for r in RETAILERS)}
                            for t in months}))
@@ -317,14 +317,14 @@ def _plant_tables(solution: dict) -> None:
         rows[f] = {t: solution["assembly"][f, t] for t in months}
         if o_max[f] > 0:
             rows[f"{f}, in overtime"] = {t: solution["overtime"][f, t] for t in months}
-    print("Assembly (bikes/month); each row «in overtime» is part of the row of its plant")
+    _say("Assembly (bikes/month); each row «in overtime» is part of the row of its plant")
     _display(pd.DataFrame(rows).T)
     stock = {}
     for name, row in solution["seasonal stock"].items():
         stock[name] = dict(row)
         if name == "Central warehouse":
             stock["Central warehouse, in rented storage"] = {t: solution["rented"][t] for t in months}
-    print("Stock at the end of the month at each stage (bikes); the row «in rented storage» is part of the central "
+    _say("Stock at the end of the month at each stage (bikes); the row «in rented storage» is part of the central "
           "warehouse and of the total")
     _display(pd.DataFrame(stock).T)
 
@@ -342,11 +342,11 @@ def _lost_sales_table(solution: dict) -> None:
     table.insert(0, "Share of its orders",
                  [f"{_number(100 * solution['lost sales share'][r], 1)} %" for r in losing])
     table.insert(1, "Backorder share", [_number(BACKORDER_SHARE[r], 1) for r in losing])
-    print("Lost sales (bikes)")
+    _say("Lost sales (bikes)")
     _display(table)
     waiting = [r for r in RETAILERS if any(solution["backorders"][r, t] > TOL for t in months)]
     if waiting:
-        print("Backorders at the end of the month (bikes)")
+        _say("Backorders at the end of the month (bikes)")
         _display(pd.DataFrame({f"{r} ({PLACES_M4[r][0]})": {t: solution["backorders"][r, t] for t in months}
                                for r in waiting}).T)
 
@@ -425,26 +425,26 @@ def plan(growth: float = 0.0, promotion_months=(), discount: float = 0.0, promot
     data = {**_scenario(growth, promotion_months, discount, promotion_growth), **options}
     solution = solve(**data)
     if solution is None:
-        print("The model has no solution with these values.")
+        _say("The model has no solution with these values.")
         return None
     base = solve(**options)
     is_open = solution["open"][PLANT_3] == 1
     state = {OPEN: "open", CLOSED: "closed"}.get(plant_3, f"a binary variable, {'open' if is_open else 'closed'} "
                                                           "in the optimal plan")
     fixed = len(T) * fixed_cost if is_open else 0
-    print(f"Plant 3: {state}, with a fixed cost of {_number(fixed_cost)} €/month (value of the form). "
+    _say(f"Plant 3: {state}, with a fixed cost of {_number(fixed_cost)} €/month (value of the form). "
           f"Overtime: {'yes' if overtime else 'no'}. "
           f"Rented storage: {'up to ' + _number(u_max) + ' bikes' if rented_storage else 'no'}.")
-    print(f"Plan of the scenario: cost {_number(solution['cost'], 2)} €, of which {_number(fixed)} € is the fixed cost "
+    _say(f"Plan of the scenario: cost {_number(solution['cost'], 2)} €, of which {_number(fixed)} € is the fixed cost "
           f"of plant 3; margin {_number(solution['margin'], 2)} €; "
           f"lost sales {_number(sum(solution['lost sales'].values()))} bikes.")
     again = " (decided again for the baseline forecast)" if plant_3 == VARIABLE else ""
-    print(f"Margin under the baseline forecast (demand growth 0, no promotion), with the same setting of plant 3{again}, "
+    _say(f"Margin under the baseline forecast (demand growth 0, no promotion), with the same setting of plant 3{again}, "
           f"the same fixed cost and the same capacity options, to compare with the margin of the scenario: "
           f"{_number(base['margin'], 2)} €.")
-    print(SEVERAL if not only_plan(**data) else "No other plan has the same optimal cost: the cell shows the only optimal "
+    _say(SEVERAL if not only_plan(**data) else "No other plan has the same optimal cost: the cell shows the only optimal "
           "plan.")
-    print("Capacity utilization in the six months (bikes assembled, overtime included, as a share of the assembly "
+    _say("Capacity utilization in the six months (bikes assembled, overtime included, as a share of the assembly "
           "capacity of the six months): "
           + "; ".join(f"{f} {_number(100 * solution['capacity utilization'][f], 1)} %" for f in F) + ".")
     if show_tables:

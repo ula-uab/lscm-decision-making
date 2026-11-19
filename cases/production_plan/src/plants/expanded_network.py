@@ -42,7 +42,7 @@ from .data import (LOCAL_EXP, MAX_ROUTE_KM, MAX_TRAVEL_TIME, NODE_CAPACITY_YEAR,
                    YEARLY_ORDERS)
 from .model import TOL, _optimal
 from . import figures
-from .show import SHORT, _display, _light, _number
+from .show import SHORT, _display, _light, _number, _say
 
 SHORT_LIST_STOPS = 2           # the short list: the routes of one and of two retailers
 TWICE = "#E6A800"              # a local warehouse within reach of two or more regional warehouses
@@ -356,7 +356,7 @@ def show_data() -> None:
                            for r in RETAILERS_EXP}).T.rename_axis("Retailer"))
     _display(pd.DataFrame({l: {"Place": PLACES_EXP[l][0], "Node capacity (bikes/year)": NODE_CAPACITY_YEAR[l],
                                **_coordinates(l)} for l in LOCAL_EXP}).T.rename_axis("Local warehouse"))
-    print(f"Orders of all the retailers: {_number(sum(YEARLY_ORDERS.values()))} bikes/year; capacity of all the "
+    _say(f"Orders of all the retailers: {_number(sum(YEARLY_ORDERS.values()))} bikes/year; capacity of all the "
           f"local warehouses: {_number(sum(NODE_CAPACITY_YEAR.values()))} bikes/year.")
     table = pd.DataFrame({PLACES_EXP[l][0]: {place(r): _number(COST[l, r], 2) for r in RETAILERS_EXP}
                           for l in LOCAL_EXP})
@@ -425,7 +425,7 @@ def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None, 
     capacities = dict(NODE_CAPACITY_YEAR)
     if capacity is not None:
         capacities[warehouse] = capacity
-    print(f"Node capacity of {place(warehouse)}: {_number(capacities[warehouse])} bikes/year; capacity of all the "
+    _say(f"Node capacity of {place(warehouse)}: {_number(capacities[warehouse])} bikes/year; capacity of all the "
           f"local warehouses: {_number(sum(capacities.values()))} bikes/year for "
           f"{_number(sum(YEARLY_ORDERS.values()))} bikes/year of orders.")
     plans = {"Cheapest": cheapest_plan(capacity=capacities), "Rule": rule_plan(capacity=capacities),
@@ -434,25 +434,25 @@ def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None, 
     cheapest, model_plan = plans["Cheapest"], plans["Generalized assignment"]
     over = ", ".join(f"{place(l)} ({_number(cheapest['load'][l])} for {_number(capacities[l])})"
                      for l in cheapest["over"])
-    print(f"Each retailer at its cheapest local warehouse: {_number(cheapest['cost'], 2)} €/year; "
+    _say(f"Each retailer at its cheapest local warehouse: {_number(cheapest['cost'], 2)} €/year; "
           + (f"not valid, the load exceeds the capacity of {over}." if over else "valid: no capacity is exceeded."))
     rule = plans["Rule"]
-    print("The rule, in the order of the list: " + ("no valid plan: a retailer finds no local warehouse with room."
+    _say("The rule, in the order of the list: " + ("no valid plan: a retailer finds no local warehouse with room."
                                                     if rule is None else f"{_number(rule['cost'], 2)} €/year."))
     if model_plan is None:
-        print("Generalized assignment: the model has no solution.")
+        _say("Generalized assignment: the model has no solution.")
         return plans
     moved = [r for r in RETAILERS_EXP if model_plan["warehouse"][r] != cheapest["warehouse"][r]]
-    print(f"Generalized assignment: {_number(model_plan['cost'], 2)} €/year; {len(moved)} retailers do not go to "
+    _say(f"Generalized assignment: {_number(model_plan['cost'], 2)} €/year; {len(moved)} retailers do not go to "
           f"their cheapest local warehouse.")
     if not only_assignment(capacity=capacities):
-        print(SEVERAL)
+        _say(SEVERAL)
     if rule is not None:
-        print(f"The rule costs {_number(100 * (rule['cost'] / model_plan['cost'] - 1), 1)} % more than the "
+        _say(f"The rule costs {_number(100 * (rule['cost'] / model_plan['cost'] - 1), 1)} % more than the "
               f"generalized assignment.")
     split = plans["Transportation problem"]
     shared = [r for r in RETAILERS_EXP if r not in split["warehouse"]]
-    print(f"Transportation problem: {_number(split['cost'], 2)} €/year, "
+    _say(f"Transportation problem: {_number(split['cost'], 2)} €/year, "
           f"{_number(100 * (1 - split['cost'] / model_plan['cost']), 1)} % less than the generalized assignment; "
           f"{len(shared)} retailers are split between two or more local warehouses.")
     if not show_tables:
@@ -460,7 +460,7 @@ def assignment(warehouse: str = ROUTE_WAREHOUSE, capacity: float | None = None, 
         return plans
     changed = [r for r in RETAILERS_EXP if r in moved or r in shared
                or (rule is not None and rule["warehouse"][r] != cheapest["warehouse"][r])]
-    print("Retailers that are not at their cheapest local warehouse in some plan:")
+    _say("Retailers that are not at their cheapest local warehouse in some plan:")
     _display(_assignment_table(plans, {r: YEARLY_ORDERS[r] for r in changed}))
     loads = pd.DataFrame({place(l): {"Node capacity": _number(capacities[l]),
                                      **{label: (_number(plan["load"][l], 1) if plan else "—")
@@ -530,23 +530,23 @@ def covering(max_time: float = MAX_TRAVEL_TIME, exactly_one: bool = False, show_
     form = "exactly one chosen site" if exactly_one else "at least one chosen site"
     unreached = [l for l in LOCAL_EXP if not any(l in s for s in sets.values())]
     if plan is None:
-        print(f"Each local warehouse within reach of {form}: the model has no solution."
+        _say(f"Each local warehouse within reach of {form}: the model has no solution."
               + (f" Within reach of no candidate site: {', '.join(place(l) for l in unreached)}." if unreached
                  else ""))
         return None
-    print(f"Each local warehouse within reach of {form}: regional warehouses at {', '.join(plan['sites'])}; "
+    _say(f"Each local warehouse within reach of {form}: regional warehouses at {', '.join(plan['sites'])}; "
           f"cost {_number(plan['cost'])} thousand €/year.")
     if not only_covering(max_time=max_time, exactly_one=exactly_one):
-        print(SEVERAL)
+        _say(SEVERAL)
     if not show_tables:
         _covering_figure(plan, max_time)
         return plan
     twice = {place(l): "; ".join(sites) for l, sites in plan["reached by"].items() if len(sites) > 1}
     if twice:
-        print("Local warehouses within reach of two or more regional warehouses:")
+        _say("Local warehouses within reach of two or more regional warehouses:")
         _display(pd.DataFrame({"Regional warehouses within reach": twice}).rename_axis("Local warehouse"))
     else:
-        print("No local warehouse is within reach of two or more regional warehouses.")
+        _say("No local warehouse is within reach of two or more regional warehouses.")
     return plan
 
 
@@ -597,26 +597,26 @@ def routes(truck: float = TRUCK_CAPACITY, full_list: bool = True, show_tables: b
     if not full_list:
         candidates = short_list(candidates)
     which = "full list" if full_list else f"short list (routes of at most {SHORT_LIST_STOPS} retailers)"
-    print(f"Truck capacity {_number(truck)} bikes; longest route {_number(MAX_ROUTE_KM)} km; cost of a route "
+    _say(f"Truck capacity {_number(truck)} bikes; longest route {_number(MAX_ROUTE_KM)} km; cost of a route "
           f"{_number(ROUTE_FIXED_COST)} € plus {_number(ROUTE_KM_COST, 2)} €/km. {which.capitalize()}: "
           f"{len(candidates)} candidate routes.")
     _display(_route_table(candidates))
     plan = route_plan(candidates)
     if plan is None:
-        print("Set partitioning (each retailer on exactly one route): the model has no solution.")
+        _say("Set partitioning (each retailer on exactly one route): the model has no solution.")
         too_big = [place(r) for r in ROUTE_RETAILERS if WEEKLY_ORDERS[r] > truck]
         if too_big:
-            print(f"Weekly orders larger than the truck, on no candidate route: {', '.join(too_big)}.")
+            _say(f"Weekly orders larger than the truck, on no candidate route: {', '.join(too_big)}.")
         return None
-    print(f"Set partitioning (each retailer on exactly one route): routes "
+    _say(f"Set partitioning (each retailer on exactly one route): routes "
           f"{', '.join(str(route['number']) for route in plan['routes'])}; {_number(plan['cost'], 2)} €/week, "
           f"{_number(plan['km'], 1)} km.")
     if not only_routes(candidates):
-        print(SEVERAL)
+        _say(SEVERAL)
     cover = route_plan(candidates, exactly_one=False)
     twice = [place(r) for r, n in cover["visits"].items() if n > 1]
     same = sorted(route["number"] for route in cover["routes"]) == sorted(route["number"] for route in plan["routes"])
-    print(f"Set covering (each retailer on at least one route): {_number(cover['cost'], 2)} €/week; "
+    _say(f"Set covering (each retailer on at least one route): {_number(cover['cost'], 2)} €/week; "
           + ("the same routes." if same else f"routes {', '.join(str(route['number']) for route in cover['routes'])}"
              + (f"; on two or more routes: {', '.join(twice)}." if twice else ".")))
     if show_tables:
