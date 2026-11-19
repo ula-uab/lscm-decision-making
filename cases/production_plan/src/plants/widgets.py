@@ -7,7 +7,8 @@ solved again. The figure is a Plotly figure, so that the reader sees the value
 of each bar or point by placing the pointer on it.
 
 It needs ipywidgets and Plotly, which Google Colab has; on your own computer,
-the repository environment installs them.
+the repository environment installs them. The figure loads the Plotly library
+from the internet, so it needs a connection.
 """
 
 from __future__ import annotations
@@ -22,13 +23,21 @@ from IPython.display import display
 NO_WIDGETS = "PLANTS_NO_WIDGETS"
 
 
+def _show(fig) -> None:
+    """A Plotly figure as HTML, with the Plotly library loaded from the internet:
+    PyCharm does not redraw a figure shown with Plotly's default renderer when it
+    changes under the dropdown, and Colab and PyCharm both redraw it as HTML."""
+    from IPython.display import HTML
+    display(HTML(fig.to_html(include_plotlyjs="cdn", full_html=False)))
+
+
 def select_plot(options: dict, draw: Callable, value=None, description: str = "") -> None:
     """A dropdown with ``options`` (label shown: value passed to ``draw``) and,
     under it, the figure that ``draw(value)`` returns, redrawn each time the
     option changes. ``value`` is the option shown first; by default, the first."""
     first = value if value is not None else next(iter(options.values()))
     if os.environ.get(NO_WIDGETS):
-        draw(first).show()
+        _show(draw(first))
         return
     import ipywidgets as widgets
 
@@ -39,7 +48,7 @@ def select_plot(options: dict, draw: Callable, value=None, description: str = ""
     def redraw(_=None):
         with out:
             out.clear_output(wait=True)
-            draw(dropdown.value).show()
+            _show(draw(dropdown.value))
 
     dropdown.observe(redraw, names="value")
     display(widgets.VBox([dropdown, out]))
