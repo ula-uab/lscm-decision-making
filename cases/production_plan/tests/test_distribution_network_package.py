@@ -1,6 +1,7 @@
 """Check that the package reproduces the numbers of distribution_network.md (M3),
 and that the notebook of M3 runs from start to end."""
 
+import os
 import re
 from pathlib import Path
 
@@ -8,6 +9,8 @@ import matplotlib
 import pytest
 
 matplotlib.use("Agg")
+# The notebooks run without a browser: the dropdown of the arcs is left out
+os.environ["PLANTS_NO_WIDGETS"] = "1"
 
 from plants import distribution_network as dn  # noqa: E402
 from plants.data import ARCS, F, FORECAST_4, FORECASTS, K_h_node, LOCAL, NODES, SHARE, T, arcs  # noqa: E402
@@ -179,6 +182,17 @@ def test_net_supply_in_january_and_may():
     assert january["kind"]["Plant 3"] == dn.TRANSHIPMENT_NODE
     assert may["supply"]["Central warehouse"] == pytest.approx(136)
     assert may["supply"]["Regional warehouse 2"] == pytest.approx(14)
+
+
+def test_arc_flow_figure():
+    # The flow on an arc in each month, red where its arc capacity is full: the
+    # rail arc (arc 6) never; arc 7, from the rail terminal, from February to June
+    solution = dn.solve()
+    rail = dn.arc_flow_figure(solution, dn.RAIL_ARC).data[0]
+    assert list(rail.y) == pytest.approx([156, 200, 200, 200, 200, 200])
+    assert dn.FULL_BAR not in rail.marker.color
+    terminal = dn.arc_flow_figure(solution, dn.RAIL_ARC + 1).data[0]
+    assert [colour == dn.FULL_BAR for colour in terminal.marker.color] == [False] + [True] * 5
 
 
 def test_notebook_runs():

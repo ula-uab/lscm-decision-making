@@ -372,9 +372,48 @@ def _report(data: dict, heading: str, month: str = "May", prices: bool = True, r
     return solution
 
 
+FULL_BAR = "#d62728"              # SHORT ("tab:red") for Plotly: a full arc capacity, as in the network
+
+
+def arc_flow_figure(solution: dict, a: int):
+    """A Plotly figure of the flow on arc ``a`` in each month, with its arc
+    capacity as a dashed line: a month in which the capacity is full in red, as
+    in the network."""
+    import plotly.graph_objects as go
+
+    arc = solution["arcs"][a]
+    months = solution["months"]
+    flows = [solution["flow"][a, t] for t in months]
+    full = [v > TOL and abs(v - arc["capacity"]) < TOL for v in flows]
+    fig = go.Figure(go.Bar(
+        x=months, y=flows, marker_color=[FULL_BAR if f else figures.INK for f in full],
+        text=[_number(v) for v in flows], textposition="outside",
+        customdata=["arc capacity full" if f else f"{_number(arc['capacity'] - v)} bikes free" for v, f in
+                    zip(flows, full)],
+        hovertemplate="%{x}: %{y:,.0f} bikes (%{customdata})<extra></extra>", showlegend=False))
+    fig.add_hline(y=arc["capacity"], line_dash="dash", line_color="black", line_width=1,
+                  annotation_text=f"arc capacity {_number(arc['capacity'])}", annotation_position="top left")
+    fig.update_layout(
+        title=dict(text=f"Flow on arc {a + 1} ({arc_name(arc)}, {arc['mode'].lower()}) in each month (bikes)",
+                   font_size=14),
+        template="plotly_white", separators=",.", height=360, width=720, margin=dict(t=60, b=40, l=60, r=20),
+        yaxis=dict(title="bikes", range=[0, 1.15 * max(arc["capacity"], max(flows))]))
+    return fig
+
+
+def arc_flow_selector(solution: dict, first: int = RAIL_ARC) -> None:
+    """A dropdown of the arcs and the figure of the flow on the arc chosen in each
+    month; the plan is not solved again when the arc changes."""
+    from .widgets import select_plot
+    options = {f"{a + 1}. {arc_name(arc)}" + (" (rail)" if arc["mode"] == RAIL else ""): a
+               for a, arc in enumerate(solution["arcs"])}
+    select_plot(options, lambda a: arc_flow_figure(solution, a), value=first, description="Arc:")
+
+
 def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
     """The plan with forecast 4, with the flows of one month on the network; and,
-    first, whether M2 has a plan for forecast 4."""
+    first, whether M2 has a plan for forecast 4. Under the figures, a dropdown of
+    the arcs with the flow on the arc chosen in each month."""
     if m2_has_no_solution():
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
@@ -385,7 +424,10 @@ def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
               f"of March {_number(ordered - assembled + ending)} bikes have to be in stock, and the plants and "
               f"the central warehouse can hold {_number(sum(K_h_node[f] for f in F) + K_h_node[CENTRAL])}.")
         print()
-    return _report({}, FORECAST, month, show_tables=show_tables)
+    solution = _report({}, FORECAST, month, show_tables=show_tables)
+    if solution is not None and not show_tables:
+        arc_flow_selector(solution)
+    return solution
 
 
 def rail_capacity_test(rail_capacity: float = 400, month: str = "May", show_tables: bool = False) -> dict | None:
