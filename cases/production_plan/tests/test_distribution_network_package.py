@@ -10,7 +10,7 @@ import pytest
 matplotlib.use("Agg")
 
 from plants import distribution_network as dn  # noqa: E402
-from plants.data import ARCS, F, FORECAST_4, FORECASTS, K_h_node, LOCAL, NODES, SHARE, T, arcs  # noqa: E402
+from plants.data import ARCS, F, FORECAST_4, FORECASTS, K_h_node, LOCAL, NODES, SHARE, T  # noqa: E402
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "notebooks" / "distribution_network.ipynb"
 
@@ -79,46 +79,6 @@ def test_table9_shadow_prices_of_the_full_capacities():
     assert months(solution["storage price"], "Plant 1") == pytest.approx([-4, -4, -9, -3, 0, 0])
     assert months(solution["storage price"], "Central warehouse") == pytest.approx([-1, -1, -6, 0, 0, 0])
     assert all(solution["arc price"][a, t] == 0 for a in range(13) if a not in (3, 6) for t in T)
-
-
-@pytest.mark.parametrize("capacity, cost, rail", [
-    (200, 1112018.47, [156, 200, 200, 200, 200, 200]),
-    (150, 1112221.83, [150] * 6),
-    (100, 1112498.03, [100] * 6),
-    (50, 1112833.55, [50] * 6)])
-def test_rail_capacity(capacity, cost, rail):
-    arc_list = [dict(arc) for arc in ARCS]
-    arc_list[dn.RAIL_ARC]["capacity"] = capacity
-    solution = dn.solve(arc_list=arc_list)
-    assert solution["cost"] == pytest.approx(cost)
-    assert months(solution["flow"], dn.RAIL_ARC) == pytest.approx(rail)
-
-
-def test_rail_capacity_below_which_there_is_no_solution():
-    for capacity, solved in ((12, False), (13, True)):
-        arc_list = [dict(arc) for arc in ARCS]
-        arc_list[dn.RAIL_ARC]["capacity"] = capacity
-        assert (dn.solve(arc_list=arc_list) is not None) == solved
-
-
-@pytest.mark.parametrize("rate, cost, rail, road", [
-    (0.004, 1111224.39, [176, 200, 200, 200, 200, 200], [0, 0, 0, 0, 20, 0]),
-    (0.008, 1112792.99, [156, 200, 200, 200, 200, 200], [0, 0, 0, 0, 20, 0]),
-    (0.010, 1113123.47, [0, 4, 10, 4, 70, 0], [84, 150, 150, 150, 150, 115]),
-    (0.015, 1113267.03, [0, 0, 0, 4, 70, 0], [98, 150, 150, 150, 150, 115])])
-def test_rail_rate(rate, cost, rail, road):
-    arc_list = arcs({"Road": 0.010, "Rail": rate})
-    solution = dn.solve(arc_list=arc_list)
-    assert solution["cost"] == pytest.approx(cost)
-    assert months(solution["flow"], dn.RAIL_ARC) == pytest.approx(rail)
-    assert months(solution["flow"], 7) == pytest.approx(road)
-
-
-def test_rail_rate_at_which_the_two_routes_cost_the_same():
-    arc_list = arcs({"Road": 0.010, "Rail": 0.009})
-    assert arc_list[dn.RAIL_ARC]["cost"] + arc_list[6]["cost"] == pytest.approx(arc_list[7]["cost"])
-    assert dn.solve(arc_list=arc_list)["cost"] == pytest.approx(1113093.55)
-    assert dn.only_plan(arc_list=arc_list) is False
 
 
 @pytest.mark.parametrize("capacity, cost", [(300, 1111994.39), (280, 1112018.47), (250, 1112101.67)])

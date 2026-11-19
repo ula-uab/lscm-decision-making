@@ -8,8 +8,7 @@ The notebook calls one function per step:
 
 1. ``show_data``: the nodes, the list of arcs and forecast 4;
 2. ``network_plan``: the plan with forecast 4, with the flows of each month;
-3. ``rail_capacity_test``, ``rail_rate_test`` and ``node_capacity_test``: the plan
-   when one datum changes;
+3. ``node_capacity_test``: the plan when one datum changes;
 4. ``month_flows``: an analysis of the plan, not a version of the model: the
    minimum cost flow problem of each month.
 
@@ -29,7 +28,7 @@ import pulp
 
 from .central_warehouse import SEVERAL, only_optimal
 from .data import (ARCS, CENTRAL, F, FORECAST_4, FORECAST_4_NAME, K, K_h_node, K_n, LOCAL, NODES, PLACES, RAIL,
-                   RAIL_TERMINAL, REGIONAL, SHARE, TRANSPORT_RATE, T, arcs as make_arcs, b_0, b_max, c, c_b, c_h_node,
+                   RAIL_TERMINAL, REGIONAL, SHARE, TRANSPORT_RATE, T, b_0, b_max, c, c_b, c_h_node,
                    h_node_0, h_node_end)
 from .model import TOL, _constraints, _optimal
 from . import figures, interactive
@@ -487,23 +486,6 @@ def network_plan(show_tables: bool = False) -> dict | None:
               f"the central warehouse can hold {_number(sum(K_h_node[f] for f in F) + K_h_node[CENTRAL])}.")
         _say()
     return _report({}, FORECAST, arc_flow=True, show_tables=show_tables)
-
-
-def rail_capacity_test(rail_capacity: float = 400, show_tables: bool = False) -> dict | None:
-    """The plan with forecast 4 and the arc capacity of arc 6, the rail arc, changed."""
-    arc_list = [dict(arc) for arc in ARCS]
-    arc_list[RAIL_ARC]["capacity"] = rail_capacity
-    _say(f"Arc capacity of arc 6 (rail): {_number(rail_capacity)} bikes/month.")
-    return _report({"arc_list": arc_list}, FORECAST, prices=False, routes=True, show_tables=show_tables)
-
-
-def rail_rate_test(rail_rate: float = 0.006, show_tables: bool = False) -> dict | None:
-    """The plan with forecast 4 and the transport rate of rail changed: the transport
-    cost of the rail arc is its distance times that rate."""
-    arc_list = make_arcs({**TRANSPORT_RATE, RAIL: rail_rate})
-    _say(f"Transport rate of rail: {_number(rail_rate, 4)} €/(bike·km); transport cost of the rail arc: "
-          f"{_number(arc_list[RAIL_ARC]['cost'], 2)} €/bike.")
-    return _report({"arc_list": arc_list}, FORECAST, prices=False, routes=True, show_tables=show_tables)
 
 
 def node_capacity_test(node_capacity: float = 280, show_tables: bool = False) -> dict | None:
