@@ -385,7 +385,7 @@ def _route_table(solution: dict) -> pd.DataFrame:
 def _route_figure(solution: dict, node_capacity: dict = K_n):
     """The flow on the routes to regional warehouse 2 and to Valencia in each month,
     stacked by arc, with a dropdown of the two destinations; at regional warehouse
-    2, its node capacity."""
+    2, its node capacity and its stock at the end of the month."""
     arc_list, months = solution["arcs"], solution["months"]
     # one colour for each route, none red: red marks a full arc capacity
     colours = iter(["tab:blue", "tab:orange", "tab:green", "tab:brown", "tab:purple"])
@@ -395,21 +395,59 @@ def _route_figure(solution: dict, node_capacity: dict = K_n):
         rows = {f"arc {a + 1}: {arc_name(arc_list[a])}": [solution["flow"][a, t] for t in months]
                 for a in entering(node, arc_list)}
         limit = node_capacity.get(node)
-        options[f"Routes to {name}"] = interactive.bars(
+        fig = interactive.bars(
             months, rows, {row: interactive.colour(next(colours)) for row in rows},
             f"Flow on the routes to {name} (bikes)", line=limit,
             line_label=f"node capacity {_number(limit)}" if limit else "")
+        if node == "Regional warehouse 2":
+            # the colour of the regional warehouses in the stock at each stage
+            name_stock = "stock of regional warehouse 2 at the end of the month"
+            fig.add_scatter(x=months, y=[solution["stock"][node, t] for t in months], mode="lines+markers",
+                            name=name_stock, line=dict(color=interactive.colour(figures.STAGE_COLOURS[
+                                "Regional warehouses"]), width=2), marker_size=8,
+                            hovertemplate=f"{name_stock}<br>%{{x}}: %{{y:,.0f}} bikes<extra></extra>")
+        options[f"Routes to {name}"] = fig
     return interactive.dropdown_figure(options)
 
 
-def _report(data: dict, heading: str, prices: bool = True, routes: bool = False, arc_flow: bool = False,
-            show_tables: bool = False) -> dict | None:
-    """Solve M3 with the data given and show its cost and whether other plans have
-    the same cost; then the plan in figures or, with ``show_tables``, in tables:
-    with ``routes``, the flows on the routes to regional warehouse 2 and Valencia;
-    the flows on the network, one month at a time; with ``arc_flow``, the flow on
-    one arc in each month; the assembly, the stock and, with ``prices``, the shadow
-    prices of the full capacities."""
+SEVILLE = "Local warehouse 4"
+
+
+def _seville_figure(solution: dict):
+    """The orders of Seville (local warehouse 4) in each month, the bikes delivered
+    and the orders still pending at the end of the month."""
+    import plotly.graph_objects as go
+
+    months = solution["months"]
+    rows = _seville_rows(solution)
+    fig = go.Figure()
+    # the orders without fill, the deliveries in the colour of the local warehouses
+    # in the stock at each stage, and the pending orders in a colour of their own:
+    # red marks a full capacity
+    styles = {"orders": dict(marker_color="white", marker_line=dict(color="black", width=1)),
+              "delivered": dict(marker_color=interactive.colour(figures.STAGE_COLOURS["Local warehouses"])),
+              "pending at the end of the month": dict(marker_color=interactive.colour("tab:pink"))}
+    for (label, values), style in zip(rows.items(), styles.values()):
+        fig.add_bar(x=months, y=values, name=label, **style,
+                    hovertemplate=f"{label}<br>%{{x}}: %{{y:,.0f}} bikes<extra></extra>")
+    fig.update_layout(**interactive.LAYOUT, barmode="group", height=interactive.MONTH_HEIGHT,
+                      title=dict(text="Seville (local warehouse 4): orders, deliveries and pending orders (bikes)",
+                                 font_size=14),
+                      yaxis=dict(title="bikes", range=[0, 1.15 * max(max(v) for v in rows.values())]))
+    interactive._legend_below(fig)
+    return fig
+
+
+def _seville_rows(solution: dict) -> dict:
+    months = solution["months"]
+    return {"orders": [SHARE[SEVILLE] * DEMAND[t] for t in months],
+            "delivered": [solution["deliveries"][SEVILLE, t] for t in months],
+            "pending at the end of the month": [solution["backorders"][SEVILLE, t] for t in months]}
+
+
+def _solved(data: dict, heading: str) -> dict | None:
+    """Solve M3 with the data given and print its cost and whether other plans have
+    the same cost, or that there is no plan."""
     solution = solve(**data)
     if solution is None:
         _say(f"{heading}: the model has no solution: no plan delivers every order by the end of June within "
@@ -418,16 +456,25 @@ def _report(data: dict, heading: str, prices: bool = True, routes: bool = False,
     _say(f"{heading}: optimal plan, cost {_number(solution['cost'], 2)} €.")
     if not only_plan(**data):
         _say(SEVERAL)
+    return solution
+
+
+def _report(data: dict, heading: str, prices: bool = True, arc_flow: bool = False,
+            show_tables: bool = False) -> dict | None:
+    """Solve M3 with the data given and show its cost and whether other plans have
+    the same cost; then the plan in figures or, with ``show_tables``, in tables:
+    the flows on the network, one month at a time; with ``arc_flow``, the flow on
+    one arc in each month; the assembly, the stock and, with ``prices``, the shadow
+    prices of the full capacities."""
+    solution = _solved(data, heading)
+    if solution is None:
+        return None
     if show_tables:
-        if routes:
-            _display(_route_table(solution))
         _tables(solution)
         if prices:
             _prices(solution)
         return solution
     node_capacity = data.get("node_capacity", K_n)
-    if routes:
-        interactive.show(_route_figure(solution, node_capacity))
     interactive.show(_flow_network(solution, node_capacity))
     if arc_flow:
         interactive.show(arc_flow_selector(solution))
@@ -489,10 +536,24 @@ def network_plan(show_tables: bool = False) -> dict | None:
 
 
 def node_capacity_test(node_capacity: float = 280, show_tables: bool = False) -> dict | None:
-    """The plan with forecast 4 and the node capacity of regional warehouse 2 changed."""
+    """The plan with forecast 4 and the node capacity of regional warehouse 2 changed:
+    the flows on the routes to regional warehouse 2, with its stock, and to
+    Valencia; and the orders, deliveries and pending orders of Seville."""
     _say(f"Node capacity of regional warehouse 2: {_number(node_capacity)} bikes/month.")
-    return _report({"node_capacity": {"Regional warehouse 2": node_capacity}}, FORECAST, prices=False,
-                   routes=True, show_tables=show_tables)
+    limit = {"Regional warehouse 2": node_capacity}
+    solution = _solved({"node_capacity": limit}, FORECAST)
+    if solution is None:
+        return None
+    if show_tables:
+        _display(_route_table(solution))
+        _display(pd.DataFrame({t: {"Regional warehouse 2": solution["stock"]["Regional warehouse 2", t]}
+                               for t in solution["months"]}).rename_axis("Stock at the end of the month (bikes)"))
+        _display(pd.DataFrame(_seville_rows(solution), index=solution["months"]).T
+                 .rename(index=str.capitalize).rename_axis("Seville, local warehouse 4 (bikes)"))
+        return solution
+    interactive.show(_route_figure(solution, limit))
+    interactive.show(_seville_figure(solution))
+    return solution
 
 
 # ---------------------------------------------------------------------------

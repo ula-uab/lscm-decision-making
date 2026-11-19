@@ -81,15 +81,51 @@ def test_table9_shadow_prices_of_the_full_capacities():
     assert all(solution["arc price"][a, t] == 0 for a in range(13) if a not in (3, 6) for t in T)
 
 
-@pytest.mark.parametrize("capacity, cost", [(300, 1111994.39), (280, 1112018.47), (250, 1112101.67)])
-def test_node_capacity(capacity, cost):
+@pytest.mark.parametrize("capacity, cost, stock_april, delivered_may, pending_may", [
+    (300, 1111994.39, 0, 294, 0),
+    (280, 1112018.47, 14, 294, 0),
+    (250, 1112101.67, 44, 294, 0),
+    (240, 1112668.47, 40, 280, 14),
+    (230, 1113471.27, 30, 260, 34),
+    (223, 1114045.43, 23, 246, 48)])
+def test_node_capacity(capacity, cost, stock_april, delivered_may, pending_may):
+    # §6.4: the stock of regional warehouse 2 at the end of April, and the bikes
+    # delivered to Seville in May and its orders pending at the end of May
     solution = dn.solve(node_capacity={"Regional warehouse 2": capacity})
     assert solution["cost"] == pytest.approx(cost)
+    assert solution["stock"]["Regional warehouse 2", "Apr"] == pytest.approx(stock_april)
+    assert solution["deliveries"]["Local warehouse 4", "May"] == pytest.approx(delivered_may)
+    assert solution["backorders"]["Local warehouse 4", "May"] == pytest.approx(pending_may)
+
+
+def test_node_capacity_ranges():
+    # §6.4: never full from 294 up; full in May from 293; orders of Seville pending
+    # from 246 down
+    def solved(capacity):
+        return dn.solve(node_capacity={"Regional warehouse 2": capacity})
+    assert solved(294)["cost"] == pytest.approx(solved(10**5)["cost"])
+    assert solved(293)["cost"] > solved(294)["cost"] + 1
+    assert solved(247)["backorders"]["Local warehouse 4", "May"] == pytest.approx(0)
+    assert solved(246)["backorders"]["Local warehouse 4", "May"] > 0
 
 
 def test_node_capacity_below_which_there_is_no_solution():
     assert dn.solve(node_capacity={"Regional warehouse 2": 222}) is None
+    assert dn.solve(node_capacity={"Regional warehouse 2": 220}) is None
     assert dn.solve(node_capacity={"Regional warehouse 2": 223}) is not None
+
+
+def test_node_capacity_figures():
+    # The routes to regional warehouse 2 with its stock, and to Valencia without it;
+    # then Seville: orders, deliveries and pending orders
+    solution = dn.solve(node_capacity={"Regional warehouse 2": 240})
+    routes = dn._route_figure(solution, {"Regional warehouse 2": 240})
+    getafe, valencia = (b.args[0]["visible"] for b in routes.layout.updatemenus[0].buttons)
+    stock = [k for k, t in enumerate(routes.data) if t.name and t.name.startswith("stock of regional warehouse 2")]
+    assert len(stock) == 1 and getafe[stock[0]] and not valencia[stock[0]]
+    seville = dn._seville_figure(solution)
+    assert [t.name for t in seville.data] == ["orders", "delivered", "pending at the end of the month"]
+    assert list(seville.data[2].y) == pytest.approx([0, 0, 0, 0, 14, 0])
 
 
 def test_plans_without_a_constraint():
