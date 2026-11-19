@@ -381,16 +381,41 @@ def _route(g: dict, a: int) -> tuple:
     return pts, way, _edge(d, way, across) + 1
 
 
+def _node_arrow(g: dict, arrow: dict) -> tuple[list, list]:
+    """An arrow at a node that is not an arc: the shape of its line, and the
+    annotations of its head and of its text. ``arrow`` gives the node; "tail" and
+    "head" (px from the centre of the node, y down); "dash" (a Plotly dash, or None
+    for a solid line); "colour"; and "text",
+    written at "at" (px, y down) with "align" ("left" or "right")."""
+    cx, cy, _, _ = _box(g["nodes"][arrow["node"]])
+    (x0, y0), (x1, y1) = arrow["tail"], arrow["head"]
+    line = dict(type="line", xsizemode="pixel", ysizemode="pixel", xanchor=cx, yanchor=cy, x0=x0, y0=-y0, x1=x1,
+                y1=-y1, layer="above", line=dict(color=arrow["colour"], width=1.6,
+                                                  dash=arrow["dash"] or "solid"))
+    # only the head, its tail 8 px back along the arrow
+    length = math.hypot(x1 - x0, y1 - y0)
+    head = dict(x=cx, y=cy, xshift=x1, yshift=-y1, ax=-8 * (x1 - x0) / length, ay=-8 * (y1 - y0) / length,
+                xref="x", yref="y", text="", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.6,
+                arrowcolor=arrow["colour"], standoff=0)
+    (tx, ty), align = arrow["at"], arrow["align"]
+    text = dict(x=cx, y=cy, xshift=tx, yshift=-ty, xanchor=align, yanchor="middle", text=arrow["text"],
+                showarrow=False, font=dict(size=11, color=arrow["colour"]))
+    return [line], [head, text]
+
+
 def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict | None = None,
-            height: int = 460) -> go.Figure:
+            height: int = 460, xmax: float = 1330, extra_keys: list | None = None) -> go.Figure:
     """The network by stages, as figure CS-F1 of the statement, with the name of each
     node beside it. It takes the width of the cell: the distances between the nodes
     stretch with it, and the nodes and their names keep their size in px. ``options`` gives, by label of the dropdown (one option: no
     dropdown), a dict with "title"; "arc_text" (arc: text written on it);
     "arc_hover" and "node_hover" (the label of each arc and node); and, optionally,
-    "full" and "idle" (arcs drawn red and light grey, with no text) and "fill"
-    (node: colour). ``legend`` adds, under the figure, a filled square for each
-    label: colour."""
+    "full" and "idle" (arcs drawn red and light grey, with no text), "fill"
+    (node: colour) and "arrows" (arrows at the nodes that are not arcs, as in
+    ``_node_arrow``). ``legend`` adds, under the figure, a filled square for each
+    label: colour; ``extra_keys``, a line for each (label, Plotly line). ``xmax`` is the
+    right end of the axis: a larger one leaves room on the right of the last
+    stage."""
     g = _geometry(nodes, len(arc_list))
     labels = list(options)
     first = labels.index(first) if first is not None else 0
@@ -452,7 +477,13 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
         dots = [dict(type="circle", x0=-3, y0=-3, x1=3, y1=3, xsizemode="pixel", ysizemode="pixel", xanchor=x,
                      yanchor=y, fillcolor=INK, line_width=0)
                 for x, y in g["dots"] if sum(figures._on((x, y), p) for p in drawn) > 1]
-        layouts.append({"annotations": names + notes, "shapes": _node_shapes(g, nodes, option.get("fill", {})) + dots,
+        lines = []
+        for arrow in option.get("arrows", ()):
+            line, marks = _node_arrow(g, arrow)
+            lines += line
+            notes += marks
+        layouts.append({"annotations": names + notes,
+                        "shapes": _node_shapes(g, nodes, option.get("fill", {})) + dots + lines,
                         "title.text": option["title"]})
     # The legend: the arcs and, with ``legend``, the colours of the nodes; always shown
     keys = [("road", dict(color=INK, width=1.4)), ("rail", dict(color=INK, width=1.4, dash="dash")),
@@ -462,6 +493,9 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
     for name, line in keys:
         fig.add_scatter(x=[None], y=[None], mode="lines", line=line, name=name)
         owner.append(None)
+    for name, line in extra_keys or ():
+        fig.add_scatter(x=[None], y=[None], mode="lines", line=line, name=name)
+        owner.append(None)
     for name, c in (legend or {}).items():
         fig.add_scatter(x=[None], y=[None], mode="markers", name=name,
                         marker=dict(symbol="square", size=12, color=c, line=dict(color=INK, width=1)))
@@ -469,7 +503,7 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
     fig.update_layout(**LAYOUT, height=height, dragmode="pan", hovermode="closest",
                       annotations=layouts[first]["annotations"], shapes=layouts[first]["shapes"],
                       title=dict(text=layouts[first]["title.text"], font_size=14),
-                      xaxis=dict(visible=False, range=[190, 1330]),
+                      xaxis=dict(visible=False, range=[190, xmax]),
                       yaxis=dict(visible=False, range=[600, 0]))
     fig.update_layout(margin=dict(t=56, l=4, r=4, b=4))
     fig.update_layout(legend=dict(orientation="h", yanchor="top", y=0, x=0, font_size=11))

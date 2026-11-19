@@ -579,6 +579,23 @@ def net_supply(solution: dict, month: str) -> dict:
     return q
 
 
+MOVES = ("assembled", "delivered", "stock used", "stock built up")
+
+
+def node_moves(solution: dict, month: str) -> dict:
+    """What gives each node its net supply in a month of a plan of M3 (bikes): what
+    it assembles, what it delivers, and the stock it uses (its stock goes down) or
+    builds up (its stock goes up). The net supply is assembled - delivered + stock
+    used - stock built up."""
+    k = T.index(month)
+    out = {}
+    for i in NODES:
+        change = solution["stock"][i, month] - (h_node_0[i] if k == 0 else solution["stock"][i, T[k - 1]])
+        out[i] = dict(zip(MOVES, (solution["assembly"].get((i, month), 0), solution["deliveries"].get((i, month), 0),
+                                  -change if change < -TOL else 0.0, change if change > TOL else 0.0)))
+    return out
+
+
 def node_kind(q: float) -> str:
     """The kind of a node in the minimum cost flow problem of a month, from its net supply."""
     return SUPPLY_NODE if q > TOL else (DEMAND_NODE if q < -TOL else TRANSHIPMENT_NODE)
@@ -612,18 +629,71 @@ def min_cost_flow(supply: dict, arc_list: list = ARCS, node_capacity: dict = K_n
 
 def month_problem(month: str, solution: dict | None = None) -> dict:
     """The minimum cost flow problem of one month taken from the optimal plan of M3:
-    the net supply and the kind of each node, and its solution, with the transport
-    cost and the flows of M3 in that month to compare."""
+    the net supply and the kind of each node, what gives each node its net supply,
+    and its solution, with the transport cost and the flows of M3 in that month to
+    compare."""
     solution = solution or solve()
     q = net_supply(solution, month)
     flows = min_cost_flow(q)
     return {"month": month, "supply": q, "kind": {i: node_kind(v) for i, v in q.items()},
+            "moves": node_moves(solution, month),
             "cost": flows["cost"], "flow": flows["flow"], "m3 cost": transport_cost(solution, month),
             "m3 flow": {a: solution["flow"][a, month] for a in range(len(ARCS))}}
 
 
 # The colour of each kind of node, as in figure F32a of the presentation of T3
 KIND_FILL = {SUPPLY_NODE: "#C6DDDF", TRANSHIPMENT_NODE: figures.FILL, DEMAND_NODE: "#8FB9C0"}
+
+# The arrows at the nodes that are not arcs, in orange as in figure F34 of the
+# presentation of T3: solid what a node assembles or delivers, dashed the stock it
+# uses or builds up, as in figure F31
+MOVE_COLOUR = interactive.colour("tab:orange")
+# a short dash, so that an arrow of 20 px still reads as dashed
+MOVE_DASH = "3px,2px"
+_SOLID, _DASHED = dict(color=MOVE_COLOUR, width=1.6), dict(color=MOVE_COLOUR, width=1.6, dash=MOVE_DASH)
+MOVE_KEYS = [("assembled (into the node)", _SOLID), ("delivered (out of the node)", _SOLID),
+             ("stock used (into the node)", _DASHED), ("stock built up (out of the node)", _DASHED)]
+MOVE_SPACE = 1420  # right end of the axis: room for the arrows on the right of the local warehouses
+
+# Where the arrows of each node go, on a side that the network leaves free, the same
+# in every month: for each one, its outer end and the point where it touches the
+# node (px from the centre of the node, y down), and where its text goes
+_TOP = {"assembled": ((-12, -36), (-12, -19), (-16, -30), "right"),
+        "stock": ((12, -36), (12, -19), (16, -30), "left")}
+_RIGHT = {"delivered": ((42, -2), (11, -2), (46, -2), "left"),
+          "stock": ((42, 14), (20, 14), (46, 14), "left")}
+_LEFT = {"stock": ((-34, -13), (-4, -13), (-38, -13), "right")}
+_BELOW = {"stock": ((-12, 42), (-12, 19), (-16, 36), "right")}
+MOVE_PLACES = {**{f: _TOP for f in F}, CENTRAL: _BELOW, **{i: _LEFT for i in REGIONAL}, **{i: _RIGHT for i in LOCAL}}
+
+
+def move_arrows(moves: dict) -> list:
+    """The arrows of the nodes in one month: into a node, what it assembles and the
+    stock it uses; out of it, what it delivers and the stock it builds up. An arrow
+    whose bikes are 0 is not drawn."""
+    arrows = []
+    for i, m in moves.items():
+        for move, into in (("assembled", True), ("delivered", False), ("stock used", True), ("stock built up", False)):
+            if m[move] <= TOL:
+                continue
+            outer, inner, at, align = MOVE_PLACES[i]["stock" if move.startswith("stock") else move]
+            tail, head = (outer, inner) if into else (inner, outer)
+            arrows.append(dict(node=i, tail=tail, head=head, dash=MOVE_DASH if move.startswith("stock") else None,
+                               colour=MOVE_COLOUR,
+                               text=_number(m[move]), at=at, align=align))
+    return arrows
+
+
+def _supply_label(i: str, p: dict, t: str) -> str:
+    """The label of a node in the network of a month: its kind and how its net supply
+    is made."""
+    m, q = p["moves"][i], p["supply"][i]
+    before = p["stock before"][i]
+    return (f"{_node_name(i)}<br>{p['kind'][i]}<br>assembled {_number(m['assembled'])}; delivered "
+            f"{_number(m['delivered'])}; stock used {_number(m['stock used'])}; stock built up "
+            f"{_number(m['stock built up'])}<br>net supply q in {t} = stock at the start {_number(before)} + assembled "
+            f"{_number(m['assembled'])} − delivered {_number(m['delivered'])} − stock at the end "
+            f"{_number(before + m['stock built up'] - m['stock used'])} = {_number(q)} bikes")
 
 
 def month_flows(show_tables: bool = False) -> dict:
@@ -634,7 +704,11 @@ def month_flows(show_tables: bool = False) -> dict:
     of each month."""
     solution = solve()
     problems = {t: month_problem(t, solution) for t in T}
+    for k, (t, p) in enumerate(problems.items()):
+        p["stock before"] = {i: h_node_0[i] if k == 0 else solution["stock"][i, T[k - 1]] for i in NODES}
     if show_tables:
+        _display(pd.DataFrame({t: {(i, move.capitalize()): p["moves"][i][move] for i in NODES for move in MOVES}
+                               for t, p in problems.items()}).rename_axis(["Node", "Bikes"]))
         _display(pd.DataFrame({t: {i: p["supply"][i] for i in NODES} for t, p in problems.items()})
                  .rename_axis("Net supply q (bikes)"))
         _display(pd.DataFrame({t: {i: p["kind"][i] for i in NODES} for t, p in problems.items()})
@@ -653,9 +727,9 @@ def month_flows(show_tables: bool = False) -> dict:
                 arc_hover={a: f"{_arc_label(a, arc)}<br>flow in {t}: {_number(flow[a])} bikes<br>arc capacity "
                               f"{_number(arc['capacity'])} bikes/month" + (", full" if a in full else "")
                            for a, arc in enumerate(ARCS)},
-                node_hover={i: f"{_node_name(i)}<br>{p['kind'][i]}<br>net supply q in {t}: {_number(p['supply'][i])} "
-                               "bikes" for i in NODES})
-        interactive.show(interactive.network(NODES, ARCS, options, first="May", legend=KIND_FILL))
+                node_hover={i: _supply_label(i, p, t) for i in NODES}, arrows=move_arrows(p["moves"]))
+        interactive.show(interactive.network(NODES, ARCS, options, first="May", legend=KIND_FILL, xmax=MOVE_SPACE,
+                                             extra_keys=MOVE_KEYS))
     _display(pd.DataFrame({t: {"Minimum cost flow problem (€)": _number(p["cost"], 2),
                                "Plan of M3 (€)": _number(p["m3 cost"], 2),
                                "Same flow on every arc": "yes" if all(abs(p["flow"][a] - p["m3 flow"][a]) < 1e-6

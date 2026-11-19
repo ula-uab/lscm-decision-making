@@ -177,6 +177,36 @@ def test_net_supply_in_january_and_may():
     assert may["supply"]["Regional warehouse 2"] == pytest.approx(14)
 
 
+@pytest.mark.parametrize("month, node, moves, supply", [
+    ("Jan", "Central warehouse", {"stock built up": 150}, -150),
+    ("Feb", "Central warehouse", {}, 0),
+    ("Mar", "Central warehouse", {}, 0),
+    ("Apr", "Central warehouse", {"stock used": 14}, 14),
+    ("Apr", "Regional warehouse 1", {"stock used": 60}, 60),
+    ("Apr", "Regional warehouse 2", {"stock used": 46}, 46),
+    ("Apr", "Local warehouse 1", {"delivered": 120, "stock used": 20}, -100),
+    ("May", "Plant 1", {"assembled": 250, "stock used": 40}, 290),
+    ("May", "Regional warehouse 2", {"stock used": 14}, 14)])
+def test_arrows_of_the_nodes(month, node, moves, supply):
+    # The arrows of a node in the network of section 5 of the notebook: only those
+    # whose bikes are not 0, with their bikes
+    p = dn.month_problem(month)
+    assert {m: v for m, v in p["moves"][node].items() if v} == pytest.approx(moves)
+    assert p["supply"][node] == pytest.approx(supply)
+    drawn = [a for a in dn.move_arrows(p["moves"]) if a["node"] == node]
+    assert sorted(a["text"] for a in drawn) == sorted(dn._number(v) for v in moves.values())
+
+
+def test_moves_give_the_net_supply():
+    # In every node and month: assembled - delivered + stock used - stock built up
+    for t in T:
+        p = dn.month_problem(t)
+        for i in NODES:
+            m = p["moves"][i]
+            assert m["assembled"] - m["delivered"] + m["stock used"] - m["stock built up"] == \
+                pytest.approx(p["supply"][i])
+
+
 def test_arc_flow_figure():
     # The flow on an arc in each month, red where its arc capacity is full: the
     # rail arc (arc 6) never; arc 7, from the rail terminal, from February to June
