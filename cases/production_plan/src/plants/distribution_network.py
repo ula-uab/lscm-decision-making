@@ -283,8 +283,10 @@ def _prices(solution: dict) -> None:
     for i in sorted({i for i, _ in solution["node price"]}, key=NODES.index):
         if any(solution["node price"][i, t] for t in months):
             rows[f"Node capacity, {i}"] = {t: solution["node price"][i, t] for t in months}
+    # A storage capacity that is full in some month, also with a shadow price of 0
     for i in NODES:
-        if i != RAIL_TERMINAL and any(solution["storage price"][i, t] for t in months):
+        if i != RAIL_TERMINAL and any(solution["storage price"][i, t] or abs(solution["stock"][i, t] - K_h_node[i]) < TOL
+                                      for t in months):
             rows[f"Storage capacity, {i}"] = {t: solution["storage price"][i, t] for t in months}
     if rows:
         _say(PRICES)

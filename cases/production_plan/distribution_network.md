@@ -244,10 +244,13 @@ Table 9. Shadow prices of the full capacities (€/bike)
 | Storage capacity, Local warehouse 1 | 0 | 0 | −3 | 0 | 0 | 0 |
 | Storage capacity, Local warehouse 2 | 0 | 0 | −2 | 0 | 0 | 0 |
 | Storage capacity, Local warehouse 3 | 0 | 0 | −1 | 0 | 0 | 0 |
+| Storage capacity, Local warehouse 4 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 One more bike of arc capacity on arc 7 in February, March, April or June saves 0,72 €. That bike goes to Valencia by rail and regional warehouse 2, at 2,30 + 3,60 = 5,90 €/bike from the central warehouse, instead of through regional warehouse 1, at 3,11 + 3,51 = 6,62 €/bike.
 
-The storage capacities are full at the end of March, when the seasonal stock is largest. In March the last bike of seasonal stock is held at local warehouse 4, where holding costs 14 €/(bike·month). One more bike of storage capacity at another node in March lets that bike be held there instead: it saves 14 € less the holding cost of that node, from 9 € at plant 1 to 1 € at local warehouse 3.
+In May the node capacity of regional warehouse 2 is full, and the last bikes that reach it go by road from the central warehouse, arc 8. One more bike of arc capacity on arc 7 in May saves 3,30 − 2,30 = 1,00 €: that bike goes by rail instead of by road from the central warehouse. One more bike on arc 4 saves 3,23 + 3,30 − 4,27 = 2,26 €: it goes from plant 3 directly to regional warehouse 2 instead of through the central warehouse and arc 8.
+
+The storage capacities are full at the end of March, when the seasonal stock is largest. In March the last bike of seasonal stock is held at local warehouse 4, where holding costs 14 €/(bike·month). One more bike of storage capacity at another node in March lets that bike be held there instead: it saves 14 € less the holding cost of that node, from 9 € at plant 1 to 1 € at local warehouse 3, and nothing at local warehouse 4 itself.
 
 ### 6.4 Results of the notebook tests
 

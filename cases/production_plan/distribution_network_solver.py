@@ -328,8 +328,9 @@ if __name__ == "__main__":
             by_month(f"Arc capacity, {a + 1}. {arc[0]} -> {arc[1]}", [prices["arc"][a, t] for t in T])
     for i in K_n:
         by_month(f"Node capacity, {i}", [prices["node"][i, t] for t in T])
+    # A storage capacity that is full in some month, also with a shadow price of 0
     for i in NODES:
-        if i != TERMINAL and any(prices["storage"][i, t] for t in T):
+        if i != TERMINAL and any(prices["storage"][i, t] or abs(v["h"][i, t] - K_h[i]) < 1e-6 for t in T):
             by_month(f"Storage capacity, {i}", [prices["storage"][i, t] for t in T])
 
     # §7 The analysis of the plan of M3
