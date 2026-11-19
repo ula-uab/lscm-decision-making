@@ -187,9 +187,9 @@ def test_arc_flow_figure():
     solution = dn.solve()
     rail = dn.arc_flow_figure(solution, dn.RAIL_ARC).data[0]
     assert list(rail.y) == pytest.approx([156, 200, 200, 200, 200, 200])
-    assert dn.FULL_BAR not in rail.marker.color
+    assert dn.interactive.FULL not in rail.marker.color
     terminal = dn.arc_flow_figure(solution, dn.RAIL_ARC + 1).data[0]
-    assert [colour == dn.FULL_BAR for colour in terminal.marker.color] == [False] + [True] * 5
+    assert [colour == dn.interactive.FULL for colour in terminal.marker.color] == [False] + [True] * 5
 
 
 def test_arc_flow_dropdown():
@@ -204,6 +204,18 @@ def test_arc_flow_dropdown():
     assert visible["visible"] == [a == dn.RAIL_ARC + 1 for a in range(13)]
     assert layout["title.text"].startswith("Flow on arc 7 (Rail terminal → Regional warehouse 2")
     assert layout["shapes"][0].y0 == 200
+
+
+def test_interactive_figures():
+    # The network has one option per month, May first; in May the full capacities
+    # are arcs 4 and 7 and the node capacity of regional warehouse 2
+    solution = dn.solve()
+    menu = dn._flow_network(solution).layout.updatemenus[0]
+    assert [b.label for b in menu.buttons] == T and menu.active == T.index("May")
+    prices = dn._prices_figure(solution)
+    may = prices.layout.updatemenus[0].buttons[T.index("May")].args[1]
+    assert list(may["yaxis.ticktext"]) == ["Arc 4", "Arc 7", "Node capacity, Regional warehouse 2"]
+    assert [b.label for b in dn._assembly_figure(solution).layout.updatemenus[0].buttons] == [*F, "All plants"]
 
 
 def test_notebook_runs():

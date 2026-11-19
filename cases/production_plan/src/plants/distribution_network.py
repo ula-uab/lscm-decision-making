@@ -7,13 +7,14 @@ notebook distribution_network.ipynb shows.
 The notebook calls one function per step:
 
 1. ``show_data``: the nodes, the list of arcs and forecast 4;
-2. ``network_plan``: the plan with forecast 4, with the flows of one month;
+2. ``network_plan``: the plan with forecast 4, with the flows of each month;
 3. ``rail_capacity_test``, ``rail_rate_test`` and ``node_capacity_test``: the plan
    when one datum changes;
 4. ``month_flows``: an analysis of the plan, not a version of the model: the
-   minimum cost flow problem of one month.
+   minimum cost flow problem of each month.
 
-Each one shows figures or, with ``show_tables``, the same data in tables.
+Each one shows interactive figures, drawn with Plotly (``interactive``), or, with
+``show_tables``, the same data in tables.
 
 The arcs are dicts with origin, destination, mode, distance (km), capacity
 (bikes/month) and transport cost (EUR/bike), as in ``data.arcs``; an arc is
@@ -24,8 +25,6 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 import pulp
 
 from .central_warehouse import SEVERAL, only_optimal
@@ -34,7 +33,7 @@ from .data import (ARCS, CENTRAL, F, FORECAST_4, FORECAST_4_NAME, K, K_h_node, K
                    h_node_0, h_node_end)
 from .model import TOL, _constraints, _optimal
 from . import figures, interactive
-from .show import SHORT, _display, _european_axes, _light, _number
+from .show import COLOURS, _display, _number
 
 FORECAST = FORECAST_4_NAME               # M3 is solved with forecast 4
 DEMAND = FORECAST_4
@@ -186,17 +185,16 @@ def show_data(show_tables: bool = False) -> None:
           f"rail {_number(TRANSPORT_RATE['Rail'], 3)}.")
     orders = {i: [SHARE[i] * DEMAND[t] for t in T] for i in LOCAL}
     if not show_tables:
-        figures.places_map([(_kind(i), *PLACES[i]) for i in NODES], "Places of the nodes of the network of M3")
-        figures.network(NODES, range(len(ARCS)), {i: figures.data_text(i, stock=True) for i in NODES},
-                        {a: figures.arc_text(arc) for a, arc in enumerate(ARCS)},
-                        "Data of M3. Plants: unit assembly cost · capacity; holding cost · storage capacity; initial "
-                        "stock → required final stock.\nWarehouses: holding cost · storage capacity"
-                        + ("; each one starts and ends the six months with no stock" if figures.warehouses_empty(NODES)
-                           else "") + ". Arcs: transport cost (€/bike) · arc capacity (bikes/month).",
-                        text_colour=figures.INK, arc_list=ARCS)
-        figures.orders_figure({f"{i} ({PLACES[i][0]}), {_number(100 * SHARE[i])} %": orders[i] for i in LOCAL},
-                              f"{FORECAST}: orders of each local warehouse in each month, its share of the forecast",
-                              ylabel="Orders (bikes/month)", capacity=sum(K[f]["Jan"] for f in F))
+        interactive.show(interactive.places_map([(_kind(i), i, *PLACES[i]) for i in NODES],
+                                                "Places of the nodes of the network of M3"))
+        interactive.show(data_network())
+        capacity = sum(K[f]["Jan"] for f in F)
+        rows = {f"{i} ({PLACES[i][0]}), {_number(100 * SHARE[i])} %": orders[i] for i in LOCAL}
+        set2 = plt.get_cmap("Set2")
+        interactive.show(interactive.bars(
+            T, rows, {row: interactive.colour(set2(k)) for k, row in enumerate(rows)},
+            f"{FORECAST}: orders of each local warehouse (bikes/month)", ytitle="bikes/month",
+            line=capacity, line_label=f"assembly capacity of the three plants, {_number(capacity)}"))
         return
     _display(places_table(NODES, PLACES))
     _display(pd.DataFrame([{"Arc": a + 1, "Origin": arc["origin"], "Destination": arc["destination"],
@@ -211,6 +209,41 @@ def show_data(show_tables: bool = False) -> None:
     table = pd.DataFrame({**{i: dict(zip(T, orders[i])) for i in LOCAL}, FORECAST: DEMAND}).T
     table.insert(0, "Share", [f"{_number(100 * SHARE[i])} %" for i in LOCAL] + ["100 %"])
     _display(table.rename_axis("Orders (bikes/month)"))
+
+
+def _node_name(i: str) -> str:
+    return f"<b>{i}</b> ({PLACES[i][0]})"
+
+
+def _arc_label(a: int, arc: dict) -> str:
+    return f"<b>arc {a + 1}</b>: {arc_name(arc)} ({arc['mode'].lower()})"
+
+
+def data_network():
+    """The network with the data of M3: the data of each node and arc in its label,
+    and a dropdown of what is written on the arcs."""
+    nodes = {}
+    for i in NODES:
+        if i == RAIL_TERMINAL:
+            nodes[i] = f"{_node_name(i)}<br>holds no stock"
+            continue
+        lines = [f"unit assembly cost {_number(c[i])} €/bike", f"capacity {_number(K[i]['Jan'])} bikes/month"] \
+            if i in F else []
+        lines += [f"holding cost {_number(c_h_node[i])} €/(bike·month)", f"storage capacity {_number(K_h_node[i])} bikes",
+                  f"initial stock {_number(h_node_0[i])} bikes", f"required final stock {_number(h_node_end[i])} bikes"]
+        if i in K_n:
+            lines.append(f"node capacity {_number(K_n[i])} bikes/month")
+        nodes[i] = "<br>".join([_node_name(i), *lines])
+    arcs = {a: f"{_arc_label(a, arc)}<br>distance {_number(arc['km'], 1)} km<br>"
+               f"transport cost {_number(arc['cost'], 2)} €/bike<br>arc capacity {_number(arc['capacity'])} bikes/month"
+            for a, arc in enumerate(ARCS)}
+    text = {"Transport cost (€/bike)": lambda a, arc: _number(arc["cost"], 2),
+            "Arc capacity (bikes/month)": lambda a, arc: _number(arc["capacity"]),
+            "Arc number": lambda a, arc: str(a + 1)}
+    options = {label: dict(title=f"Data of M3. On each arc: {label[0].lower() + label[1:]}",
+                           arc_text={a: write(a, arc) for a, arc in enumerate(ARCS)}, arc_hover=arcs, node_hover=nodes)
+               for label, write in text.items()}
+    return interactive.network(NODES, ARCS, options)
 
 
 def _flow_table(solution: dict) -> pd.DataFrame:
@@ -266,31 +299,74 @@ def stage_stock(solution: dict) -> dict:
             for stage, nodes in stages.items()}
 
 
-def _network_text(solution: dict, month: str) -> dict:
-    """Under each node, its stock at the end of the month; at each local warehouse,
-    also its deliveries and its backorders."""
-    text = {i: f"stock {_number(solution['stock'][i, month])}" for i in NODES if i != RAIL_TERMINAL}
-    for i in LOCAL:
-        text[i] += (f" · deliveries {_number(solution['deliveries'][i, month])} · "
-                    f"backorders {_number(solution['backorders'][i, month])}")
-    return text
+def _node_month(solution: dict, i: str, t: str, node_capacity: dict = K_n) -> str:
+    """The label of a node in the network of one month: its stock at the end of the
+    month and, by kind of node, what it assembles, receives or delivers."""
+    if i == RAIL_TERMINAL:
+        return f"{_node_name(i)}<br>holds no stock"
+    lines = [_node_name(i)]
+    if i in F:
+        lines.append(f"assembled in {t}: {_number(solution['assembly'][i, t])} bikes")
+    if i in node_capacity:
+        lines.append(f"received in {t}: {_number(figures._arriving(solution, i, t))} bikes "
+                     f"(node capacity {_number(node_capacity[i])})")
+    if i in SHARE:
+        lines += [f"deliveries in {t}: {_number(solution['deliveries'][i, t])} bikes",
+                  f"backorders at the end of {t}: {_number(solution['backorders'][i, t])} bikes"]
+    lines.append(f"stock at the end of {t}: {_number(solution['stock'][i, t])} bikes")
+    return "<br>".join(lines)
 
 
-@_light
-def _stock_and_prices(solution: dict, month: str, node_capacity: dict, prices: bool = True) -> None:
-    """The stock at each stage of the network; with ``prices``, beside it, the shadow
-    prices of the capacities that are full in the month of the form."""
+def _flow_network(solution: dict, node_capacity: dict = K_n):
+    """The network with the flow on each arc, one month at a time, with a dropdown
+    of the months: an arc whose capacity is full in red, an arc with no flow in
+    light grey; the data of each node and arc in the month in its label."""
+    arc_list, options = solution["arcs"], {}
+    for t in solution["months"]:
+        full = figures.full_arcs(solution, t)
+        flow = {a: solution["flow"][a, t] for a in range(len(arc_list))}
+        options[t] = dict(
+            title=f"Plan of M3 in {t}: flow on each arc (bikes)", full=full,
+            idle=[a for a, v in flow.items() if v <= TOL], arc_text={a: _number(v) for a, v in flow.items()},
+            arc_hover={a: f"{_arc_label(a, arc)}<br>flow in {t}: {_number(flow[a])} bikes<br>arc capacity "
+                          f"{_number(arc['capacity'])} bikes/month" + (", full" if a in full else "")
+                       for a, arc in enumerate(arc_list)},
+            node_hover={i: _node_month(solution, i, t, node_capacity) for i in NODES})
+    return interactive.network(NODES, arc_list, options, first="May")
+
+
+def _assembly_figure(solution: dict, capacity: dict = K):
+    """The bikes that each plant assembles in each month against its capacity, with a
+    dropdown of the plants and of the three plants together."""
     months = solution["months"]
-    if prices:
-        fig, (left, right) = plt.subplots(1, 2, figsize=(15, 4.2), gridspec_kw={"width_ratios": [1, 1.25]})
-        figures.shadow_prices(right, figures.full_capacities(solution, month, NODES, K_h_node, node_capacity), month)
-    else:
-        fig, left = plt.subplots(figsize=(7.5, 4.2))
-    figures.stage_stock(left, stage_stock(solution), months)
-    left.set_title("Stock at each stage of the network", fontsize=10)
-    _european_axes(fig)
-    fig.tight_layout()
-    plt.show()
+    rows = {f: [solution["assembly"][f, t] for t in months] for f in F}
+    colours = {f: interactive.colour(COLOURS[f]) for f in F}
+    options = {f: interactive.bars(months, {f: rows[f]}, colours, f"Assembly of {f.lower()} in each month (bikes)",
+                                   line=[capacity[f][t] for t in months], line_label="capacity", inside=True)
+               for f in F}
+    options["All plants"] = interactive.bars(
+        months, rows, colours, "Assembly of the three plants in each month (bikes)",
+        line=[sum(capacity[f][t] for f in F) for t in months], line_label="capacity of the three plants")
+    return interactive.dropdown_figure(options)
+
+
+def _stock_figure(solution: dict):
+    """The stock at each stage of the network at the end of each month, stacked."""
+    return interactive.bars(solution["months"], stage_stock(solution),
+                            {s: interactive.colour(c) for s, c in figures.STAGE_COLOURS.items()},
+                            "Stock at each stage at the end of the month (bikes)")
+
+
+def _prices_figure(solution: dict, node_capacity: dict = K_n):
+    """The shadow prices of the capacities that are full in each month, with a
+    dropdown of the months."""
+    full = {t: figures.full_capacities(solution, t, NODES, K_h_node, node_capacity) for t in solution["months"]}
+    most = max(len(p) for p in full.values())
+    return interactive.dropdown_figure(
+        {t: interactive.horizontal_bars([name.split(" (")[0] for name, _ in p], [v for _, v in p],
+                                        [name for name, _ in p], f"Shadow prices of the full capacities in {t} (€/bike)",
+                                        "€/bike", unit="€/bike", empty=f"No capacity is full in {t}", rows=most)
+         for t, p in full.items()}, first="May")
 
 
 def _routes(solution: dict) -> list:
@@ -305,46 +381,34 @@ def _route_table(solution: dict) -> pd.DataFrame:
                          for t in months}).rename_axis("Routes to regional warehouse 2 and Valencia (bikes)")
 
 
-@_light
-def _route_figure(solution: dict) -> None:
-    """The flow on each route to regional warehouse 2 and to Valencia in each month,
-    in grouped bars, with the arc capacity of each route."""
+def _route_figure(solution: dict, node_capacity: dict = K_n):
+    """The flow on the routes to regional warehouse 2 and to Valencia in each month,
+    stacked by arc, with a dropdown of the two destinations; at regional warehouse
+    2, its node capacity."""
     arc_list, months = solution["arcs"], solution["months"]
-    routes = _routes(solution)
-    fig, ax = plt.subplots(figsize=(11, 4.8))
     # one colour for each route, none red: red marks a full arc capacity
-    colours = ["tab:blue", "tab:orange", "tab:green", "tab:brown", "tab:purple"]
-    width = 0.8 / len(routes)
-    top = max(max(solution["flow"][a, t] for a in routes for t in months), 1) * 1.2
-    for k, a in enumerate(routes):
-        x = [i + (k - (len(routes) - 1) / 2) * width for i in range(len(months))]
-        values = [solution["flow"][a, t] for t in months]
-        arc = arc_list[a]
-        ax.bar(x, values, width * 0.92, color=colours[k],
-               label=f"arc {a + 1}: {arc_name(arc)} (arc capacity {_number(arc['capacity'])})")
-        for xi, v in zip(x, values):
-            ax.text(xi, v + top * 0.01, _number(v), ha="center", va="bottom", fontsize=6.5)
-    ax.set_ylim(0, top)
-    ax.set_xticks(range(len(months)), months)
-    ax.set_ylabel("Flow (bikes/month)")
-    ax.set_title("Flow on the routes to regional warehouse 2 (Getafe) and to local warehouse 3 (Valencia)",
-                 fontsize=10)
-    ax.legend(fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
-    ax.spines[["top", "right"]].set_visible(False)
-    _european_axes(fig)
-    fig.tight_layout()
-    plt.show()
+    colours = iter(["tab:blue", "tab:orange", "tab:green", "tab:brown", "tab:purple"])
+    options = {}
+    for node, name in (("Regional warehouse 2", "regional warehouse 2 (Getafe)"),
+                       ("Local warehouse 3", "local warehouse 3 (Valencia)")):
+        rows = {f"arc {a + 1}: {arc_name(arc_list[a])}": [solution["flow"][a, t] for t in months]
+                for a in entering(node, arc_list)}
+        limit = node_capacity.get(node)
+        options[f"Routes to {name}"] = interactive.bars(
+            months, rows, {row: interactive.colour(next(colours)) for row in rows},
+            f"Flow on the routes to {name} (bikes)", line=limit,
+            line_label=f"node capacity {_number(limit)}" if limit else "")
+    return interactive.dropdown_figure(options)
 
 
-def _report(data: dict, heading: str, month: str = "May", prices: bool = True, routes: bool = False,
+def _report(data: dict, heading: str, prices: bool = True, routes: bool = False, arc_flow: bool = False,
             show_tables: bool = False) -> dict | None:
     """Solve M3 with the data given and show its cost and whether other plans have
     the same cost; then the plan in figures or, with ``show_tables``, in tables:
     with ``routes``, the flows on the routes to regional warehouse 2 and Valencia;
-    the flows of one month on the network, the assembly, the stock and, with
-    ``prices``, the shadow prices of the full capacities."""
-    if month not in T:
-        raise ValueError(f"The month must be one of {', '.join(T)}.")
+    the flows on the network, one month at a time; with ``arc_flow``, the flow on
+    one arc in each month; the assembly, the stock and, with ``prices``, the shadow
+    prices of the full capacities."""
     solution = solve(**data)
     if solution is None:
         print(f"{heading}: the model has no solution: no plan delivers every order by the end of June within "
@@ -360,19 +424,17 @@ def _report(data: dict, heading: str, month: str = "May", prices: bool = True, r
         if prices:
             _prices(solution)
         return solution
+    node_capacity = data.get("node_capacity", K_n)
     if routes:
-        _route_figure(solution)
-    figures.flow_network(solution, month, NODES, _network_text(solution, month),
-                         f"Plan of M3 in {month}. On each arc, its flow (bikes). Under each node, its stock at the end "
-                         f"of {month} (bikes);\nat each local warehouse, also its deliveries in {month} and its "
-                         f"backorders at the end of {month} (bikes).")
-    figures.assembly_figure(solution["assembly"], data.get("capacity", K), solution["months"], F,
-                            "Assembly of each plant in each month and its capacity")
-    _stock_and_prices(solution, month, data.get("node_capacity", K_n), prices)
+        interactive.show(_route_figure(solution, node_capacity))
+    interactive.show(_flow_network(solution, node_capacity))
+    if arc_flow:
+        interactive.show(arc_flow_selector(solution))
+    interactive.show(_assembly_figure(solution, data.get("capacity", K)))
+    interactive.show(_stock_figure(solution))
+    if prices:
+        interactive.show(_prices_figure(solution, node_capacity))
     return solution
-
-
-FULL_BAR = "#d62728"              # SHORT ("tab:red") for Plotly: a full arc capacity, as in the network
 
 
 def arc_flow_figure(solution: dict, a: int):
@@ -386,34 +448,32 @@ def arc_flow_figure(solution: dict, a: int):
     flows = [solution["flow"][a, t] for t in months]
     full = [v > TOL and abs(v - arc["capacity"]) < TOL for v in flows]
     fig = go.Figure(go.Bar(
-        x=months, y=flows, marker_color=[FULL_BAR if f else figures.INK for f in full],
+        x=months, y=flows, marker_color=[interactive.FULL if f else figures.INK for f in full],
         text=[_number(v) for v in flows], textposition="outside",
         customdata=["arc capacity full" if f else f"{_number(arc['capacity'] - v)} bikes available" for v, f in
                     zip(flows, full)],
         hovertemplate="%{x}: %{y:,.0f} bikes (%{customdata})<extra></extra>", showlegend=False))
     fig.add_hline(y=arc["capacity"], line_dash="dash", line_color="black", line_width=1,
                   annotation_text=f"arc capacity {_number(arc['capacity'])}", annotation_position="top left")
-    fig.update_layout(
-        title=dict(text=f"Flow on arc {a + 1} ({arc_name(arc)}, {arc['mode'].lower()}) in each month (bikes)",
-                   font_size=14),
-        template="plotly_white", separators=",.", height=360, width=720, margin=dict(t=60, b=40, l=60, r=20),
-        yaxis=dict(title="bikes", range=[0, 1.15 * max(arc["capacity"], max(flows))]))
+    fig.update_layout(**interactive.LAYOUT, height=interactive.MONTH_HEIGHT,
+                      title=dict(text=f"Flow on arc {a + 1} ({arc_name(arc)}, {arc['mode'].lower()}) in each month "
+                                      "(bikes)", font_size=14),
+                      yaxis=dict(title="bikes", range=[0, 1.15 * max(arc["capacity"], max(flows))]))
     return fig
 
 
 def arc_flow_selector(solution: dict, first: int = RAIL_ARC):
     """The figure of the flow on one arc in each month, with a dropdown of the
     arcs; the plan is not solved again when the arc changes."""
-    from .interactive import dropdown_figure
     label = lambda a, arc: f"{a + 1}. {arc_name(arc)}" + (" (rail)" if arc["mode"] == RAIL else "")  # noqa: E731
-    return dropdown_figure({label(a, arc): arc_flow_figure(solution, a) for a, arc in enumerate(solution["arcs"])},
-                           first=label(first, solution["arcs"][first]))
+    return interactive.dropdown_figure({label(a, arc): arc_flow_figure(solution, a)
+                                        for a, arc in enumerate(solution["arcs"])},
+                                       first=label(first, solution["arcs"][first]))
 
 
-def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
-    """The plan with forecast 4, with the flows of one month on the network; and,
-    first, whether M2 has a plan for forecast 4. Under the figures, the flow on
-    one arc in each month, with a dropdown of the arcs."""
+def network_plan(show_tables: bool = False) -> dict | None:
+    """The plan with forecast 4, with the flows on the network; and, first, whether
+    M2 has a plan for forecast 4."""
     if m2_has_no_solution():
         ordered = sum(DEMAND[t] for t in T[3:])
         assembled = sum(K[f][t] for f in F for t in T[3:])
@@ -424,33 +484,30 @@ def network_plan(month: str = "May", show_tables: bool = False) -> dict | None:
               f"of March {_number(ordered - assembled + ending)} bikes have to be in stock, and the plants and "
               f"the central warehouse can hold {_number(sum(K_h_node[f] for f in F) + K_h_node[CENTRAL])}.")
         print()
-    solution = _report({}, FORECAST, month, show_tables=show_tables)
-    if solution is not None and not show_tables:
-        interactive.show(arc_flow_selector(solution))
-    return solution
+    return _report({}, FORECAST, arc_flow=True, show_tables=show_tables)
 
 
-def rail_capacity_test(rail_capacity: float = 400, month: str = "May", show_tables: bool = False) -> dict | None:
+def rail_capacity_test(rail_capacity: float = 400, show_tables: bool = False) -> dict | None:
     """The plan with forecast 4 and the arc capacity of arc 6, the rail arc, changed."""
     arc_list = [dict(arc) for arc in ARCS]
     arc_list[RAIL_ARC]["capacity"] = rail_capacity
     print(f"Arc capacity of arc 6 (rail): {_number(rail_capacity)} bikes/month.")
-    return _report({"arc_list": arc_list}, FORECAST, month, prices=False, routes=True, show_tables=show_tables)
+    return _report({"arc_list": arc_list}, FORECAST, prices=False, routes=True, show_tables=show_tables)
 
 
-def rail_rate_test(rail_rate: float = 0.006, month: str = "May", show_tables: bool = False) -> dict | None:
+def rail_rate_test(rail_rate: float = 0.006, show_tables: bool = False) -> dict | None:
     """The plan with forecast 4 and the transport rate of rail changed: the transport
     cost of the rail arc is its distance times that rate."""
     arc_list = make_arcs({**TRANSPORT_RATE, RAIL: rail_rate})
     print(f"Transport rate of rail: {_number(rail_rate, 4)} €/(bike·km); transport cost of the rail arc: "
           f"{_number(arc_list[RAIL_ARC]['cost'], 2)} €/bike.")
-    return _report({"arc_list": arc_list}, FORECAST, month, prices=False, routes=True, show_tables=show_tables)
+    return _report({"arc_list": arc_list}, FORECAST, prices=False, routes=True, show_tables=show_tables)
 
 
-def node_capacity_test(node_capacity: float = 280, month: str = "May", show_tables: bool = False) -> dict | None:
+def node_capacity_test(node_capacity: float = 280, show_tables: bool = False) -> dict | None:
     """The plan with forecast 4 and the node capacity of regional warehouse 2 changed."""
     print(f"Node capacity of regional warehouse 2: {_number(node_capacity)} bikes/month.")
-    return _report({"node_capacity": {"Regional warehouse 2": node_capacity}}, FORECAST, month, prices=False,
+    return _report({"node_capacity": {"Regional warehouse 2": node_capacity}}, FORECAST, prices=False,
                    routes=True, show_tables=show_tables)
 
 
@@ -524,40 +581,39 @@ def month_problem(month: str, solution: dict | None = None) -> dict:
 KIND_FILL = {SUPPLY_NODE: "#C6DDDF", TRANSHIPMENT_NODE: figures.FILL, DEMAND_NODE: "#8FB9C0"}
 
 
-def _kind_handles() -> list:
-    return [Patch(facecolor=KIND_FILL[k], edgecolor=figures.INK, label=k) for k in KIND_FILL]
-
-
-def month_flows(month: str = "May", show_tables: bool = False) -> dict:
-    """The minimum cost flow problem of one month taken from the optimal plan of M3:
-    the network with the kind and the net supply of each node and the flow on each
-    arc; and its transport cost against that of M3 in the month. With
-    ``show_tables``, the same in two tables."""
-    if month not in T:
-        raise ValueError(f"The month must be one of {', '.join(T)}.")
-    problem = month_problem(month)
-    q, flow = problem["supply"], problem["flow"]
-    same = all(abs(flow[a] - problem["m3 flow"][a]) < 1e-6 for a in flow)
+def month_flows(show_tables: bool = False) -> dict:
+    """The minimum cost flow problem of each month taken from the optimal plan of
+    M3: the network with the kind and the net supply of each node and the flow on
+    each arc, with a dropdown of the months; and its transport cost against that of
+    M3 in each month. With ``show_tables``, the same in tables. Returns the problem
+    of each month."""
+    solution = solve()
+    problems = {t: month_problem(t, solution) for t in T}
     if show_tables:
-        _display(pd.DataFrame({i: {"Net supply q (bikes)": q[i], "Kind of node": problem["kind"][i]} for i in NODES})
-                 .T.rename_axis(f"Node, {month}"))
-        _display(pd.DataFrame({f"{a + 1}. {arc_name(arc)}": {"Minimum cost flow problem": flow[a],
-                                                             "Plan of M3": problem["m3 flow"][a]}
-                               for a, arc in enumerate(ARCS)}).T.rename_axis(f"Flow on each arc in {month} (bikes)"))
+        _display(pd.DataFrame({t: {i: p["supply"][i] for i in NODES} for t, p in problems.items()})
+                 .rename_axis("Net supply q (bikes)"))
+        _display(pd.DataFrame({t: {i: p["kind"][i] for i in NODES} for t, p in problems.items()})
+                 .rename_axis("Kind of node"))
+        _display(pd.DataFrame({t: {f"{a + 1}. {arc_name(arc)}": p["flow"][a] for a, arc in enumerate(ARCS)}
+                               for t, p in problems.items()}).rename_axis("Flow on each arc (bikes)"))
     else:
-        full = [a for a, arc in enumerate(ARCS) if flow[a] > TOL and abs(flow[a] - arc["capacity"]) < 1e-6]
-        handles = _kind_handles() + [Line2D([], [], color=figures.INK, lw=1.2, label="road"),
-                                     Line2D([], [], color=figures.INK, lw=1.2, ls=(0, (5, 3)), label="rail"),
-                                     Line2D([], [], color=SHORT, lw=1.6, label="arc capacity full"),
-                                     Line2D([], [], color=figures.IDLE, lw=1.2, label="no flow")]
-        figures.network(NODES, range(len(ARCS)), {i: f"q = {_number(q[i])}" for i in NODES if i != RAIL_TERMINAL},
-                        {a: _number(v) for a, v in flow.items()},
-                        f"Minimum cost flow problem of {month}, from the plan of M3. On each arc, its flow (bikes). "
-                        f"Under each node, its net supply q in {month} (bikes):\npositive at a supply node, negative "
-                        "at a demand node and 0 at a transhipment node; at the rail terminal, which holds no stock, "
-                        "it is always 0.",
-                        full=full, idle=[a for a, v in flow.items() if v <= TOL], text_colour=figures.INK,
-                        arc_list=ARCS, fill={i: KIND_FILL[k] for i, k in problem["kind"].items()}, handles=handles)
-    print(f"Transport cost in {month}: minimum cost flow problem {_number(problem['cost'], 2)} €; plan of M3 "
-          f"{_number(problem['m3 cost'], 2)} €. The flows are the same on every arc: {'yes' if same else 'no'}.")
-    return problem
+        options = {}
+        for t, p in problems.items():
+            flow = p["flow"]
+            full = [a for a, arc in enumerate(ARCS) if flow[a] > TOL and abs(flow[a] - arc["capacity"]) < 1e-6]
+            options[t] = dict(
+                title=f"Minimum cost flow problem of {t}: flow on each arc (bikes)", full=full,
+                idle=[a for a, v in flow.items() if v <= TOL], arc_text={a: _number(v) for a, v in flow.items()},
+                fill={i: KIND_FILL[k] for i, k in p["kind"].items()},
+                arc_hover={a: f"{_arc_label(a, arc)}<br>flow in {t}: {_number(flow[a])} bikes<br>arc capacity "
+                              f"{_number(arc['capacity'])} bikes/month" + (", full" if a in full else "")
+                           for a, arc in enumerate(ARCS)},
+                node_hover={i: f"{_node_name(i)}<br>{p['kind'][i]}<br>net supply q in {t}: {_number(p['supply'][i])} "
+                               "bikes" for i in NODES})
+        interactive.show(interactive.network(NODES, ARCS, options, first="May", legend=KIND_FILL))
+    _display(pd.DataFrame({t: {"Minimum cost flow problem (€)": _number(p["cost"], 2),
+                               "Plan of M3 (€)": _number(p["m3 cost"], 2),
+                               "Same flow on every arc": "yes" if all(abs(p["flow"][a] - p["m3 flow"][a]) < 1e-6
+                                                                     for a in p["flow"]) else "no"}
+                           for t, p in problems.items()}).rename_axis("Transport cost of the month"))
+    return problems
