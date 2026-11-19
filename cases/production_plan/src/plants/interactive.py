@@ -327,7 +327,7 @@ def _route(g: dict, a: int) -> tuple:
 
 
 def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict | None = None,
-            height: int = 500) -> go.Figure:
+            height: int = 460) -> go.Figure:
     """The network by stages, as figure CS-F1 of the statement, with the name of each
     node beside it. It takes the width of the cell: the distances between the nodes
     stretch with it, and the nodes and their names keep their size in px. ``options`` gives, by label of the dropdown (one option: no
@@ -415,7 +415,7 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
                       annotations=layouts[first]["annotations"], shapes=layouts[first]["shapes"],
                       title=dict(text=layouts[first]["title.text"], font_size=14),
                       xaxis=dict(visible=False, range=[190, 1330]),
-                      yaxis=dict(visible=False, range=[690, 0]))
+                      yaxis=dict(visible=False, range=[600, 0]))
     fig.update_layout(margin=dict(t=56, l=4, r=4, b=4))
     fig.update_layout(legend=dict(orientation="h", yanchor="top", y=0, x=0, font_size=11))
     if len(options) > 1:
