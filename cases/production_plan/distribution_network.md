@@ -165,8 +165,7 @@ with $h_{i0}$ and $b_{i0}$ given. The objective is the cost of the plan, in euro
 2. Costs are proportional to the quantities: there is no fixed cost of using a plant, an arc or a warehouse.
 3. A bike shipped in a month arrives in that month at the end of its arc, and can go along several arcs and be delivered in that same month.
 4. The transport cost of an arc is the same every month, whatever the flow on it.
-5. Each local warehouse receives the same share of the late demand peak every month.
-6. Customers wait for their backorders: no sale is lost.
+5. Customers wait for their backorders: no sale is lost.
 
 ## 6. Results under the late demand peak
 
