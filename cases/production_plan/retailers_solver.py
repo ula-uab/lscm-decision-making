@@ -4,8 +4,9 @@
 # retailers, their arcs, their orders, backorder shares and lost-sale cost
 # (Tables 1 to 3); that M3, with the orders at the local warehouses, has no
 # solution with the higher late demand peak; the plan of M4 with the higher late
-# demand peak (Tables 5 to 8); and the shadow prices of the capacities that are
-# full (Table 9).
+# demand peak (Tables 5 to 8); the shadow prices of the capacities that are
+# full (Table 9); and the change in each term of the cost with one more bike of
+# storage capacity at local warehouse 4 in March (Table 10).
 #
 # The model is written with the PuLP library and solved by the HiGHS solver.
 #
@@ -137,16 +138,19 @@ c_l = 700
 # §4 The model, written with PuLP and solved with HiGHS
 # ---------------------------------------------------------------------------
 
-def solve_model(nodes, arcs, share, retailers=True):
+def solve_model(nodes, arcs, share, retailers=True, extra_storage=None):
     """Solve the model on a network: nodes, arcs (origin, destination, mode, km,
     capacity, cost) and the share of the higher late demand peak of each demand node. With
     retailers=True (M4), the demand nodes are retailers: of the demand not
     delivered in its month, the backorder share is backordered and the rest is
     lost sales, and no order is pending at the end of June. With retailers=False
-    (M3), every order has to be delivered by the end of June. Returns (cost,
+    (M3), every order has to be delivered by the end of June. extra_storage adds
+    bikes to the storage capacity of a node in one month only, by (node, month).
+    Returns (cost,
     values of each kind of variable, shadow prices of the arc, node and storage
     capacities), or None if it has no solution."""
     model = pulp.LpProblem("retailers", pulp.LpMinimize)
+    extra_storage = extra_storage or {}
 
     def key(node):
         return node.replace(" ", "")
@@ -184,7 +188,7 @@ def solve_model(nodes, arcs, share, retailers=True):
             # month plus what the node assembles and what arrives
             model += (shipped + delivered <= before + assembled + arriving, f"shipment_limit_{key(i)}_{t}")
             # Storage capacity and node capacity
-            model += (h[i, t] <= K_h[i], f"storage_{key(i)}_{t}")
+            model += (h[i, t] <= K_h[i] + extra_storage.get((i, t), 0), f"storage_{key(i)}_{t}")
             if i in K_n:
                 model += (arriving <= K_n[i], f"node_capacity_{key(i)}_{t}")
         # Required final stock
@@ -237,6 +241,23 @@ def solve_model(nodes, arcs, share, retailers=True):
 # ---------------------------------------------------------------------------
 # Printing
 # ---------------------------------------------------------------------------
+
+def breakdown(v, new):
+    """The change in each term of the cost from the plan v to the plan new: one
+    row (term, where, month, change in bikes, unit cost, change in cost) per
+    variable that changes."""
+    unit = {"p": lambda k: c[k[0]], "h": lambda k: c_h[k[0]], "x": lambda k: ARCS_M4[k[0]][5],
+            "b": lambda k: c_b, "l": lambda k: c_l}
+    terms = {"p": "Assembly", "h": "Holding", "x": "Transport", "b": "Backorders", "l": "Lost sales"}
+    rows = []
+    for kind, term in terms.items():
+        for k, value in v[kind].items():
+            change = new[kind][k] - value
+            if abs(change) > 1e-6:
+                where = f"{k[0] + 1}. {ARCS_M4[k[0]][0]} -> {ARCS_M4[k[0]][1]}" if kind == "x" else k[0]
+                rows.append((term, where, k[1], change, unit[kind](k), change * unit[kind](k)))
+    return rows
+
 
 def eu(x, decimals=2):
     """A number in European format: point for thousands, comma for decimals."""
@@ -331,3 +352,16 @@ if __name__ == "__main__":
     for i in NODES:
         if i != TERMINAL and any(prices["storage"][i, t] for t in T):
             by_month(f"Storage capacity, {i}", [prices["storage"][i, t] for t in T])
+
+    # The plan with one more bike of storage capacity at local warehouse 4 in
+    # March, and what changes in each term of the cost
+    print()
+    print("Table 10. Change in each term of the cost with one more bike of storage capacity "
+          "at local warehouse 4 in March")
+    new_cost, new_v, _ = solve_model(NODES + RETAILERS, ARCS_M4, SHARE,
+                                     extra_storage={("Local warehouse 4", "Mar"): 1})
+    rows = breakdown(v, new_v)
+    for term, where, t, change, unit_cost, change_cost in rows:
+        print(f"{term:<12}{where:<52}{t:<5}{eu(change, 1):>6} x {eu(unit_cost):>7}{eu(change_cost, 3):>11}")
+    print(f"{'Total':<69}{eu(sum(row[5] for row in rows), 3):>21}")
+    print(f"Change in the cost of the plan: {eu(new_cost - cost, 3)} EUR")

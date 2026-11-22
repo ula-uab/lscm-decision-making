@@ -53,12 +53,14 @@ def build(order: dict | None = None, months=T, arc_list: list = ARCS_M4, backord
           lost_sale_cost: dict = c_l, holding: dict = c_h_node_m4, storage: dict = K_h_node_m4,
           node_capacity: dict = K_n, initial: dict = h_node_0_m4, final: dict | None = h_node_end_m4,
           backorder_cost: float = c_b, backorders_initial: float = b_0, capacity: dict = K, nodes=NODES_M4,
-          plants=F, retailers=RETAILERS):
+          plants=F, retailers=RETAILERS, extra_storage: dict | None = None):
     """The model of M4, not solved. ``order`` gives the orders of each retailer in
-    each month, by (r, t); by default, its share of forecast 5. Returns the model, a
-    dict of its variables by kind ("p" by (f, t); "x" by (a, t); "h" by (i, t);
-    "s", "b", "l" by (r, t)) and the cost expression."""
+    each month, by (r, t); by default, its share of forecast 5. ``extra_storage``
+    adds bikes to the storage capacity of a node in one month only, by (i, t).
+    Returns the model, a dict of its variables by kind ("p" by (f, t); "x" by
+    (a, t); "h" by (i, t); "s", "b", "l" by (r, t)) and the cost expression."""
     order = order or orders(months=months)
+    extra_storage = extra_storage or {}
     model = pulp.LpProblem("retailers", pulp.LpMinimize)
     # p = bikes assembled; x = bikes shipped on each arc; h = stock at the end of
     # the month; s = deliveries, b = backorders at the end of the month and
@@ -88,7 +90,7 @@ def build(order: dict | None = None, months=T, arc_list: list = ARCS_M4, backord
             # Shipment limit: what leaves is at most the stock of the previous month,
             # plus what the node assembles and what arrives that month
             model += (shipped + delivered <= before + assembled + arriving, f"shipment_limit_{_key(i)}_{t}")
-            model += (h[i, t] <= storage[i], f"storage_{_key(i)}_{t}")
+            model += (h[i, t] <= storage[i] + extra_storage.get((i, t), 0), f"storage_{_key(i)}_{t}")
             if i in node_capacity:
                 model += (arriving <= node_capacity[i], f"node_capacity_{_key(i)}_{t}")
         if final is not None:
@@ -149,6 +151,37 @@ def solve(**data) -> dict | None:
         "node price": {(i, t): clean(cons[f"node_capacity_{_key(i)}_{t}"].pi) for i in node_capacity for t in months},
         "storage price": {(i, t): clean(cons[f"storage_{_key(i)}_{t}"].pi) for i in nodes for t in months},
     }
+
+
+def storage_price_breakdown(node: str = "Local warehouse 4", month: str = "Mar", extra: float = 1,
+                            **data) -> list[dict]:
+    """The change in each term of the cost when the storage capacity of a node rises
+    by ``extra`` bikes in one month only (Table 10 of retailers.md): the plan with
+    that capacity less the plan with the data given (the other arguments of
+    ``build``). One row per variable that changes: its term of the cost, where and
+    when, its change (bikes), its unit cost and the change in cost (EUR). While the
+    same capacities are full, the rows add up to ``extra`` times the shadow price of
+    that storage capacity."""
+    base = solve(**data)
+    new = solve(**data, extra_storage={(node, month): extra})
+    arc_list = data.get("arc_list", ARCS_M4)
+    holding = data.get("holding", c_h_node_m4)
+    lost_sale_cost = data.get("lost_sale_cost", c_l)
+    unit = {"assembly": lambda key: c[key[0]], "stock": lambda key: holding[key[0]],
+            "flow": lambda key: arc_list[key[0]]["cost"], "backorders": lambda key: data.get("backorder_cost", c_b),
+            "lost sales": lambda key: lost_sale_cost[key[0]]}
+    terms = {"assembly": "Assembly", "stock": "Holding", "flow": "Transport", "backorders": "Backorders",
+             "lost sales": "Lost sales"}
+    rows = []
+    for kind, term in terms.items():
+        for key, value in base[kind].items():
+            change = new[kind][key] - value
+            if abs(change) > TOL:
+                where = (f"{key[0] + 1}. {arc_name(arc_list[key[0]])}" if kind == "flow"
+                         else _name(key[0]) if key[0] in RETAILERS else key[0])
+                rows.append({"term": term, "where": where, "month": key[1], "change": change,
+                             "unit cost": unit[kind](key), "cost": change * unit[kind](key)})
+    return rows
 
 
 def m3_has_no_solution(demand: dict = DEMAND) -> bool:

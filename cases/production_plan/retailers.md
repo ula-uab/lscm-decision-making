@@ -251,7 +251,38 @@ Table 9. Shadow prices of the full capacities (€/bike)
 | Storage capacity, Local warehouse 3 | 0 | 0 | −297,17 | 0 | 0 | 0 |
 | Storage capacity, Local warehouse 4 | 0 | 0 | −296,17 | 0 | 0 | 0 |
 
-Arcs 4 and 7 are full from February, with the shadow prices they have in M3. The storage capacities are full at the end of March. One more bike of storage capacity at local warehouse 4 in March lets plant 3 assemble one more bike in February and hold it as seasonal stock, and avoids one lost sale, half at Alicante in May and half at Granada in June: the cost falls by 296,17 €, the 700 € of the lost sale less what assembling, holding and transporting that bike costs. At a node with a lower holding cost the saving is larger, by the difference in holding cost: 305,17 € at plant 1.
+Arcs 4 and 7 are full from February, with the shadow prices they have in M3. The storage capacities are full at the end of March. One more bike of storage capacity at local warehouse 4 in March lets plant 3 assemble one more bike in February and hold it as seasonal stock, and avoids one lost sale, half at Alicante in May and half at Granada in June: the cost falls by 296,17 €, the 700 € of the lost sale and 30 € of backorders at Alicante less what assembling, holding and transporting cost. At a node with a lower holding cost the saving is larger, by the difference in holding cost: 305,17 € at plant 1.
+
+Table 10. Change in each term of the cost with one more bike of storage capacity at local warehouse 4 in March: the plan with that capacity, also the only optimal plan, less the plan of §6.1
+
+| Term of the cost | Plant, node, arc or retailer | Month | Change (bikes) × unit cost | Change in cost (€) |
+|---|---|---|---|---|
+| Assembly | Plant 3 | Feb | 1 × 390 | 390 |
+| Holding | Central warehouse | Apr | 1 × 8 | 8 |
+| | Regional warehouse 1 | Feb | 1 × 9 | 9 |
+| | Local warehouse 4 | Mar | 1 × 14 | 14 |
+| Transport | 3. Plant 3 → Central warehouse | Feb | 1 × 3,23 | 3,23 |
+| | 5. Central warehouse → Regional warehouse 1 | Feb | 1 × 3,11 | 3,11 |
+| | | Apr | −1 × 3,11 | −3,11 |
+| | | May | 1 × 3,11 | 3,11 |
+| | 11. Regional warehouse 1 → Local warehouse 3 | Mar | 1 × 3,51 | 3,51 |
+| | | Apr | −1 × 3,51 | −3,51 |
+| | | May | 1 × 3,51 | 3,51 |
+| | 12. Regional warehouse 2 → Local warehouse 3 | Mar | −1 × 3,60 | −3,60 |
+| | | Apr | 1 × 3,60 | 3,60 |
+| | | Jun | −0,5 × 3,60 | −1,80 |
+| | 13. Regional warehouse 2 → Local warehouse 4 | Mar | 1 × 5,26 | 5,26 |
+| | | Apr | −1 × 5,26 | −5,26 |
+| | | Jun | 0,5 × 5,26 | 2,63 |
+| | 18. Local warehouse 3 → Retailer 3 (Alicante) | May | 1 × 1,77 | 1,77 |
+| | | Jun | −0,5 × 1,77 | −0,885 |
+| | 24. Local warehouse 4 → Retailer 6 (Granada) | Jun | 0,5 × 2,54 | 1,27 |
+| Backorders | Retailer 3 (Alicante) | May | −0,5 × 60 | −30 |
+| Lost sales | Retailer 3 (Alicante) | May | −0,5 × 700 | −350 |
+| | Retailer 6 (Granada) | Jun | −0,5 × 700 | −350 |
+| Total | | | | −296,165 |
+
+Each row is a variable of the plan that changes, with its change times its unit cost in the objective; the rows add up to the shadow price of Table 9, −296,17 €/bike rounded to the cent. The shadow price is not 700 € less the cost of one route from plant 3 to a retailer: the plan exchanges bikes between routes and months, so that arcs 5, 11, 12 and 13 carry one bike more in one month and one less in another and three nodes hold one more bike for a month, and the bike that Alicante receives in May lowers its backorders as well as its lost sales.
 
 ### 6.4 Results of the notebook tests
 

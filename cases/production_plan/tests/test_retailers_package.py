@@ -92,6 +92,25 @@ def test_one_more_bike_of_storage_in_march_avoids_one_lost_sale():
     assert solution["assembly"]["Plant 3", "Feb"] == pytest.approx(111)
 
 
+def test_table10_breakdown_of_the_storage_price_of_local_warehouse_4_in_march():
+    rows = rt.storage_price_breakdown("Local warehouse 4", "Mar")
+    price = rt.solve()["storage price"]["Local warehouse 4", "Mar"]
+    # The rows add up to the shadow price of Table 9, -296,17 EUR/bike
+    assert sum(row["cost"] for row in rows) == pytest.approx(price, abs=1e-6)
+    assert sum(row["cost"] for row in rows) == pytest.approx(-296.17, abs=0.005)
+    assert all(row["cost"] == pytest.approx(row["change"] * row["unit cost"]) for row in rows)
+    # The plan with the extra capacity is the only optimal plan, so the rows are those of that plan
+    assert rt.only_plan(extra_storage={("Local warehouse 4", "Mar"): 1}) is True
+    by_term = {}
+    for row in rows:
+        by_term[row["term"]] = by_term.get(row["term"], 0) + row["cost"]
+    assert by_term == pytest.approx({"Assembly": 390, "Holding": 31, "Transport": 12.835, "Backorders": -30,
+                                     "Lost sales": -700})
+    lost_sales = {(row["where"], row["month"]): row["change"] for row in rows if row["term"] == "Lost sales"}
+    assert lost_sales == pytest.approx({("Retailer 3 (Alicante)", "May"): -0.5, ("Retailer 6 (Granada)", "Jun"): -0.5})
+    assert len(rows) == 23
+
+
 @pytest.mark.parametrize("retailer, month, cost, total, plant_3", [
     ("Retailer 2", "Jan", 1333627.24, 140, [60, 150, 150, 150, 150, 150]),
     ("Retailer 6", "Jan", 1334132.24, 140, [60, 150, 150, 150, 150, 150]),

@@ -36,7 +36,9 @@ def test_script_prints_the_tables():
                  "Cost: 1.294.204,84 EUR",
                  "Lost sales, all retailers: 140,00 of 3.550,00 orders",
                  row("Lost sales, Retailer 6 (Granada)", [0, 0, 0, 0, 54, 51]),
-                 row("Arc capacity, 22. Local warehouse 4 -> Retailer 5", [0, 0, 0, -2.11, -2.11, 0])):
+                 row("Arc capacity, 22. Local warehouse 4 -> Retailer 5", [0, 0, 0, -2.11, -2.11, 0]),
+                 "Lost sales  Retailer 6                                          Jun    -0,5 x  700,00   -350,000",
+                 "Change in the cost of the plan: -296,165 EUR"):
         assert text in out
 
 
@@ -51,3 +53,16 @@ def test_script_agrees_with_the_package():
         assert values[kind] == pytest.approx(package[key], abs=1e-6)
     assert prices["arc"] == pytest.approx(package["arc price"], abs=1e-6)
     assert [arc[5] for arc in script.ARCS_M4] == [arc["cost"] for arc in rt.ARCS_M4]
+
+
+def test_script_table10_agrees_with_the_package():
+    from plants import retailers as rt
+    script = load()
+    _, values, _ = script.solve_model(script.NODES + script.RETAILERS, script.ARCS_M4, script.SHARE)
+    _, new, _ = script.solve_model(script.NODES + script.RETAILERS, script.ARCS_M4, script.SHARE,
+                                   extra_storage={("Local warehouse 4", "Mar"): 1})
+    rows = script.breakdown(values, new)
+    package = rt.storage_price_breakdown("Local warehouse 4", "Mar")
+    assert [(r[0], r[2], r[3], r[5]) for r in rows] == pytest.approx(
+        [(r["term"], r["month"], r["change"], r["cost"]) for r in package])
+    assert sum(r[5] for r in rows) == pytest.approx(-296.165, abs=1e-6)
