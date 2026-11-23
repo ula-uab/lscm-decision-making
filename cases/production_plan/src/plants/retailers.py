@@ -7,11 +7,12 @@ and what the notebook retailers.ipynb shows.
 The notebook calls one function per step:
 
 1. ``show_data``: the retailers, their arcs, their orders and backorder shares;
-2. ``retailer_plan``: the plan with forecast 5, with the flows of one month;
+2. ``retailer_plan``: the plan with forecast 5, with the flows of each month;
 3. ``backorder_share_test``, ``lost_sale_cost_test``, ``promotion_test`` and
    ``transport_cost_test``: the plan when one datum changes.
 
-Each one shows figures or, with ``show_tables``, the same data in tables.
+Each one shows interactive figures, drawn with Plotly (``interactive``), or, with
+``show_tables``, the same data in tables.
 
 The model reuses the list of arcs and the functions ``entering`` and ``leaving``
 of M3, and the check of a single optimal plan of M2; M3 does not change.
@@ -27,18 +28,20 @@ from .central_warehouse import SEVERAL, only_optimal
 from .data import (ARCS_M4, BACKORDER_SHARE, CENTRAL, FORECAST_5, FORECAST_5_NAME, F, K, K_h_node, K_h_node_m4, K_n,
                    LOCAL, NODES, NODES_M4, PLACES_M4, RAIL_TERMINAL, RETAILERS, REGIONAL, SHARE_M4, T, b_0, c, c_b,
                    c_h_node_m4, c_l, h_node_0_m4, h_node_end_m4)
-from .distribution_network import PRICES, _kind, arc_name, entering, leaving, places_table, stage_stock
+from .distribution_network import (PRICES, _assembly_figure, _kind, _prices_figure, _stock_figure, arc_name,
+                                   entering, leaving, places_table)
 from .model import TOL, _constraints, _optimal
-from . import figures
-from .show import _display, _european_axes, _light, _number, _say
+from . import figures, interactive
+from .show import _display, _number, _say
 
 FORECAST = FORECAST_5_NAME               # M4 is solved with forecast 5
 DEMAND = FORECAST_5
 FIRST_RETAILER_ARC = len(ARCS_M4) - 12    # arcs 14 to 25 of the list go to the retailers
-# The colour of each retailer in the figures with one series per retailer. Red is
-# kept for a full arc capacity: Murcia is pink, as in the figure of its orders
-RETAILER_COLOURS = dict(zip(RETAILERS, ["tab:blue", "tab:orange", "tab:green", "tab:pink", "tab:purple",
-                                        "tab:brown"]))
+# The colour of each retailer in the figures with one series per retailer: the
+# soft palette Set2, as the local warehouses that receive the orders in M3, so that
+# no retailer takes the colour of a plant or of a stage of the network
+RETAILER_COLOURS = dict(zip(RETAILERS, [plt.get_cmap("Set2")(k) for k in range(6)]))
+ARC_PAIR = (figures.INK, "#8FB9C0")       # the two arcs to a retailer: dark and light teal, as the arcs of the network
 
 def _key(node: str) -> str:
     return node.replace(" ", "")
@@ -207,20 +210,15 @@ def show_data(show_tables: bool = False) -> None:
     _say(f"{FORECAST} (bikes/month): " + "; ".join(f"{t} {_number(DEMAND[t])}" for t in T) + ".")
     order = orders()
     if not show_tables:
-        figures.places_map([(_kind(i), *PLACES_M4[i]) for i in NODES_M4], "Places of the nodes of the network of M4")
-        figures.network(NODES_M4, range(len(ARCS_M4)),
-                        {i: figures.data_text(i, stock=True, lost_sale=True) for i in NODES_M4},
-                        {a: figures.arc_text(arc) for a, arc in enumerate(ARCS_M4)},
-                        "Data of M4. Plants: unit assembly cost · capacity; holding cost · storage capacity; initial "
-                        "stock → required final stock. Warehouses: holding cost · storage capacity"
-                        + ("; each one starts and ends the six months with no stock" if figures.warehouses_empty(NODES)
-                           else "") + ".\nRetailers: backorder share; lost-sale cost. Arcs: transport cost (€/bike) · "
-                        "arc capacity (bikes/month); the arcs to the retailers have an arc capacity of "
-                        f"{_number(ARCS_M4[-1]['capacity'])} bikes/month.", text_colour=figures.INK)
-        figures.orders_figure({f"{_name(r)}, {_number(100 * SHARE_M4[r])} %": [order[r, t] for t in T]
-                               for r in RETAILERS},
-                              f"{FORECAST}: orders of each retailer in each month, its share of the forecast",
-                              ylabel="Orders (bikes/month)", capacity=sum(K[f]["Jan"] for f in F))
+        interactive.show(interactive.places_map([(_kind(i), i, *PLACES_M4[i]) for i in NODES_M4],
+                                                "Places of the nodes of the network of M4"))
+        interactive.show(data_network())
+        capacity = sum(K[f]["Jan"] for f in F)
+        rows = {f"{_name(r)}, {_number(100 * SHARE_M4[r])} %": [order[r, t] for t in T] for r in RETAILERS}
+        interactive.show(interactive.bars(
+            T, rows, {row: interactive.colour(RETAILER_COLOURS[r]) for row, r in zip(rows, RETAILERS)},
+            f"{FORECAST}: orders of each retailer (bikes/month)", ytitle="bikes/month",
+            line=capacity, line_label=f"assembly capacity of the three plants, {_number(capacity)}"))
         return
     _display(places_table(NODES_M4, PLACES_M4))
     _display(pd.DataFrame([{"Arc": a + 1, "Origin": arc["origin"], "Destination": arc["destination"],
@@ -283,90 +281,144 @@ def _lost_sales_table(solution: dict) -> pd.DataFrame:
             .rename_axis("Lost sales (bikes)"))
 
 
-def _network_text(solution: dict, month: str) -> dict:
-    """Under each node, its stock at the end of the month; at each retailer, its
-    orders, deliveries and lost sales in the month and its backorders at the end of
-    the month."""
-    text = {i: f"stock {_number(solution['stock'][i, month])}" for i in NODES if i != RAIL_TERMINAL}
-    for r in RETAILERS:
-        text[r] = (f"orders {_number(solution['orders'][r, month])} · deliveries "
-                   f"{_number(solution['deliveries'][r, month])}\n"
-                   f"lost sales {_number(solution['lost sales'][r, month])} · "
-                   f"backorders {_number(solution['backorders'][r, month])}")
-    return text
+# ---------------------------------------------------------------------------
+# Interactive figures (Plotly)
+# ---------------------------------------------------------------------------
+
+XMAX = 1680          # right end of the network: room for the retailers and their names
 
 
-def _lost_sales(ax, solution: dict) -> None:
-    """The lost sales of each retailer in each month, stacked."""
-    months = solution["months"]
-    rows = {_name(r): [solution["lost sales"][r, t] for t in months] for r in RETAILERS}
-    total = max(sum(v[i] for v in rows.values()) for i in range(len(months)))
-    figures.stacked(ax, months, rows, {_name(r): RETAILER_COLOURS[r] for r in RETAILERS}, top=max(total * 1.25, 10))
-    if total <= TOL:
-        ax.text(0.5, 0.5, "no lost sales", transform=ax.transAxes, ha="center", va="center", fontsize=9)
-    ax.set_ylabel("Lost sales (bikes)")
-    ax.set_title("Lost sales of each retailer", fontsize=10)
-    ax.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=2, frameon=False)
+def _node_name(i: str) -> str:
+    return f"<b>{i}</b> ({PLACES_M4[i][0]})"
 
 
-@_light
-def _results_figure(solution: dict, month: str, full: bool, node_capacity: dict) -> None:
-    """The lost sales of each retailer; with ``full``, before it the stock at each
-    stage of the network and after it the shadow prices of the capacities that are
-    full in the month of the form."""
-    if full:
-        fig, axes = plt.subplots(1, 3, figsize=(17, 4.4), gridspec_kw={"width_ratios": [1, 1, 1.3]})
-        figures.stage_stock(axes[0], stage_stock(solution), solution["months"])
-        axes[0].set_title("Stock at each stage of the network", fontsize=10)
-        _lost_sales(axes[1], solution)
-        figures.shadow_prices(axes[2], figures.full_capacities(solution, month, NODES, K_h_node_m4, node_capacity),
-                              month)
-    else:
-        fig, ax = plt.subplots(figsize=(7.5, 4.2))
-        _lost_sales(ax, solution)
-    _european_axes(fig)
-    fig.tight_layout()
-    plt.show()
+def _arc_label(a: int, arc: dict) -> str:
+    return f"<b>arc {a + 1}</b>: {arc_name(arc)} ({arc['mode'].lower()})"
 
 
-@_light
-def _arc_figure(solution: dict, arc: int) -> None:
-    """The flow in each month on the two arcs that reach the retailer of an arc."""
+def data_network():
+    """The network with the data of M4: the data of each node and arc in its label,
+    and a dropdown of what is written on the arcs."""
+    nodes = {}
+    for i in NODES_M4:
+        if i == RAIL_TERMINAL:
+            nodes[i] = f"{_node_name(i)}<br>holds no stock"
+            continue
+        if i in RETAILERS:
+            nodes[i] = "<br>".join([_node_name(i), f"backorder share {_number(BACKORDER_SHARE[i], 1)}",
+                                    f"lost-sale cost {_number(c_l[i])} €/bike", "holds no stock"])
+            continue
+        lines = [f"unit assembly cost {_number(c[i])} €/bike", f"capacity {_number(K[i]['Jan'])} bikes/month"] \
+            if i in F else []
+        lines += [f"holding cost {_number(c_h_node_m4[i])} €/(bike·month)",
+                  f"storage capacity {_number(K_h_node_m4[i])} bikes", f"initial stock {_number(h_node_0_m4[i])} bikes",
+                  f"required final stock {_number(h_node_end_m4[i])} bikes"]
+        if i in K_n:
+            lines.append(f"node capacity {_number(K_n[i])} bikes/month")
+        nodes[i] = "<br>".join([_node_name(i), *lines])
+    arcs = {a: f"{_arc_label(a, arc)}<br>distance {_number(arc['km'], 1)} km<br>"
+               f"transport cost {_number(arc['cost'], 2)} €/bike<br>arc capacity {_number(arc['capacity'])} bikes/month"
+            for a, arc in enumerate(ARCS_M4)}
+    text = {"Transport cost (€/bike)": lambda a, arc: _number(arc["cost"], 2),
+            "Arc capacity (bikes/month)": lambda a, arc: _number(arc["capacity"]),
+            "Arc number": lambda a, arc: str(a + 1)}
+    options = {label: dict(title=f"Data of M4. On each arc: {label[0].lower() + label[1:]}",
+                           text_last=range(FIRST_RETAILER_ARC, len(ARCS_M4)),
+                           arc_text={a: write(a, arc) for a, arc in enumerate(ARCS_M4)}, arc_hover=arcs,
+                           node_hover=nodes)
+               for label, write in text.items()}
+    return interactive.network(NODES_M4, ARCS_M4, options, xmax=XMAX)
+
+
+def _node_month(solution: dict, i: str, t: str, node_capacity: dict = K_n) -> str:
+    """The label of a node in the network of one month: for a retailer, its orders,
+    deliveries and lost sales in the month and its backorders at the end of it; for
+    any other node, as in M3, with its stock at the end of the month."""
+    if i == RAIL_TERMINAL:
+        return f"{_node_name(i)}<br>holds no stock"
+    lines = [_node_name(i)]
+    if i in RETAILERS:
+        lines += [f"orders in {t}: {_number(solution['orders'][i, t])} bikes",
+                  f"deliveries in {t}: {_number(solution['deliveries'][i, t])} bikes",
+                  f"lost sales in {t}: {_number(solution['lost sales'][i, t])} bikes",
+                  f"backorders at the end of {t}: {_number(solution['backorders'][i, t])} bikes",
+                  f"backorder share {_number(BACKORDER_SHARE[i], 1)}"]
+        return "<br>".join(lines)
+    if i in F:
+        lines.append(f"assembled in {t}: {_number(solution['assembly'][i, t])} bikes")
+    if i in node_capacity:
+        lines.append(f"received in {t}: {_number(figures._arriving(solution, i, t))} bikes "
+                     f"(node capacity {_number(node_capacity[i])})")
+    lines.append(f"stock at the end of {t}: {_number(solution['stock'][i, t])} bikes")
+    return "<br>".join(lines)
+
+
+def _flow_network(solution: dict, node_capacity: dict = K_n, first: str = "May"):
+    """The network with the flow on each arc, one month at a time, with a dropdown
+    of the months that opens in ``first``: an arc whose capacity is full in red, an
+    arc with no flow in light grey; the data of each node and arc in the month in
+    its label."""
+    arc_list, options = solution["arcs"], {}
+    for t in solution["months"]:
+        full = figures.full_arcs(solution, t)
+        flow = {a: solution["flow"][a, t] for a in range(len(arc_list))}
+        options[t] = dict(
+            title=f"Plan of M4 in {t}: flow on each arc (bikes)", full=full,
+            text_last=range(FIRST_RETAILER_ARC, len(arc_list)),
+            idle=[a for a, v in flow.items() if v <= TOL], arc_text={a: _number(v) for a, v in flow.items()},
+            arc_hover={a: f"{_arc_label(a, arc)}<br>flow in {t}: {_number(flow[a])} bikes<br>arc capacity "
+                          f"{_number(arc['capacity'])} bikes/month" + (", full" if a in full else "")
+                       for a, arc in enumerate(arc_list)},
+            node_hover={i: _node_month(solution, i, t, node_capacity) for i in NODES_M4})
+    return interactive.network(NODES_M4, arc_list, options, first=first, xmax=XMAX)
+
+
+def _lost_sales_figure(solution: dict):
+    """The lost sales of each retailer in each month, stacked, each retailer in its
+    colour."""
+    rows = {_name(r): [solution["lost sales"][r, t] for t in solution["months"]] for r in RETAILERS}
+    return interactive.bars(solution["months"], rows,
+                            {_name(r): interactive.colour(RETAILER_COLOURS[r]) for r in RETAILERS},
+                            "Lost sales of each retailer in each month (bikes)", top=max(
+                                1.25 * max(sum(v[k] for v in rows.values()) for k in range(len(solution["months"]))),
+                                10))
+
+
+def _arc_pair_figure(solution: dict, arc: int):
+    """The flow in each month on the two arcs that reach the retailer of an arc,
+    side by side, with the transport cost of each arc in the legend."""
+    import plotly.graph_objects as go
+
     arc_list, months = solution["arcs"], solution["months"]
     retailer = arc_list[arc]["destination"]
-    pair = entering(retailer, arc_list)
-    fig, ax = plt.subplots(figsize=(9, 3.8))
-    colours = plt.get_cmap("tab10")
-    top = max(max(solution["flow"][a, t] for a in pair for t in months), 1) * 1.2
-    for k, a in enumerate(pair):
-        x = [i + (k - 0.5) * 0.38 for i in range(len(months))]
-        values = [solution["flow"][a, t] for t in months]
-        ax.bar(x, values, 0.36, color=colours(k),
-               label=f"arc {a + 1}: {_name(arc_list[a]['origin'])}, "
-                     f"transport cost {_number(arc_list[a]['cost'], 2)} €/bike")
-        for xi, v in zip(x, values):
-            ax.text(xi, v + top * 0.01, _number(v), ha="center", va="bottom", fontsize=7)
-    ax.set_ylim(0, top)
-    ax.set_xticks(range(len(months)), months)
-    ax.set_ylabel("Flow (bikes/month)")
-    ax.set_title(f"Flow on the two arcs to {_name(retailer)}", fontsize=10)
-    ax.legend(fontsize=7.5, loc="upper left", frameon=False)
-    ax.spines[["top", "right"]].set_visible(False)
-    _european_axes(fig)
-    fig.tight_layout()
-    plt.show()
+    fig = go.Figure()
+    for k, a in enumerate(entering(retailer, arc_list)):
+        label = (f"arc {a + 1}, from {_name(arc_list[a]['origin'])}: "
+                 f"{_number(arc_list[a]['cost'], 2)} €/bike")
+        flows = [solution["flow"][a, t] for t in months]
+        # a month in which the arc capacity is full in red, as in the network
+        full = [v > TOL and abs(v - arc_list[a]["capacity"]) < TOL for v in flows]
+        fig.add_bar(x=months, y=flows, name=label, marker_color=[interactive.FULL if f else ARC_PAIR[k] for f in full],
+                    text=[_number(v) for v in flows], textposition="outside",
+                    customdata=[", arc capacity full" if f else "" for f in full],
+                    hovertemplate=f"{label}<br>%{{x}}: %{{y:,.0f}} bikes%{{customdata}}<extra></extra>")
+    top = max(max(solution["flow"][a, t] for a in entering(retailer, arc_list) for t in months), 1)
+    fig.update_layout(**interactive.LAYOUT, barmode="group", height=interactive.MONTH_HEIGHT,
+                      title=dict(text=f"Flow on the two arcs to {_name(retailer)} (bikes)", font_size=14),
+                      yaxis=dict(title="bikes", range=[0, 1.15 * top]))
+    interactive._legend_below(fig)
+    return fig
 
 
-def _report(data: dict, heading: str, month: str = "May", full: bool = True, show_tables: bool = False,
-            arc: int | None = None) -> dict | None:
+def _report(data: dict, heading: str, full: bool = True, show_tables: bool = False, arc: int | None = None,
+            first: str = "May") -> dict | None:
     """Solve M4 with the data given and show its cost, its lost sales and whether
     other plans have the same cost; then the plan in figures or, with
-    ``show_tables``, in tables. With ``full``, the whole plan and the shadow prices
-    of the full capacities; without it, the lost sales, the assembly and the flows
-    of one month on the network. With ``arc``, first the flow on the two arcs to the
-    retailer of that arc (a position in the list)."""
-    if month not in T:
-        raise ValueError(f"The month must be one of {', '.join(T)}.")
+    ``show_tables``, in tables. With ``full``, the network of each month, the
+    assembly, the stock at each stage, the lost sales and the shadow prices of the
+    full capacities; without it, the lost sales, the assembly and the network of
+    each month. The network opens in the month ``first``. With ``arc``, first the
+    flow on the two arcs to the retailer of that arc (a position in the list)."""
     solution = solve(**data)
     if solution is None:
         _say(f"{heading}: the model has no solution.")
@@ -388,27 +440,24 @@ def _report(data: dict, heading: str, month: str = "May", full: bool = True, sho
             _display(_lost_sales_table(solution))
             _display(_assembly_table(solution))
         return solution
-    if arc is not None:
-        _arc_figure(solution, arc)
-    title = (f"Plan of M4 in {month}. On each arc, its flow (bikes). Under each node, its stock at the end of {month} "
-             f"(bikes);\nat each retailer, its orders, deliveries and lost sales in {month} and its backorders "
-             f"at the end of {month} (bikes).")
     node_capacity = data.get("node_capacity", K_n)
+    if arc is not None:
+        interactive.show(_arc_pair_figure(solution, arc))
     if full:
-        figures.flow_network(solution, month, NODES_M4, _network_text(solution, month), title)
-        figures.assembly_figure(solution["assembly"], K, solution["months"], F,
-                                "Assembly of each plant in each month and its capacity")
-        _results_figure(solution, month, True, node_capacity)
+        interactive.show(_flow_network(solution, node_capacity, first))
+        interactive.show(_assembly_figure(solution, data.get("capacity", K)))
+        interactive.show(_stock_figure(solution))
+        interactive.show(_lost_sales_figure(solution))
+        interactive.show(_prices_figure(solution, node_capacity))
     else:
-        _results_figure(solution, month, False, node_capacity)
-        figures.assembly_figure(solution["assembly"], K, solution["months"], F,
-                                "Assembly of each plant in each month and its capacity")
-        figures.flow_network(solution, month, NODES_M4, _network_text(solution, month), title)
+        interactive.show(_lost_sales_figure(solution))
+        interactive.show(_assembly_figure(solution, data.get("capacity", K)))
+        interactive.show(_flow_network(solution, node_capacity, first))
     return solution
 
 
-def retailer_plan(month: str = "May", show_tables: bool = False) -> dict | None:
-    """The plan with forecast 5, with the flows of one month on the network; and,
+def retailer_plan(show_tables: bool = False) -> dict | None:
+    """The plan with forecast 5, with the flows of each month on the network; and,
     first, whether M3 has a plan for forecast 5."""
     if m3_has_no_solution():
         ordered = sum(DEMAND[t] for t in T[3:])
@@ -420,10 +469,10 @@ def retailer_plan(month: str = "May", show_tables: bool = False) -> dict | None:
               f"{_number(ordered - assembled + ending)} bikes have to be in stock, and the network can hold "
               f"{_number(sum(K_h_node[i] for i in NODES))}.")
         _say()
-    return _report({}, FORECAST, month, show_tables=show_tables)
+    return _report({}, FORECAST, show_tables=show_tables)
 
 
-def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 0.4, month: str = "May",
+def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 0.4,
                          show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the backorder share of one retailer changed."""
     if retailer not in RETAILERS:
@@ -431,31 +480,33 @@ def backorder_share_test(retailer: str = "Retailer 6", backorder_share: float = 
     share = {**BACKORDER_SHARE, retailer: backorder_share}
     _say(f"Backorder share of {_name(retailer)}: {_number(backorder_share, 2)}; "
           f"lost sales, the rest: {_number(1 - backorder_share, 2)}.")
-    return _report({"backorder_share": share}, FORECAST, month, full=False, show_tables=show_tables)
+    return _report({"backorder_share": share}, FORECAST, full=False, show_tables=show_tables)
 
 
-def lost_sale_cost_test(lost_sale_cost: float = 700, month: str = "May", show_tables: bool = False) -> dict | None:
+def lost_sale_cost_test(lost_sale_cost: float = 700, show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the lost-sale cost, the price that the retailers
     pay for a bike, changed for every retailer."""
     _say(f"Lost-sale cost: {_number(lost_sale_cost)} €/bike.")
-    return _report({"lost_sale_cost": {r: lost_sale_cost for r in RETAILERS}}, FORECAST, month, full=False,
+    return _report({"lost_sale_cost": {r: lost_sale_cost for r in RETAILERS}}, FORECAST, full=False,
                    show_tables=show_tables)
 
 
 def promotion_test(retailer: str = "Retailer 2", month: str = "Jan", extra_orders: float = 100,
                    show_tables: bool = False) -> dict | None:
-    """The plan with forecast 5 and more orders of one retailer in one month."""
+    """The plan with forecast 5 and more orders of one retailer in one month; the
+    network opens in that month."""
     if retailer not in RETAILERS:
         raise ValueError(f"The retailer must be one of {', '.join(RETAILERS)}.")
+    if month not in T:
+        raise ValueError(f"The month must be one of {', '.join(T)}.")
     order = orders()
     order[retailer, month] += extra_orders
     _say(f"Orders of {_name(retailer)} in {month}: {_number(order[retailer, month])} bikes, "
           f"{_number(extra_orders)} more than in the {FORECAST.lower()}.")
-    return _report({"order": order}, FORECAST, month, full=False, show_tables=show_tables)
+    return _report({"order": order}, FORECAST, full=False, show_tables=show_tables, first=month)
 
 
-def transport_cost_test(arc: int = 17, transport_cost: float = 1.05, month: str = "May",
-                        show_tables: bool = False) -> dict | None:
+def transport_cost_test(arc: int = 17, transport_cost: float = 1.05, show_tables: bool = False) -> dict | None:
     """The plan with forecast 5 and the transport cost of one arc from a local
     warehouse to a retailer changed (arcs 14 to 25)."""
     if not FIRST_RETAILER_ARC < arc <= len(ARCS_M4):
@@ -463,4 +514,4 @@ def transport_cost_test(arc: int = 17, transport_cost: float = 1.05, month: str 
     arc_list = [dict(a) for a in ARCS_M4]
     arc_list[arc - 1]["cost"] = transport_cost
     _say(f"Transport cost of arc {arc}, {arc_name(arc_list[arc - 1])}: {_number(transport_cost, 2)} €/bike.")
-    return _report({"arc_list": arc_list}, FORECAST, month, full=False, show_tables=show_tables, arc=arc - 1)
+    return _report({"arc_list": arc_list}, FORECAST, full=False, show_tables=show_tables, arc=arc - 1)

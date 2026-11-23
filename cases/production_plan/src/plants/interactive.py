@@ -410,7 +410,8 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
     stretch with it, and the nodes and their names keep their size in px. ``options`` gives, by label of the dropdown (one option: no
     dropdown), a dict with "title"; "arc_text" (arc: text written on it);
     "arc_hover" and "node_hover" (the label of each arc and node); and, optionally,
-    "full" and "idle" (arcs drawn red and light grey, with no text), "fill"
+    "full" and "idle" (arcs drawn red and light grey, with no text), "text_last"
+    (arcs whose text goes on their last stretch, not on their longest), "fill"
     (node: colour) and "arrows" (arrows at the nodes that are not arcs, as in
     ``_node_arrow``). ``legend`` adds, under the figure, a filled square for each
     label: colour; ``extra_keys``, a line for each (label, Plotly line). ``xmax`` is the
@@ -458,7 +459,9 @@ def network(nodes: list, arc_list: list, options: dict, first=None, legend: dict
             ax, ay = {"right": (-tail, 0), "left": (tail, 0), "down": (0, -tail), "up": (0, tail)}[way]
             notes.append(dict(x=pts[-1][0], y=pts[-1][1], ax=ax, ay=ay, xref="x", yref="y", text="",
                               showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.4, arrowcolor=c, standoff=standoff))
-            p0, p1 = max(zip(pts[:-1], pts[1:]), key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1]))
+            stretches = list(zip(pts[:-1], pts[1:]))
+            p0, p1 = (stretches[-1] if a in option.get("text_last", ()) else
+                      max(stretches, key=lambda s: abs(s[0][0] - s[1][0]) + abs(s[0][1] - s[1][1])))
             mx, my = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
             if option["arc_text"].get(a) and a not in idle:
                 notes.append(dict(x=mx, y=my, text=option["arc_text"][a], showarrow=False, bgcolor="white",
