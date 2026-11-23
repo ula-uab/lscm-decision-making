@@ -294,7 +294,7 @@ The second test changes the lost-sale cost of every retailer. With 500 €/bike 
 
 The third test changes the orders of a retailer in one month. With 100 more orders of Sabadell in January, plant 3 assembles 60 bikes in January and 150 in February, and the lost sales stay at 140; the result is the same with Granada, at a cost of 1.333.627,24 € and 1.334.132,24 €. With 100 more orders of Lleida in May, the assembly does not change and the lost sales grow to 240: 81 at Alicante, 14 at Córdoba and 145 at Granada. With 100 more orders of Córdoba in May, the lost sales are the same, and the plan costs 1.367.464,14 € instead of 1.366.786,14 €.
 
-The fourth test changes the transport cost of an arc to a retailer. With arc 17, from Tarragona to Sabadell, at 0,50 €/bike instead of 1,05, Sabadell receives from Tarragona; it still receives 20 and 24 bikes from Girona in April and May, because arc 10, from regional warehouse 1 to Tarragona, carries 300 bikes in May, its arc capacity. With arc 15, from Girona to Lleida, at 0,50 €/bike instead of 2,26, Lleida receives from Girona. In both cases the lost sales and the assembly do not change.
+The fourth test changes the transport cost of an arc to a retailer. With arc 17, from Tarragona to Sabadell, at 0,50 €/bike instead of 1,05, Sabadell receives from Tarragona; it still receives 20 bikes from Girona in April, the seasonal stock that Girona held at the end of March, and 24 in May, because arc 10, from regional warehouse 1 to Tarragona, carries 300 bikes in May, its arc capacity. With arc 15, from Girona to Lleida, at 0,50 €/bike instead of 2,26, Lleida receives from Girona. In both cases the lost sales and the assembly do not change.
 
 ## 7. Script and notebook
 
