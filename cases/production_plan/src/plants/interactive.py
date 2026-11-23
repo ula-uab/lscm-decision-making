@@ -44,9 +44,6 @@ it, with no zoom:
 The colours are those of the figures drawn with matplotlib (``figures``), so that
 each colour keeps its meaning: red, a full capacity; light grey, an arc with no
 flow; one colour for each plant and for each stage of the network.
-
-A new figure, or a change to one, is checked in Colab (also with "Run all") and
-in PyCharm before it is pushed.
 """
 
 from __future__ import annotations
