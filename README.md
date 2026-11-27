@@ -18,6 +18,8 @@ Each case lives in its own folder under `cases/`, with a document that explains 
 | [`traveling_salesman`](cases/traveling_salesman/) | T2 · Optimization methods | The round trip of a sales representative through 14 cities: nearest neighbor and sweep, local search with the swap of two adjacent cities and the reversal of a sub-path, the shortest route by dynamic programming, and where the local search stops from random starting routes. Scripts, and a notebook that opens in Google Colab |
 | [`security_filters`](cases/security_filters/) | Airport operations | Passengers arriving at the security checkpoint: presentation curve under demand scenarios, lane policies compared in a decision table, and evaluation against the observed day. Package with notebooks that open in Google Colab |
 
+Public data sets used by other exercises of the courses, such as the time series of the forecasting exercises, are in [`datasets/`](datasets/), one folder per collection, with the source of each file.
+
 ## Running the cases
 
 There are three ways, from easiest to most complete:

@@ -1,0 +1,16 @@
+# fpp3: time series of *Forecasting: Principles and Practice*
+
+Hyndman, R. J. and Athanasopoulos, G. (2021). *Forecasting: Principles and Practice*, 3rd ed. OTexts, Melbourne. Free online at <https://otexts.com/fpp3/>.
+
+The book, known as fpp3, uses time series distributed with the R packages [`tsibbledata`](https://tsibbledata.tidyverts.org/) and [`fpp3`](https://pkg.robjhyndman.com/fpp3/). The files of this folder are CSV versions of some of them. The original source of each series is the one given in the documentation of the package, linked from the table.
+
+| File | Content | Period | Original source |
+|---|---|---|---|
+| `aus_arrivals.csv` | Quarterly international arrivals to Australia from Japan, New Zealand, the United Kingdom and the United States (columns `Quarter`, `Origin`, `Arrivals`) | 1981 Q1 – 2012 Q3 | Tourism Research Australia ([documentation](https://pkg.robjhyndman.com/fpp3/reference/aus_arrivals.html)) |
+| `aus_livestock.csv` | Monthly number of animals slaughtered for meat in Australia, by kind of animal and state; 54 series (columns `unique_id`, `ds`, `y`) | July 1972 – December 2018 | Australian Bureau of Statistics, catalogue 7218.0.55.001 ([documentation](https://tsibbledata.tidyverts.org/reference/aus_livestock.html)) |
+| `aus_production_formatted.csv` | Quarterly manufacturing production in Australia of beer (megalitres), bricks, cement, electricity, gas and tobacco; 6 series (columns `unique_id`, `ds`, `y`) | 1956 Q1 – 2010 Q2 | Australian Bureau of Statistics, catalogue 8301.0.55.001, table 1 ([documentation](https://tsibbledata.tidyverts.org/reference/aus_production.html)) |
+| `aus_retail.csv` | Monthly retail turnover of each Australian state and territory by industry, in millions of Australian dollars; 152 series (columns `State`, `Industry`, `Series ID`, `Month`, `Turnover`) | April 1982 – December 2018 | Australian Bureau of Statistics, catalogue 8501.0, table 11 ([documentation](https://tsibbledata.tidyverts.org/reference/aus_retail.html)) |
+| `gafa_stock.csv` | Daily share prices (US dollars) and volume traded of Apple, Amazon, Facebook and Google, on trading days; 24 series named `<symbol>_<variable>`, such as `GOOG_Close` (columns `unique_id`, `ds`, `y`) | 2014 – 2018 | Yahoo Finance ([documentation](https://tsibbledata.tidyverts.org/reference/gafa_stock.html)) |
+| `global_economy.csv` | Yearly economic indicators of 263 countries and regions: GDP, growth, CPI, imports and exports (percentage of GDP) and population (columns `unique_id`, `Code`, `ds`, `GDP`, `Growth`, `CPI`, `Imports`, `Exports`, `Population`) | 1960 – 2017 | The World Bank, World Development Indicators ([documentation](https://tsibbledata.tidyverts.org/reference/global_economy.html)) |
+| `PBS_unparsed.csv` | Monthly number of prescriptions (`Scripts`) and their cost in Australian dollars (`Cost`) under the Pharmaceutical Benefits Scheme, by concession type, patient type and drug class (ATC levels 1 and 2) | July 1991 – June 2008 | Medicare Australia ([documentation](https://tsibbledata.tidyverts.org/reference/PBS.html)) |
+| `us_employment.csv` | Monthly employment in the United States by sector of the economy; 148 series (columns `ds`, `unique_id`, `y`) | January 1939 – September 2019 | US Bureau of Labor Statistics ([documentation](https://pkg.robjhyndman.com/fpp3/reference/us_employment.html)) |
