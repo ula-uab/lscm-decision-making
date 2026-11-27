@@ -1,0 +1,4 @@
+# Owners of the whole repository. With the ruleset «Protect main», a pull
+# request into main needs the approval of one of them (Juanjo Ramos: the
+# institutional and the personal account).
+* @ulaProjectsUAB @jjramosgo-coder
